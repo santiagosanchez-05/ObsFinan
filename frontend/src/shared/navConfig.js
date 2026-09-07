@@ -29,8 +29,9 @@ export const DEFAULT_ROUTE_BY_ROLE = {
   [ROLES.CLIENTE]: '/eventos',
 };
 
-// Nav público (sin usuario logueado) — Landing y Sobre Nosotros.
+// Nav público (sin usuario logueado).
 export const PUBLIC_NAV = [
   { to: '/', label: 'Inicio' },
   { to: '/sobre-nosotros', label: 'Sobre nosotros' },
+  { to: '/contacto', label: 'Contacto' },
 ];
