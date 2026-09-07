@@ -1,8 +1,8 @@
 # Dependencias
 node_modules
 
-# Variables de entorno (cada quien tiene las suyas, nunca se comparten)
-.env
+# Variables de entorno — .env SÍ se versiona a propósito (decisión del
+# equipo). .env.local queda para overrides personales, ese sí se ignora.
 .env.local
 
 # Logs
