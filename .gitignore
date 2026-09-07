@@ -1,11 +1,13 @@
 # Dependencias
 node_modules
 
-# Variables de entorno (cada quien tiene las suyas, nunca se comparten)
+# Variables de entorno — backend/.env SÍ se versiona a propósito (decisión
+# del equipo, entorno de desarrollo compartido) para que todos tengan las
+# mismas credenciales apenas clonan, sin pedirlas por privado.
 .env
 .env.local
 frontend/.env
-backend/.env
+!backend/.env
 
 # Build
 dist
