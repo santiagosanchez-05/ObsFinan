@@ -1,0 +1,194 @@
+const request = require('supertest');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+
+// Mockeamos la conexión a la BD — este test no necesita la base real.
+jest.mock('../../config/db', () => ({
+  query: jest.fn(),
+}));
+
+// Mockeamos el envío de correo — no queremos mandar mails reales en los tests.
+jest.mock('../../config/mailer', () => ({
+  sendMail: jest.fn().mockResolvedValue(true),
+}));
+
+const pool = require('../../config/db');
+const transporter = require('../../config/mailer');
+const app = require('../../app');
+
+describe('POST /api/auth/login', () => {
+  const CORREO = 'superadmin@bienestarfinanciero.test';
+  const PASSWORD_CORRECTA = 'Temp-BienestarFinanciero2026';
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('devuelve 400 si el correo no tiene formato válido', async () => {
+    const res = await request(app).post('/api/auth/login').send({ email: 'no-es-correo', password: '123' });
+    expect(res.status).toBe(400);
+  });
+
+  it('devuelve 401 si el correo no existe', async () => {
+    pool.query.mockResolvedValueOnce([[]]); // sin resultados
+    const res = await request(app).post('/api/auth/login').send({ email: 'nadie@test.com', password: '123' });
+    expect(res.status).toBe(401);
+  });
+
+  it('devuelve 401 si la contraseña es incorrecta', async () => {
+    const hash = await bcrypt.hash(PASSWORD_CORRECTA, 10);
+    pool.query.mockResolvedValueOnce([[
+      { user_id: 1, first_name: 'Santiago', paternal_last_name: 'Admin', email: CORREO, password_hash: hash, status: 1, campus_id: 1, role_name: 'superadmin' },
+    ]]);
+    const res = await request(app).post('/api/auth/login').send({ email: CORREO, password: 'incorrecta' });
+    expect(res.status).toBe(401);
+  });
+
+  it('devuelve 200 + token si el login es correcto', async () => {
+    const hash = await bcrypt.hash(PASSWORD_CORRECTA, 10);
+    pool.query.mockResolvedValueOnce([[
+      { user_id: 1, first_name: 'Santiago', paternal_last_name: 'Admin', email: CORREO, password_hash: hash, status: 1, campus_id: 1, role_name: 'superadmin' },
+    ]]);
+    const res = await request(app).post('/api/auth/login').send({ email: CORREO, password: PASSWORD_CORRECTA });
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('token');
+    expect(res.body.user).toMatchObject({ correo: CORREO, role: 'superadmin' });
+  });
+});
+
+describe('POST /api/auth/forgot-password', () => {
+  const CORREO = 'superadmin@bienestarfinanciero.test';
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('devuelve 400 si el correo no tiene formato válido', async () => {
+    const res = await request(app).post('/api/auth/forgot-password').send({ email: 'no-es-correo' });
+    expect(res.status).toBe(400);
+  });
+
+  it('devuelve el mismo mensaje genérico si el correo NO existe (no se manda correo)', async () => {
+    pool.query.mockResolvedValueOnce([[]]); // buscarUsuarioPorCorreo no encuentra nada
+    const res = await request(app).post('/api/auth/forgot-password').send({ email: 'nadie@test.com' });
+    expect(res.status).toBe(200);
+    expect(res.body.message).toMatch(/Si el correo existe/);
+    expect(transporter.sendMail).not.toHaveBeenCalled();
+  });
+
+  it('si el correo existe, genera el código, lo guarda con expiración a 15 min, y envía el correo', async () => {
+    pool.query
+      .mockResolvedValueOnce([[{ user_id: 1, first_name: 'Santiago', paternal_last_name: 'Admin', email: CORREO, status: 1, campus_id: 1, role_name: 'superadmin' }]]) // buscarUsuarioPorCorreo
+      .mockResolvedValueOnce([{ insertId: 1 }]); // INSERT INTO verification_code
+
+    const res = await request(app).post('/api/auth/forgot-password').send({ email: CORREO });
+
+    expect(res.status).toBe(200);
+    expect(transporter.sendMail).toHaveBeenCalledTimes(1);
+
+    // Verificamos que se guardó con exactamente 15 minutos de vigencia.
+    const insertCall = pool.query.mock.calls[1];
+    const [, params] = insertCall;
+    const [, codigo, enviadoEn, expiraEn] = params;
+    expect(codigo).toMatch(/^\d{6}$/);
+    expect(expiraEn.getTime() - enviadoEn.getTime()).toBe(15 * 60 * 1000);
+  });
+});
+
+describe('POST /api/auth/verify-code', () => {
+  const CORREO = 'superadmin@bienestarfinanciero.test';
+  const USUARIO_MOCK = { user_id: 1, first_name: 'Santiago', paternal_last_name: 'Admin', email: CORREO, status: 1, campus_id: 1, role_name: 'superadmin' };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('devuelve 400 si el código no tiene 6 dígitos', async () => {
+    const res = await request(app).post('/api/auth/verify-code').send({ email: CORREO, code: '123' });
+    expect(res.status).toBe(400);
+  });
+
+  it('devuelve 400 si el código no coincide con ninguno guardado', async () => {
+    pool.query
+      .mockResolvedValueOnce([[USUARIO_MOCK]]) // buscarUsuarioPorCorreo
+      .mockResolvedValueOnce([[]]); // sin coincidencias en verification_code
+    const res = await request(app).post('/api/auth/verify-code').send({ email: CORREO, code: '123456' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/inválido/i);
+  });
+
+  it('devuelve 400 si el código ya expiró', async () => {
+    const yaExpiro = new Date(Date.now() - 60 * 1000); // expiró hace 1 minuto
+    pool.query
+      .mockResolvedValueOnce([[USUARIO_MOCK]])
+      .mockResolvedValueOnce([[{ verification_code_id: 5, expires_at: yaExpiro }]]);
+    const res = await request(app).post('/api/auth/verify-code').send({ email: CORREO, code: '123456' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/expiró/i);
+  });
+
+  it('devuelve un resetToken si el código es correcto y todavía es válido', async () => {
+    const todaviaValido = new Date(Date.now() + 10 * 60 * 1000); // vence en 10 min
+    pool.query
+      .mockResolvedValueOnce([[USUARIO_MOCK]])
+      .mockResolvedValueOnce([[{ verification_code_id: 5, expires_at: todaviaValido }]])
+      .mockResolvedValueOnce([{}]); // UPDATE ... SET status = 0
+    const res = await request(app).post('/api/auth/verify-code').send({ email: CORREO, code: '123456' });
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('resetToken');
+  });
+});
+
+describe('POST /api/auth/reset-password', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  function tokenValido() {
+    return jwt.sign({ userId: 1, purpose: 'password-reset' }, process.env.JWT_SECRET, { expiresIn: '10m' });
+  }
+
+  it('rechaza una contraseña de menos de 8 caracteres', async () => {
+    const res = await request(app)
+      .post('/api/auth/reset-password')
+      .send({ resetToken: tokenValido(), newPassword: 'Abc123' });
+    expect(res.status).toBe(400);
+  });
+
+  it('rechaza una contraseña sin mayúscula', async () => {
+    const res = await request(app)
+      .post('/api/auth/reset-password')
+      .send({ resetToken: tokenValido(), newPassword: 'contrasena1' });
+    expect(res.status).toBe(400);
+  });
+
+  it('rechaza una contraseña sin número', async () => {
+    const res = await request(app)
+      .post('/api/auth/reset-password')
+      .send({ resetToken: tokenValido(), newPassword: 'ContrasenaSegura' });
+    expect(res.status).toBe(400);
+  });
+
+  it('rechaza una contraseña con el formato de contraseña temporal (UVL-XXXXXX)', async () => {
+    const res = await request(app)
+      .post('/api/auth/reset-password')
+      .send({ resetToken: tokenValido(), newPassword: 'UVL-a8K2p9' });
+    expect(res.status).toBe(400);
+  });
+
+  it('rechaza un resetToken inválido/expirado', async () => {
+    const res = await request(app)
+      .post('/api/auth/reset-password')
+      .send({ resetToken: 'token-invalido', newPassword: 'ContrasenaSegura1' });
+    expect(res.status).toBe(401);
+  });
+
+  it('actualiza la contraseña si el token y la nueva contraseña son válidos', async () => {
+    pool.query.mockResolvedValueOnce([{}]); // UPDATE user SET password_hash...
+    const res = await request(app)
+      .post('/api/auth/reset-password')
+      .send({ resetToken: tokenValido(), newPassword: 'ContrasenaSegura1' });
+    expect(res.status).toBe(200);
+    expect(pool.query).toHaveBeenCalledWith(expect.stringContaining('UPDATE user'), [expect.any(String), 1]);
+  });
+});

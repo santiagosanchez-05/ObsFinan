@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+@theme {
+  /* Paleta oficial Univalle (extraída de univalle.edu) */
+  --color-maroon: #9E0044;
+  --color-maroon-light: #BA254A;
+  --color-surface: #F5F7F9;
+  --color-ink: #1D201E;
+
+  --font-sans: "Sora", system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}

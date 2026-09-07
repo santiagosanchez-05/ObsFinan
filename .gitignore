@@ -1,0 +1,30 @@
+# Dependencias
+node_modules
+
+# Variables de entorno (cada quien tiene las suyas, nunca se comparten)
+.env
+.env.local
+frontend/.env
+backend/.env
+
+# Build
+dist
+dist-ssr
+
+# Cobertura de tests (Jest / Vitest)
+coverage
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Config de Claude Code (herramienta personal — nadie más del equipo la usa)
+.claude/
+
+# Editor / sistema operativo
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+Thumbs.db
