@@ -52,7 +52,18 @@ describe('POST /api/auth/login', () => {
     const res = await request(app).post('/api/auth/login').send({ email: CORREO, password: PASSWORD_CORRECTA });
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('token');
-    expect(res.body.user).toMatchObject({ correo: CORREO, role: 'superadmin' });
+    expect(res.body.user).toMatchObject({ correo: CORREO, role: 'superadmin', debeCambiarPassword: false });
+  });
+
+  it('marca debeCambiarPassword: true si se logueó con una contraseña con formato UVL-XXXXXX', async () => {
+    const passwordTemporal = 'UVL-a8K2p9';
+    const hash = await bcrypt.hash(passwordTemporal, 10);
+    pool.query.mockResolvedValueOnce([[
+      { user_id: 3, first_name: 'Guido', paternal_last_name: 'Perez', email: CORREO, password_hash: hash, status: 1, campus_id: 1, role_name: 'cliente' },
+    ]]);
+    const res = await request(app).post('/api/auth/login').send({ email: CORREO, password: passwordTemporal });
+    expect(res.status).toBe(200);
+    expect(res.body.user.debeCambiarPassword).toBe(true);
   });
 });
 
@@ -190,5 +201,65 @@ describe('POST /api/auth/reset-password', () => {
       .send({ resetToken: tokenValido(), newPassword: 'ContrasenaSegura1' });
     expect(res.status).toBe(200);
     expect(pool.query).toHaveBeenCalledWith(expect.stringContaining('UPDATE user'), [expect.any(String), 1]);
+  });
+});
+
+describe('POST /api/auth/change-password', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  function tokenSesion(userId = 1) {
+    return jwt.sign({ userId, role: 'cliente', campusId: 1 }, process.env.JWT_SECRET, { expiresIn: '1h' });
+  }
+
+  it('sin token, responde 401', async () => {
+    const res = await request(app)
+      .post('/api/auth/change-password')
+      .send({ currentPassword: 'UVL-a8K2p9', newPassword: 'ContrasenaSegura1' });
+    expect(res.status).toBe(401);
+  });
+
+  it('rechaza una nueva contraseña con formato de contraseña temporal', async () => {
+    const res = await request(app)
+      .post('/api/auth/change-password')
+      .set('Authorization', `Bearer ${tokenSesion()}`)
+      .send({ currentPassword: 'UVL-a8K2p9', newPassword: 'UVL-b9L3q0' });
+    expect(res.status).toBe(400);
+  });
+
+  it('rechaza una nueva contraseña débil', async () => {
+    const res = await request(app)
+      .post('/api/auth/change-password')
+      .set('Authorization', `Bearer ${tokenSesion()}`)
+      .send({ currentPassword: 'UVL-a8K2p9', newPassword: 'abc123' });
+    expect(res.status).toBe(400);
+  });
+
+  it('si la contraseña actual no coincide, responde 401', async () => {
+    const hashReal = await bcrypt.hash('UVL-a8K2p9', 10);
+    pool.query.mockResolvedValueOnce([[{ password_hash: hashReal }]]);
+
+    const res = await request(app)
+      .post('/api/auth/change-password')
+      .set('Authorization', `Bearer ${tokenSesion()}`)
+      .send({ currentPassword: 'esta-no-es', newPassword: 'ContrasenaSegura1' });
+
+    expect(res.status).toBe(401);
+  });
+
+  it('con la contraseña actual correcta, actualiza la contraseña', async () => {
+    const hashReal = await bcrypt.hash('UVL-a8K2p9', 10);
+    pool.query
+      .mockResolvedValueOnce([[{ password_hash: hashReal }]])
+      .mockResolvedValueOnce([{}]); // UPDATE user SET password_hash...
+
+    const res = await request(app)
+      .post('/api/auth/change-password')
+      .set('Authorization', `Bearer ${tokenSesion(7)}`)
+      .send({ currentPassword: 'UVL-a8K2p9', newPassword: 'ContrasenaSegura1' });
+
+    expect(res.status).toBe(200);
+    expect(pool.query).toHaveBeenLastCalledWith(expect.stringContaining('UPDATE user'), [expect.any(String), 7]);
   });
 });

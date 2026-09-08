@@ -4,6 +4,8 @@ const LOGO_PATH = path.join(__dirname, '..', '..', '..', '..', 'frontend', 'src'
 
 function codigoRecuperacionHtml(codigo) {
   return `
+  <meta name="color-scheme" content="light">
+  <meta name="supported-color-schemes" content="light">
   <div style="max-width:480px;margin:0 auto;font-family:Arial,Helvetica,sans-serif;background:#F5F7F9;padding:32px 16px;">
     <div style="background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e5e5e5;">
       <div style="padding:32px 32px 24px;text-align:center;">
@@ -35,7 +37,7 @@ function codigoRecuperacionHtml(codigo) {
 }
 
 function attachmentLogo() {
-  return [{ filename: 'univalleLogo.png', path: LOGO_PATH, cid: 'univalleLogo' }];
+  return [{ filename: 'univalleLogo.png', path: LOGO_PATH, cid: 'univalleLogo', contentDisposition: 'inline' }];
 }
 
 module.exports = { codigoRecuperacionHtml, attachmentLogo };

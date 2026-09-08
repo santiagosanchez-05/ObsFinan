@@ -31,4 +31,16 @@ const resetPasswordSchema = z.object({
   newPassword: passwordSchema,
 });
 
-module.exports = { loginSchema, forgotPasswordSchema, verifyCodeSchema, passwordSchema, resetPasswordSchema };
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, 'Falta la contraseña actual'),
+  newPassword: passwordSchema,
+});
+
+module.exports = {
+  loginSchema,
+  forgotPasswordSchema,
+  verifyCodeSchema,
+  passwordSchema,
+  resetPasswordSchema,
+  changePasswordSchema,
+};

@@ -8,8 +8,8 @@ import ProtectedRoute from './ProtectedRoute';
 // AuthProvider arranca ya logueado desde el primer render, sin depender de
 // un useEffect que corra después (ProtectedRoute decide y redirige en ese
 // primer render, antes de que cualquier efecto posterior llegue a tiempo).
-function loguearComo(role) {
-  localStorage.setItem('bfu_auth', JSON.stringify({ token: 'fake', user: { nombre: 'Test', role } }));
+function loguearComo(role, extra = {}) {
+  localStorage.setItem('bfu_auth', JSON.stringify({ token: 'fake', user: { nombre: 'Test', role, ...extra } }));
 }
 
 function Rutas({ allow }) {
@@ -18,16 +18,19 @@ function Rutas({ allow }) {
       <Route element={<ProtectedRoute allow={allow} />}>
         <Route path="/superadmin/usuarios" element={<div>Contenido protegido</div>} />
       </Route>
+      <Route element={<ProtectedRoute />}>
+        <Route path="/cambiar-contrasena-obligatorio" element={<div>Cambiar contraseña obligatorio</div>} />
+      </Route>
       <Route path="/login" element={<div>Pantalla Login</div>} />
       <Route path="/eventos" element={<div>Home de Admin/Cliente</div>} />
     </Routes>
   );
 }
 
-function renderRutas({ allow }) {
+function renderRutas({ allow, entry = '/superadmin/usuarios' }) {
   render(
     <AuthProvider>
-      <MemoryRouter initialEntries={['/superadmin/usuarios']}>
+      <MemoryRouter initialEntries={[entry]}>
         <Rutas allow={allow} />
       </MemoryRouter>
     </AuthProvider>,
@@ -58,5 +61,17 @@ describe('ProtectedRoute', () => {
     loguearComo(ROLES.CLIENTE);
     renderRutas({});
     expect(screen.getByText('Contenido protegido')).toBeInTheDocument();
+  });
+
+  it('con debeCambiarPassword, redirige a /cambiar-contrasena-obligatorio aunque el rol esté permitido', () => {
+    loguearComo(ROLES.SUPERADMIN, { debeCambiarPassword: true });
+    renderRutas({ allow: [ROLES.SUPERADMIN] });
+    expect(screen.getByText('Cambiar contraseña obligatorio')).toBeInTheDocument();
+  });
+
+  it('con debeCambiarPassword, esa misma pantalla NO redirige en bucle', () => {
+    loguearComo(ROLES.SUPERADMIN, { debeCambiarPassword: true });
+    renderRutas({ allow: [ROLES.SUPERADMIN], entry: '/cambiar-contrasena-obligatorio' });
+    expect(screen.getByText('Cambiar contraseña obligatorio')).toBeInTheDocument();
   });
 });

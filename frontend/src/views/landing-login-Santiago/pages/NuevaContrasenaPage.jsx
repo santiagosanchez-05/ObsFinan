@@ -111,6 +111,7 @@ export default function NuevaContrasenaPage() {
                     {verNueva ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
+                {errors.newPassword && <p className="mt-1 text-xs text-red-600">{errors.newPassword.message}</p>}
               </div>
 
               <div>

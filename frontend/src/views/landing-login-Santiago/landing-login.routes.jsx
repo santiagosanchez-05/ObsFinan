@@ -3,7 +3,9 @@ import LoginPage from './pages/LoginPage';
 import OlvideMiContrasenaPage from './pages/OlvideMiContrasenaPage';
 import VerificarCodigoPage from './pages/VerificarCodigoPage';
 import NuevaContrasenaPage from './pages/NuevaContrasenaPage';
+import CambiarContrasenaObligatoriaPage from './pages/CambiarContrasenaObligatoriaPage';
 import PublicLayout from '../../shared/PublicLayout';
+import ProtectedRoute from '../../shared/ProtectedRoute';
 
 // Cada pantalla nueva de este módulo se agrega ACÁ, en este array — nunca
 // en app/router.jsx.
@@ -23,6 +25,14 @@ const landingLoginRoutes = [
   { path: '/olvide-mi-contrasena', element: <OlvideMiContrasenaPage /> },
   { path: '/verificar-codigo', element: <VerificarCodigoPage /> },
   { path: '/nueva-contrasena', element: <NuevaContrasenaPage /> },
+  // Requiere sesión (cualquier rol) pero SIN Layout/nav a propósito — si
+  // debeCambiarPassword es true, ProtectedRoute redirige acá desde
+  // CUALQUIER ruta protegida, así que no tiene sentido mostrar links de
+  // navegación que solo rebotarían de vuelta.
+  {
+    element: <ProtectedRoute />,
+    children: [{ path: '/cambiar-contrasena-obligatorio', element: <CambiarContrasenaObligatoriaPage /> }],
+  },
 ];
 
 export default landingLoginRoutes;

@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const pool = require('../../config/db');
 const transporter = require('../../config/mailer');
 const { codigoRecuperacionHtml, attachmentLogo } = require('./emailTemplates');
+const { FORMATO_TEMPORAL_REGEX } = require('../../config/passwordTemporal');
 
 const TOKEN_EXPIRA_EN = '8h';
 const CODIGO_VALIDO_POR_MINUTOS = 15;
@@ -40,6 +41,12 @@ async function login(email, password) {
     { expiresIn: TOKEN_EXPIRA_EN },
   );
 
+  // No guardamos ningún flag en la base para esto — la propia contraseña que
+  // acaba de escribir YA nos dice si es una temporal (formato UVL-XXXXXX),
+  // porque ese formato está prohibido para cualquier contraseña elegida por
+  // el usuario (ver passwordSchema). Si coincide, es porque todavía no la cambió.
+  const debeCambiarPassword = FORMATO_TEMPORAL_REGEX.test(password);
+
   return {
     token,
     user: {
@@ -48,6 +55,7 @@ async function login(email, password) {
       correo: usuario.email,
       role: usuario.role_name,
       campusId: usuario.campus_id,
+      debeCambiarPassword,
     },
   };
 }
@@ -137,10 +145,30 @@ async function restablecerContrasena(resetToken, newPassword) {
   await pool.query('UPDATE user SET password_hash = ? WHERE user_id = ?', [passwordHash, payload.userId]);
 }
 
+// Cambio de contraseña con sesión activa (primer ingreso con la temporal, o
+// "Editar mi perfil" más adelante) — a diferencia de restablecerContrasena,
+// acá SÍ hay que probar que la persona conoce su contraseña actual.
+async function cambiarPasswordPropia(userId, currentPassword, newPassword) {
+  const [rows] = await pool.query('SELECT password_hash FROM user WHERE user_id = ? AND status = 1', [userId]);
+  const usuario = rows[0];
+  if (!usuario) {
+    throw new Error('USUARIO_NO_ENCONTRADO');
+  }
+
+  const coincide = await bcrypt.compare(currentPassword, usuario.password_hash);
+  if (!coincide) {
+    throw new Error('CONTRASENA_ACTUAL_INCORRECTA');
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, 10);
+  await pool.query('UPDATE user SET password_hash = ? WHERE user_id = ?', [passwordHash, userId]);
+}
+
 module.exports = {
   login,
   buscarUsuarioPorCorreo,
   solicitarCodigoRecuperacion,
   verificarCodigo,
   restablecerContrasena,
+  cambiarPasswordPropia,
 };

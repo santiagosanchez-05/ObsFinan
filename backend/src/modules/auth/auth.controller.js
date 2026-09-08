@@ -1,4 +1,10 @@
-const { loginSchema, forgotPasswordSchema, verifyCodeSchema, resetPasswordSchema } = require('./auth.validation');
+const {
+  loginSchema,
+  forgotPasswordSchema,
+  verifyCodeSchema,
+  resetPasswordSchema,
+  changePasswordSchema,
+} = require('./auth.validation');
 const authService = require('./auth.service');
 
 async function postLogin(req, res) {
@@ -81,4 +87,27 @@ async function postResetPassword(req, res) {
   }
 }
 
-module.exports = { postLogin, postForgotPassword, postVerifyCode, postResetPassword };
+async function postChangePassword(req, res) {
+  const parsed = changePasswordSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Datos inválidos', detalles: parsed.error.flatten() });
+  }
+
+  const { currentPassword, newPassword } = parsed.data;
+
+  try {
+    await authService.cambiarPasswordPropia(req.user.userId, currentPassword, newPassword);
+    return res.json({ message: 'Contraseña actualizada correctamente' });
+  } catch (err) {
+    if (err.message === 'CONTRASENA_ACTUAL_INCORRECTA') {
+      return res.status(401).json({ error: 'La contraseña actual no es correcta' });
+    }
+    if (err.message === 'USUARIO_NO_ENCONTRADO') {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+    console.error('Error al cambiar contraseña:', err);
+    return res.status(500).json({ error: 'Error interno del servidor' });
+  }
+}
+
+module.exports = { postLogin, postForgotPassword, postVerifyCode, postResetPassword, postChangePassword };

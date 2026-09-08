@@ -34,8 +34,22 @@ export function AuthProvider({ children }) {
     setSession(null);
   };
 
+  // Actualiza campos del usuario en la sesión activa sin volver a loguear —
+  // lo usa, por ejemplo, "cambiar contraseña obligatorio" para apagar
+  // debeCambiarPassword apenas se confirma el cambio.
+  const actualizarUsuario = (cambios) => {
+    setSession((actual) => {
+      if (!actual) return actual;
+      const data = { ...actual, user: { ...actual.user, ...cambios } };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      return data;
+    });
+  };
+
   return (
-    <AuthContext.Provider value={{ user: session?.user ?? null, token: session?.token ?? null, login, logout }}>
+    <AuthContext.Provider
+      value={{ user: session?.user ?? null, token: session?.token ?? null, login, logout, actualizarUsuario }}
+    >
       {children}
     </AuthContext.Provider>
   );

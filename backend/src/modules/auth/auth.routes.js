@@ -1,7 +1,8 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const router = express.Router();
-const { postLogin, postForgotPassword, postVerifyCode, postResetPassword } = require('./auth.controller');
+const { postLogin, postForgotPassword, postVerifyCode, postResetPassword, postChangePassword } = require('./auth.controller');
+const { requireAuth } = require('../../middlewares/auth.middleware');
 
 // TODO(Santiago): volver a windowMs: 15 * 60 * 1000 antes de entregar —
 // bajado a 1 minuto temporalmente para poder probar seguido durante el desarrollo.
@@ -39,5 +40,6 @@ router.post('/login', loginLimiter, postLogin);
 router.post('/forgot-password', forgotPasswordLimiter, postForgotPassword);
 router.post('/verify-code', verifyCodeLimiter, postVerifyCode);
 router.post('/reset-password', postResetPassword);
+router.post('/change-password', requireAuth, postChangePassword); // requiere sesión activa, no correo/código
 
 module.exports = router;
