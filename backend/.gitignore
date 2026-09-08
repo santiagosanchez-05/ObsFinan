@@ -16,6 +16,10 @@ coverage
 # Build
 dist
 
+# Archivos subidos por usuarios (Excel de ICA/SPE, etc.) — se generan en
+# runtime, no van al repo.
+uploads
+
 # Editor / sistema operativo
 .vscode/*
 !.vscode/extensions.json
