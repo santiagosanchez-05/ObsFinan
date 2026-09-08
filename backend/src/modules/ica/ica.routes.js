@@ -14,6 +14,6 @@ const upload = multer({
   },
 });
 
-router.post('/upload', requireAuth, requireRole('Admin', 'Superadmin'), upload.single('archivo'), postUploadIca);
+router.post('/upload', requireAuth, requireRole('admin', 'superadmin'), upload.single('archivo'), postUploadIca);
 
 module.exports = router;

@@ -12,7 +12,6 @@ async function postUploadIca(req, res) {
   }
   const { quarter, year } = parsedMeta.data;
 
-  // Sede tomada del token, no del formulario.
   const campusId = req.user.campusId;
   if (!campusId) {
     return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
@@ -46,6 +45,7 @@ async function postUploadIca(req, res) {
       year,
       userId: req.user.userId,
       nombreArchivo: req.file.originalname,
+      buffer: req.file.buffer,
     });
 
     return res.status(201).json({
@@ -53,8 +53,15 @@ async function postUploadIca(req, res) {
       dataLoadId: resultado.dataLoadId,
       filasInsertadas: resultado.totalInsertados,
       filasConError: errores,
+      comunasNoEncontradas: resultado.noEncontradas,
     });
   } catch (err) {
+    if (err.message === 'COMUNIDADES_NO_ENCONTRADAS') {
+      return res.status(400).json({ error: 'Ninguna comuna del archivo coincide con las de tu sede', comunas: err.detalle });
+    }
+    if (err.message === 'ARCHIVO_NO_GUARDADO') {
+      return res.status(500).json({ error: 'No se pudo guardar el archivo en el servidor. Intentá de nuevo.' });
+    }
     console.error('Error al registrar carga ICA:', err);
     return res.status(500).json({ error: 'Error interno del servidor' });
   }

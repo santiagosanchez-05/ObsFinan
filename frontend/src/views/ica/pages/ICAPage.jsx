@@ -1,3 +1,6 @@
+import { useState } from 'react';
+import { useAuth, ROLES } from '../../../shared/AuthContext';
+import RoleGate from '../../../shared/RoleGate';
 import {
   AlertTriangle,
   ArrowDownRight,
@@ -9,7 +12,8 @@ import {
   Info,
   Medal,
   Plus,
-  Users,
+  Users, Upload, X, Loader2, CheckCircle2, AlertCircle
+
 } from 'lucide-react';
 import {
   Bar,
@@ -66,6 +70,47 @@ const chartTooltip = {
 };
 
 export default function ICAPage() {
+  const [mostrarUpload, setMostrarUpload] = useState(false);
+  const [archivo, setArchivo] = useState(null);
+  const [quarter, setQuarter] = useState('');
+  const [year, setYear] = useState(new Date().getFullYear());
+  const [estado, setEstado] = useState({ cargando: false, resultado: null, error: null });
+  const { user, token } = useAuth();
+
+  async function handleConfirmarUpload() {
+    if (!archivo || !quarter) {
+      setEstado({ cargando: false, resultado: null, error: 'Completá trimestre y archivo.' });
+      return;
+    }
+    setEstado({ cargando: true, resultado: null, error: null });
+
+    const formData = new FormData();
+    formData.append('archivo', archivo);
+    formData.append('quarter', quarter);
+    formData.append('year', year);
+
+    try {
+      const res = await fetch('/api/ica/upload', {
+        method: 'POST',
+       headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setEstado({ cargando: false, resultado: null, error: data.error || 'No se pudo subir el archivo' });
+        return;
+      }
+      setEstado({ cargando: false, resultado: data, error: null });
+    } catch {
+      setEstado({ cargando: false, resultado: null, error: 'Error de conexión con el servidor' });
+    }
+  }
+
+  function handleCancelar() {
+    setMostrarUpload(false);
+    setArchivo(null);
+    setEstado({ cargando: false, resultado: null, error: null });
+  }
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-[#f4f6f8] px-4 py-5 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-[1440px]">
@@ -77,7 +122,14 @@ export default function ICAPage() {
           </div>
           <div className="flex flex-wrap gap-2">
             <button className="inline-flex items-center gap-2 rounded-lg border border-[#dce1e4] bg-white px-3 py-2 text-xs font-semibold text-[#59615e] shadow-sm transition hover:border-[#a00046] hover:text-[#a00046]"><History size={14} /> Historial de registros</button>
-            <button className="inline-flex items-center gap-2 rounded-lg border border-[#d6a4b7] bg-white px-3 py-2 text-xs font-semibold text-[#a00046] transition hover:bg-[#fff3f7]"><Download size={14} /> Subir dataset</button>
+            <RoleGate allow={[ROLES.ADMIN, ROLES.SUPERADMIN]}>
+              <button
+                onClick={() => setMostrarUpload((v) => !v)}
+                className="inline-flex items-center gap-2 rounded-lg border border-[#d6a4b7] bg-white px-3 py-2 text-xs font-semibold text-[#a00046] transition hover:bg-[#fff3f7]"
+              >
+                <Upload size={14} /> Subir dataset
+              </button>
+            </RoleGate>
             <button className="inline-flex items-center gap-2 rounded-lg bg-[#a00046] px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#820039]"><Plus size={14} /> Registrar registro</button>
           </div>
         </div>
@@ -91,7 +143,54 @@ export default function ICAPage() {
             <button className="rounded-lg bg-[#252927] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#a00046]">Aplicar filtros</button>
           </div>
         </section>
+        {mostrarUpload && (
+          <section className="mb-5 rounded-xl border border-[#e2e6e8] bg-white p-4 shadow-sm">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-bold text-[#252927]">Subir dataset ICA</h2>
+              <button onClick={handleCancelar} className="text-[#8a9290] hover:text-[#a00046]"><X size={16} /></button>
+            </div>
 
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#8a9290]">Sede</span>
+                <p className="rounded-lg border border-[#dfe4e5] bg-[#f4f6f8] px-3 py-2 text-xs text-[#414845]">
+                  {user?.campusName ?? 'Cochabamba'}
+                </p>
+              </div>
+              <label className="block">
+                <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#8a9290]">Trimestre</span>
+                <select value={quarter} onChange={(e) => setQuarter(e.target.value)} className="w-full rounded-lg border border-[#dfe4e5] px-3 py-2 text-xs">
+                  <option value="">Seleccioná</option>
+                  {[1, 2, 3, 4].map((q) => <option key={q} value={q}>Q{q}</option>)}
+                </select>
+              </label>
+            </div>
+
+            <div className="mt-3">
+              <input type="file" accept=".xlsx,.xls" onChange={(e) => setArchivo(e.target.files[0] || null)} className="block w-full text-xs" />
+              <p className="mt-1 text-[10px] text-[#8a9290]">Formato esperado: Comuna, Conocimiento, Uso, Educación, Previsión, ICA Hombres, ICA Mujeres.</p>
+            </div>
+
+            {estado.error && <p className="mt-2 flex items-center gap-1 text-xs text-[#a00046]"><AlertCircle size={13} /> {estado.error}</p>}
+            {estado.resultado && (
+              <p className="mt-2 flex items-center gap-1 text-xs text-[#3c8d66]">
+                <CheckCircle2 size={13} /> {estado.resultado.filasInsertadas} filas cargadas correctamente.
+                {estado.resultado.filasConError?.length > 0 && ` ${estado.resultado.filasConError.length} filas con error, revisá el detalle.`}
+              </p>
+            )}
+
+            <div className="mt-4 flex justify-end gap-2">
+              <button onClick={handleCancelar} className="rounded-lg border border-[#dce1e4] px-4 py-2 text-xs font-semibold text-[#59615e]">Cancelar</button>
+              <button
+                onClick={handleConfirmarUpload}
+                disabled={estado.cargando}
+                className="inline-flex items-center gap-2 rounded-lg bg-[#a00046] px-4 py-2 text-xs font-semibold text-white hover:bg-[#820039] disabled:opacity-50"
+              >
+                {estado.cargando ? <Loader2 size={13} className="animate-spin" /> : null} Confirmar
+              </button>
+            </div>
+          </section>
+        )}
         <section className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <MetricCard label="ICA general" value="62.8" detail="Puntaje ponderado nacional" trend="+2.4%" icon={<BarChart3 size={22} />} />
           <MetricCard label="Mejor comuna" value="Adela Zamudio" detail="ICA promedio" accent="67.5 pts" icon={<Medal size={22} />} />
