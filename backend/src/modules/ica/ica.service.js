@@ -4,7 +4,6 @@ const xlsx = require('xlsx');
 const pool = require('../../config/db');
 const { filaIcaSchema, ENCABEZADOS_ESPERADOS } = require('./ica.validation');
 
-// TODO(equipo): confirmar los valores reales de estos tinyint.
 // module: 1=ICA, 2=SPE; source_type: 1=individual, 2=archivo
 const MODULE_ICA = 1;
 const SOURCE_TYPE_ARCHIVO = 2;
@@ -42,15 +41,33 @@ function parsearArchivoIca(buffer) {
       break;
     }
 
+    const conocimiento = aNumero(fila[1]);
+    const uso = aNumero(fila[2]);
+    const educacion = aNumero(fila[3]);
+    const prevision = aNumero(fila[4]);
+    const icaHombres = aNumero(fila[8]);
+    const icaMujeres = aNumero(fila[9]);
+
+    // Después de la tabla de datos, la hoja sigue con párrafos de texto (hallazgos,
+    // explicación de la tabla) pegados en la misma columna A. Esas filas tienen
+    // "comuna" con texto pero NINGÚN valor numérico — es la señal real de que la
+    // tabla de datos terminó, más confiable que solo mirar si la comuna está vacía.
+    const sinNingunNumero = [conocimiento, uso, educacion, prevision, icaHombres, icaMujeres].every(
+      (valor) => valor === null,
+    );
+    if (sinNingunNumero) {
+      break;
+    }
+
     datos.push({
       filaExcel: i + 1,
       comuna: String(comuna).trim(),
-      conocimiento: aNumero(fila[1]),
-      uso: aNumero(fila[2]),
-      educacion: aNumero(fila[3]),
-      prevision: aNumero(fila[4]),
-      icaHombres: aNumero(fila[8]),
-      icaMujeres: aNumero(fila[9]),
+      conocimiento,
+      uso,
+      educacion,
+      prevision,
+      icaHombres,
+      icaMujeres,
     });
   }
 
@@ -99,14 +116,31 @@ async function resolverComunidades(filasValidas, campusId) {
   return { filasConId, noEncontradas };
 }
 
-// Escribe el archivo a disco usando el data_load_id como nombre — así nunca hay
-// colisión de nombres, sin importar cómo se llamaba el archivo original.
+// Calcula dónde debe vivir el archivo físico de una carga: {data_load_id}.{extensión}.
+// Se separa de guardarArchivoEnDisco porque también la necesita borrarArchivoSiExiste.
+function rutaArchivo(dataLoadId, nombreOriginal) {
+  const extension = path.extname(nombreOriginal) || '.xlsx';
+  return path.join(UPLOAD_DIR, `${dataLoadId}${extension}`);
+}
+
+// Escribe el archivo a disco usando el data_load_id como nombre así no hay colisión de nombres
+
 function guardarArchivoEnDisco(buffer, dataLoadId, nombreOriginal) {
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-  const extension = path.extname(nombreOriginal) || '.xlsx';
-  const rutaDestino = path.join(UPLOAD_DIR, `${dataLoadId}${extension}`);
-  fs.writeFileSync(rutaDestino, buffer);
-  return rutaDestino;
+  fs.writeFileSync(rutaArchivo(dataLoadId, nombreOriginal), buffer);
+}
+
+// Si algo falla después de haber escrito el archivo,
+// lo borramos para no dejar un .xlsx huérfano sin su data_load correspondiente
+function borrarArchivoSiExiste(dataLoadId, nombreOriginal) {
+  try {
+    const ruta = rutaArchivo(dataLoadId, nombreOriginal);
+    if (fs.existsSync(ruta)) {
+      fs.unlinkSync(ruta);
+    }
+  } catch (err) {
+    console.error('No se pudo limpiar el archivo huérfano:', err);
+  }
 }
 
 async function registrarCargaPorArchivo({ filasValidas, campusId, quarter, year, userId, nombreArchivo, buffer }) {
@@ -131,6 +165,15 @@ async function registrarCargaPorArchivo({ filasValidas, campusId, quarter, year,
     );
     dataLoadId = resultCarga.insertId;
 
+    
+    // Si falla el guarado de archivo se hace rollback de los datos.
+    try {
+      guardarArchivoEnDisco(buffer, dataLoadId, nombreArchivo);
+    } catch (errArchivo) {
+      console.error('No se pudo guardar el archivo en disco:', errArchivo);
+      throw new Error('ARCHIVO_NO_GUARDADO');
+    }
+
     for (const fila of filasConId) {
       await conexion.query(
         `INSERT INTO ica_measurement
@@ -141,24 +184,17 @@ async function registrarCargaPorArchivo({ filasValidas, campusId, quarter, year,
     }
 
     await conexion.commit();
+    return { dataLoadId, totalInsertados: filasConId.length, noEncontradas };
   } catch (err) {
     await conexion.rollback();
+    // Si el archivo ya se había escrito y falló algo después lo borramos para no dejarlo huérfano.
+    if (dataLoadId && err.message !== 'ARCHIVO_NO_GUARDADO') {
+      borrarArchivoSiExiste(dataLoadId, nombreArchivo);
+    }
     throw err;
   } finally {
     conexion.release();
   }
-
-  // El archivo se guarda recién después del commit: si esto falla, la carga
-  // de datos ya quedó bien en la BD, solo no se podrá descargar el Excel original.
-  let archivoGuardado = true;
-  try {
-    guardarArchivoEnDisco(buffer, dataLoadId, nombreArchivo);
-  } catch (err) {
-    console.error('No se pudo guardar el archivo en disco:', err);
-    archivoGuardado = false;
-  }
-
-  return { dataLoadId, totalInsertados: filasConId.length, noEncontradas, archivoGuardado };
 }
 
 module.exports = { parsearArchivoIca, validarFilas, registrarCargaPorArchivo };
