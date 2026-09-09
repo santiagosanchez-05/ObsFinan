@@ -1,6 +1,123 @@
-import PlaceholderPage from '../../../shared/PlaceholderPage';
+import React from "react";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 
-// TODO(Kevin Alanes): reemplazar por el diseño real de la 404 (US25).
+const COLORS = {
+  bg: "#f5f7f9",
+  white: "#ffffff",
+  primary: "#9e0044",
+  primarySoft: "#fef2f2",
+  text: "#1a1a1a",
+  textMuted: "#64748b",
+  border: "#e5e7eb",
+};
+
+const FONT = "'Sora', system-ui, -apple-system, sans-serif";
+
 export default function NotFoundPage() {
-  return <PlaceholderPage titulo="Página no encontrada (404)" />;
+  const navigate = useNavigate();
+
+  const volver = () => {
+    navigate("/");
+  };
+
+  return (
+    <div
+      style={{
+        minHeight: "calc(100vh - 72px)",
+        background: COLORS.bg,
+        fontFamily: FONT,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "32px",
+      }}
+    >
+      <div
+        style={{
+          width: "100%",
+          maxWidth: "620px",
+          background: COLORS.white,
+          border: `1px solid ${COLORS.border}`,
+          borderRadius: "20px",
+          padding: "56px 40px",
+          textAlign: "center",
+          boxSizing: "border-box",
+        }}
+      >
+        <div
+          style={{
+            width: "84px",
+            height: "84px",
+            borderRadius: "50%",
+            background: COLORS.primarySoft,
+            color: COLORS.primary,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            margin: "0 auto 24px",
+            fontSize: "28px",
+            fontWeight: 700,
+          }}
+        >
+          404
+        </div>
+
+        <h1
+          style={{
+            margin: "0 0 12px",
+            color: COLORS.text,
+            fontSize: "30px",
+            lineHeight: 1.2,
+            fontWeight: 700,
+          }}
+        >
+          Página no encontrada
+        </h1>
+
+        <p
+          style={{
+            margin: "0 auto 32px",
+            maxWidth: "460px",
+            color: COLORS.textMuted,
+            fontSize: "15px",
+            lineHeight: 1.7,
+          }}
+        >
+          La página que estás buscando no existe o ya no está disponible.
+        </p>
+
+        <button
+          type="button"
+          onClick={volver}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "8px",
+            minHeight: "44px",
+            padding: "0 20px",
+            border: "none",
+            borderRadius: "10px",
+            background: COLORS.primary,
+            color: COLORS.white,
+            fontFamily: FONT,
+            fontSize: "14px",
+            fontWeight: 600,
+            cursor: "pointer",
+            transition: "opacity 0.2s ease",
+          }}
+          onMouseEnter={(event) => {
+            event.currentTarget.style.opacity = "0.9";
+          }}
+          onMouseLeave={(event) => {
+            event.currentTarget.style.opacity = "1";
+          }}
+        >
+          <ArrowLeft size={17} />
+          Volver al inicio
+        </button>
+      </div>
+    </div>
+  );
 }
