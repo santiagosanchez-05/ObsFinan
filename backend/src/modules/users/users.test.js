@@ -90,6 +90,96 @@ describe('GET /api/users', () => {
     const res = await request(app).get('/api/users').set('Authorization', `Bearer ${token('superadmin')}`);
     expect(res.status).toBe(500);
   });
+
+  // US9 — búsqueda y filtros por query param.
+  function filasParaFiltros() {
+    return [[
+      { user_id: 1, first_name: 'Santiago', paternal_last_name: 'Sanchez', maternal_last_name: null, email: 'santi@test.com', status: 1, campus_id: 1, campus_name: 'Cochabamba', role_name: 'superadmin' },
+      { user_id: 2, first_name: 'Ana', paternal_last_name: 'Admin', maternal_last_name: 'Lopez', email: 'ana@test.com', status: 1, campus_id: 1, campus_name: 'Cochabamba', role_name: 'admin' },
+      { user_id: 3, first_name: 'Carlos', paternal_last_name: 'Cliente', maternal_last_name: null, email: 'carlos@test.com', status: 0, campus_id: 2, campus_name: 'La Paz', role_name: 'cliente' },
+    ]];
+  }
+
+  it('con un rol inválido en el query, responde 400', async () => {
+    const res = await request(app)
+      .get('/api/users?rol=inventado')
+      .set('Authorization', `Bearer ${token('superadmin')}`);
+    expect(res.status).toBe(400);
+  });
+
+  it('filtra por texto (q) sobre nombre, apellidos o sede', async () => {
+    pool.query.mockResolvedValueOnce(filasParaFiltros()).mockResolvedValueOnce([[{ sedesActivas: 2 }]]).mockResolvedValueOnce([[]]);
+
+    const res = await request(app)
+      .get('/api/users?q=ana')
+      .set('Authorization', `Bearer ${token('superadmin')}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.usuarios).toHaveLength(1);
+    expect(res.body.usuarios[0].nombre).toBe('Ana');
+  });
+
+  it('filtra por rol exacto', async () => {
+    pool.query.mockResolvedValueOnce(filasParaFiltros()).mockResolvedValueOnce([[{ sedesActivas: 2 }]]).mockResolvedValueOnce([[]]);
+
+    const res = await request(app)
+      .get('/api/users?rol=cliente')
+      .set('Authorization', `Bearer ${token('superadmin')}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.usuarios).toHaveLength(1);
+    expect(res.body.usuarios[0].nombre).toBe('Carlos');
+  });
+
+  it('filtra por sede (campusId)', async () => {
+    pool.query.mockResolvedValueOnce(filasParaFiltros()).mockResolvedValueOnce([[{ sedesActivas: 2 }]]).mockResolvedValueOnce([[]]);
+
+    const res = await request(app)
+      .get('/api/users?campusId=1')
+      .set('Authorization', `Bearer ${token('superadmin')}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.usuarios).toHaveLength(2);
+    expect(res.body.usuarios.map((u) => u.nombre).sort()).toEqual(['Ana', 'Santiago']);
+  });
+
+  it('combina rol y sede a la vez', async () => {
+    pool.query.mockResolvedValueOnce(filasParaFiltros()).mockResolvedValueOnce([[{ sedesActivas: 2 }]]).mockResolvedValueOnce([[]]);
+
+    const res = await request(app)
+      .get('/api/users?rol=superadmin&campusId=2')
+      .set('Authorization', `Bearer ${token('superadmin')}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.usuarios).toHaveLength(0); // nadie es superadmin en La Paz
+  });
+
+  it('las stats y los gráficos NO cambian aunque se filtre la tabla', async () => {
+    pool.query.mockResolvedValueOnce(filasParaFiltros()).mockResolvedValueOnce([[{ sedesActivas: 2 }]]).mockResolvedValueOnce([[]]);
+
+    const res = await request(app)
+      .get('/api/users?rol=cliente')
+      .set('Authorization', `Bearer ${token('superadmin')}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.stats.totalUsuarios).toBe(3); // los 3, no solo el filtrado
+    expect(res.body.porRol).toEqual(
+      expect.arrayContaining([
+        { rol: 'superadmin', total: 1 },
+        { rol: 'admin', total: 1 },
+        { rol: 'cliente', total: 1 },
+      ]),
+    );
+  });
+
+  it('sin filtros, devuelve la lista completa (comportamiento igual que antes)', async () => {
+    pool.query.mockResolvedValueOnce(filasParaFiltros()).mockResolvedValueOnce([[{ sedesActivas: 2 }]]).mockResolvedValueOnce([[]]);
+
+    const res = await request(app).get('/api/users').set('Authorization', `Bearer ${token('superadmin')}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.usuarios).toHaveLength(3);
+  });
 });
 
 describe('GET /api/users/:id', () => {
@@ -405,5 +495,274 @@ describe('POST /api/users', () => {
 
     expect(res.status).toBe(201);
     expect(pool.query).toHaveBeenCalledTimes(1); // no se agregó el chequeo de admin
+  });
+});
+
+describe('PATCH /api/users/:id', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  function cuerpo(overrides = {}) {
+    return { rol: 'admin', campusId: 1, activo: true, ...overrides };
+  }
+
+  function usuarioDetalleMock() {
+    return [[
+      {
+        user_id: 2, first_name: 'Ana', paternal_last_name: 'Admin', maternal_last_name: null,
+        email: 'ana@test.com', status: 1, created_at: '2026-01-01', updated_at: '2026-02-01',
+        campus_id: 1, role_id: 2, campus_name: 'Cochabamba', role_name: 'admin',
+        editor_first_name: null, editor_last_name: null,
+      },
+    ]];
+  }
+
+  it('sin token, responde 401', async () => {
+    const res = await request(app).patch('/api/users/2').send(cuerpo());
+    expect(res.status).toBe(401);
+  });
+
+  it('con un rol que no es superadmin, responde 403', async () => {
+    const res = await request(app).patch('/api/users/2').set('Authorization', `Bearer ${token('admin')}`).send(cuerpo());
+    expect(res.status).toBe(403);
+  });
+
+  it('con un id que no es un número, responde 400', async () => {
+    const res = await request(app)
+      .patch('/api/users/no-es-un-id')
+      .set('Authorization', `Bearer ${token('superadmin')}`)
+      .send(cuerpo());
+    expect(res.status).toBe(400);
+  });
+
+  it('con datos inválidos (rol no permitido), responde 400', async () => {
+    const res = await request(app)
+      .patch('/api/users/2')
+      .set('Authorization', `Bearer ${token('superadmin')}`)
+      .send(cuerpo({ rol: 'inventado' }));
+    expect(res.status).toBe(400);
+  });
+
+  it('si el usuario no existe, responde 404', async () => {
+    pool.query.mockResolvedValueOnce([[]]); // SELECT user_id ... no encuentra nada
+    const res = await request(app)
+      .patch('/api/users/999')
+      .set('Authorization', `Bearer ${token('superadmin')}`)
+      .send(cuerpo());
+    expect(res.status).toBe(404);
+  });
+
+  it('actualiza rol, sede y estado correctamente', async () => {
+    pool.query
+      .mockResolvedValueOnce([[{ user_id: 2 }]]) // existe
+      .mockResolvedValueOnce([[{ role_id: 2 }]]) // lookup del rol
+      .mockResolvedValueOnce([[{ adminsActivosEnSede: 0 }]]) // chequeo admin-por-sede
+      .mockResolvedValueOnce([{}]) // UPDATE
+      .mockResolvedValueOnce(usuarioDetalleMock()) // obtenerUsuarioPorId: SELECT principal
+      .mockResolvedValueOnce([[{ tieneFoto: 0 }]]); // obtenerUsuarioPorId: tieneFoto
+
+    const res = await request(app)
+      .patch('/api/users/2')
+      .set('Authorization', `Bearer ${token('superadmin')}`)
+      .send(cuerpo());
+
+    expect(res.status).toBe(200);
+    expect(res.body.usuario).toMatchObject({ id: 2, rol: 'admin', sede: 'Cochabamba', activo: true });
+    expect(pool.query).toHaveBeenNthCalledWith(
+      4,
+      expect.stringContaining('UPDATE user'),
+      [2, 1, 1, 1, 2], // role_id, campusId, status(1=activo), editadoPor(userId del token), userId
+    );
+  });
+
+  it('al editarse a sí mismo, el chequeo de "un admin por sede" se excluye a sí mismo', async () => {
+    pool.query
+      .mockResolvedValueOnce([[{ user_id: 1 }]])
+      .mockResolvedValueOnce([[{ role_id: 2 }]])
+      .mockResolvedValueOnce([[{ adminsActivosEnSede: 0 }]])
+      .mockResolvedValueOnce([{}])
+      .mockResolvedValueOnce(usuarioDetalleMock())
+      .mockResolvedValueOnce([[{ tieneFoto: 0 }]]);
+
+    const res = await request(app)
+      .patch('/api/users/1')
+      .set('Authorization', `Bearer ${token('superadmin')}`)
+      .send(cuerpo());
+
+    expect(res.status).toBe(200);
+    expect(pool.query).toHaveBeenNthCalledWith(
+      3,
+      expect.stringContaining('user_id != ?'),
+      [1, 2, 1], // campusId, role_id, userId (excluido)
+    );
+  });
+
+  it('si la sede ya tiene otro admin activo, responde 409', async () => {
+    pool.query
+      .mockResolvedValueOnce([[{ user_id: 2 }]])
+      .mockResolvedValueOnce([[{ role_id: 2 }]])
+      .mockResolvedValueOnce([[{ adminsActivosEnSede: 1 }]]);
+
+    const res = await request(app)
+      .patch('/api/users/2')
+      .set('Authorization', `Bearer ${token('superadmin')}`)
+      .send(cuerpo());
+
+    expect(res.status).toBe(409);
+  });
+
+  it('no revisa el chequeo de admin-por-sede si activo es false', async () => {
+    pool.query
+      .mockResolvedValueOnce([[{ user_id: 2 }]])
+      .mockResolvedValueOnce([[{ role_id: 2 }]])
+      .mockResolvedValueOnce([{}]) // directo al UPDATE, sin chequeo
+      .mockResolvedValueOnce(usuarioDetalleMock())
+      .mockResolvedValueOnce([[{ tieneFoto: 0 }]]);
+
+    const res = await request(app)
+      .patch('/api/users/2')
+      .set('Authorization', `Bearer ${token('superadmin')}`)
+      .send(cuerpo({ activo: false }));
+
+    expect(res.status).toBe(200);
+    expect(pool.query).toHaveBeenCalledTimes(5);
+  });
+});
+
+describe('PATCH /api/users/:id/estado', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  function usuarioDetalleMock() {
+    return [[
+      {
+        user_id: 2, first_name: 'Ana', paternal_last_name: 'Admin', maternal_last_name: null,
+        email: 'ana@test.com', status: 0, created_at: '2026-01-01', updated_at: '2026-02-01',
+        campus_id: 1, role_id: 2, campus_name: 'Cochabamba', role_name: 'admin',
+        editor_first_name: null, editor_last_name: null,
+      },
+    ]];
+  }
+
+  it('sin token, responde 401', async () => {
+    const res = await request(app).patch('/api/users/2/estado').send({ activo: false });
+    expect(res.status).toBe(401);
+  });
+
+  it('con un rol que no es superadmin, responde 403', async () => {
+    const res = await request(app)
+      .patch('/api/users/2/estado')
+      .set('Authorization', `Bearer ${token('admin')}`)
+      .send({ activo: false });
+    expect(res.status).toBe(403);
+  });
+
+  it('un superadmin no puede desactivar su propia cuenta', async () => {
+    // token() firma userId: 1 por defecto
+    const res = await request(app)
+      .patch('/api/users/1/estado')
+      .set('Authorization', `Bearer ${token('superadmin')}`)
+      .send({ activo: false });
+
+    expect(res.status).toBe(400);
+    expect(pool.query).not.toHaveBeenCalled();
+  });
+
+  it('si el usuario no existe, responde 404', async () => {
+    pool.query.mockResolvedValueOnce([[]]);
+    const res = await request(app)
+      .patch('/api/users/999/estado')
+      .set('Authorization', `Bearer ${token('superadmin')}`)
+      .send({ activo: false });
+    expect(res.status).toBe(404);
+  });
+
+  it('da de baja a un usuario (activo: false)', async () => {
+    pool.query
+      .mockResolvedValueOnce([[{ user_id: 2 }]])
+      .mockResolvedValueOnce([{}])
+      .mockResolvedValueOnce(usuarioDetalleMock())
+      .mockResolvedValueOnce([[{ tieneFoto: 0 }]]);
+
+    const res = await request(app)
+      .patch('/api/users/2/estado')
+      .set('Authorization', `Bearer ${token('superadmin')}`)
+      .send({ activo: false });
+
+    expect(res.status).toBe(200);
+    expect(res.body.usuario.activo).toBe(false);
+    expect(pool.query).toHaveBeenNthCalledWith(2, expect.stringContaining('UPDATE user'), [0, 1, 2]);
+  });
+
+  it('reactiva a un usuario (activo: true)', async () => {
+    pool.query
+      .mockResolvedValueOnce([[{ user_id: 2 }]])
+      .mockResolvedValueOnce([{}])
+      .mockResolvedValueOnce(usuarioDetalleMock())
+      .mockResolvedValueOnce([[{ tieneFoto: 0 }]]);
+
+    const res = await request(app)
+      .patch('/api/users/2/estado')
+      .set('Authorization', `Bearer ${token('superadmin')}`)
+      .send({ activo: true });
+
+    expect(res.status).toBe(200);
+    expect(pool.query).toHaveBeenNthCalledWith(2, expect.stringContaining('UPDATE user'), [1, 1, 2]);
+  });
+});
+
+describe('POST /api/users/:id/reset-password', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('sin token, responde 401', async () => {
+    const res = await request(app).post('/api/users/2/reset-password');
+    expect(res.status).toBe(401);
+  });
+
+  it('con un rol que no es superadmin, responde 403', async () => {
+    const res = await request(app).post('/api/users/2/reset-password').set('Authorization', `Bearer ${token('admin')}`);
+    expect(res.status).toBe(403);
+  });
+
+  it('si el usuario no existe (o está inactivo), responde 404', async () => {
+    pool.query.mockResolvedValueOnce([[]]);
+    const res = await request(app)
+      .post('/api/users/999/reset-password')
+      .set('Authorization', `Bearer ${token('superadmin')}`);
+    expect(res.status).toBe(404);
+  });
+
+  it('genera una contraseña temporal UVL-XXXXXX y manda el correo', async () => {
+    pool.query
+      .mockResolvedValueOnce([[{ first_name: 'Ana', email: 'ana@test.com', status: 1 }]])
+      .mockResolvedValueOnce([{}]); // UPDATE password_hash
+
+    const res = await request(app)
+      .post('/api/users/2/reset-password')
+      .set('Authorization', `Bearer ${token('superadmin')}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.passwordTemporal).toMatch(/^UVL-[A-Za-z0-9]{6}$/);
+    expect(res.body.correoEnviado).toBe(true);
+    expect(transporter.sendMail).toHaveBeenCalledWith(expect.objectContaining({ to: 'ana@test.com' }));
+  });
+
+  it('si falla el envío del correo, igual queda restablecida (correoEnviado: false)', async () => {
+    pool.query
+      .mockResolvedValueOnce([[{ first_name: 'Ana', email: 'ana@test.com', status: 1 }]])
+      .mockResolvedValueOnce([{}]);
+    transporter.sendMail.mockRejectedValueOnce(new Error('SMTP caído'));
+
+    const res = await request(app)
+      .post('/api/users/2/reset-password')
+      .set('Authorization', `Bearer ${token('superadmin')}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.correoEnviado).toBe(false);
+    expect(res.body.passwordTemporal).toMatch(/^UVL-[A-Za-z0-9]{6}$/);
   });
 });

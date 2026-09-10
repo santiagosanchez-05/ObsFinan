@@ -2,7 +2,16 @@ const express = require('express');
 const multer = require('multer');
 const router = express.Router();
 const { requireAuth, requireRole } = require('../../middlewares/auth.middleware');
-const { getUsuarios, getUsuarioPorId, getFotoUsuario, getCampuses, postRegistrarUsuario } = require('./users.controller');
+const {
+  getUsuarios,
+  getUsuarioPorId,
+  getFotoUsuario,
+  getCampuses,
+  postRegistrarUsuario,
+  patchEditarUsuario,
+  patchEstadoUsuario,
+  postResetPasswordUsuario,
+} = require('./users.controller');
 
 // En memoria: se procesa y se guarda como BLOB en la tabla `image`, nunca en disco.
 const upload = multer({
@@ -36,6 +45,9 @@ router.get('/', requireAuth, requireRole('superadmin'), getUsuarios);
 router.get('/campuses', requireAuth, requireRole('superadmin'), getCampuses);
 router.post('/', requireAuth, requireRole('superadmin'), subirFoto, postRegistrarUsuario);
 router.get('/:id/photo', requireAuth, requireRole('superadmin'), getFotoUsuario);
+router.patch('/:id/estado', requireAuth, requireRole('superadmin'), patchEstadoUsuario);
+router.post('/:id/reset-password', requireAuth, requireRole('superadmin'), postResetPasswordUsuario);
 router.get('/:id', requireAuth, requireRole('superadmin'), getUsuarioPorId);
+router.patch('/:id', requireAuth, requireRole('superadmin'), patchEditarUsuario);
 
 module.exports = router;

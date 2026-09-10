@@ -103,7 +103,7 @@ export default function UsuarioDetallePage() {
                     estado.usuario.activo ? 'bg-green-100 text-green-700' : 'bg-black/5 text-ink/50'
                   }`}
                 >
-                  {estado.usuario.activo ? 'Activo' : 'Inactivo'}
+                  {estado.usuario.activo ? 'Activo' : 'Bloqueado'}
                 </span>
               </div>
             </div>
@@ -132,7 +132,7 @@ export default function UsuarioDetallePage() {
                     <p className="text-[10px] font-bold uppercase tracking-wider text-ink/50">Estado</p>
                     <p className="mt-1 flex items-center gap-1.5 text-sm text-ink">
                       <span className={`h-2 w-2 rounded-full ${estado.usuario.activo ? 'bg-green-500' : 'bg-ink/30'}`} />
-                      {estado.usuario.activo ? 'Activo' : 'Inactivo'}
+                      {estado.usuario.activo ? 'Activo' : 'Bloqueado'}
                     </p>
                   </div>
 

@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Users, Building2, ShieldCheck, UserX, Search, Eye, Plus } from 'lucide-react';
+import { Users, Building2, ShieldCheck, UserX, UserCheck, Search, Eye, Plus } from 'lucide-react';
 import { PieChart, Pie, Cell, BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAuth } from '../../../shared/AuthContext';
+import ConfirmDialog from '../../../shared/ConfirmDialog';
 
 // Mismos tokens de marca que el resto de la app (frontend/src/index.css) — a
 // mano acá porque los gráficos SVG necesitan el hex, no clases de Tailwind.
@@ -13,41 +14,68 @@ const ROL_LABEL = { superadmin: 'Superadmin', admin: 'Admin', cliente: 'Cliente'
 const COLORES_ROL = [MAROON, MAROON_LIGHT, '#E4A8BB'];
 
 export default function UsuariosPage() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [estado, setEstado] = useState({ cargando: true, datos: null, error: null });
   const [busqueda, setBusqueda] = useState('');
+  const [busquedaDebounced, setBusquedaDebounced] = useState('');
+  const [rolFiltro, setRolFiltro] = useState('');
+  const [sedeFiltro, setSedeFiltro] = useState('');
+  const [campuses, setCampuses] = useState([]);
+  const [usuarioAConfirmar, setUsuarioAConfirmar] = useState(null); // { id, nombre, activo } | null
+  const [cambiandoEstado, setCambiandoEstado] = useState(false);
+
+  // US9 — debounce del texto de búsqueda para no disparar un fetch por cada tecla.
+  useEffect(() => {
+    const id = setTimeout(() => setBusquedaDebounced(busqueda.trim()), 350);
+    return () => clearTimeout(id);
+  }, [busqueda]);
 
   useEffect(() => {
-    let cancelado = false;
-
-    async function cargar() {
-      try {
-        const res = await fetch('/api/users', { headers: { Authorization: `Bearer ${token}` } });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'No se pudo cargar la información');
-        if (!cancelado) setEstado({ cargando: false, datos: data, error: null });
-      } catch {
-        if (!cancelado) setEstado({ cargando: false, datos: null, error: 'No se pudo cargar la información de usuarios.' });
-      }
-    }
-
-    cargar();
-    return () => {
-      cancelado = true;
-    };
+    fetch('/api/users/campuses', { headers: { Authorization: `Bearer ${token}` } })
+      .then((res) => res.json())
+      .then((data) => setCampuses(Array.isArray(data) ? data : []))
+      .catch(() => setCampuses([]));
   }, [token]);
 
-  const usuariosFiltrados = useMemo(() => {
-    const usuarios = estado.datos?.usuarios ?? [];
-    const termino = busqueda.trim().toLowerCase();
-    if (!termino) return usuarios;
-    return usuarios.filter(
-      (u) =>
-        u.nombre.toLowerCase().includes(termino) ||
-        u.apellidos.toLowerCase().includes(termino) ||
-        u.sede.toLowerCase().includes(termino),
-    );
-  }, [estado.datos, busqueda]);
+  async function cargar() {
+    try {
+      const params = new URLSearchParams();
+      if (busquedaDebounced) params.set('q', busquedaDebounced);
+      if (rolFiltro) params.set('rol', rolFiltro);
+      if (sedeFiltro) params.set('campusId', sedeFiltro);
+      const qs = params.toString();
+      const res = await fetch(`/api/users${qs ? `?${qs}` : ''}`, { headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'No se pudo cargar la información');
+      setEstado({ cargando: false, datos: data, error: null });
+    } catch {
+      setEstado({ cargando: false, datos: null, error: 'No se pudo cargar la información de usuarios.' });
+    }
+  }
+
+  // Búsqueda/filtro por servidor (US9): cada cambio de texto (ya debounced),
+  // rol o sede vuelve a pedir el listado. Stats y gráficos los recalcula el
+  // backend siempre sobre el total, así que no se ven afectados.
+  useEffect(() => {
+    cargar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, busquedaDebounced, rolFiltro, sedeFiltro]);
+
+  async function confirmarCambioEstado() {
+    if (!usuarioAConfirmar) return;
+    setCambiandoEstado(true);
+    try {
+      await fetch(`/api/users/${usuarioAConfirmar.id}/estado`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ activo: !usuarioAConfirmar.activo }),
+      });
+      await cargar();
+    } finally {
+      setCambiandoEstado(false);
+      setUsuarioAConfirmar(null);
+    }
+  }
 
   if (estado.cargando) {
     return <main className="flex min-h-[calc(100vh-4rem)] items-center justify-center text-sm text-ink/50">Cargando...</main>;
@@ -57,7 +85,7 @@ export default function UsuariosPage() {
     return <main className="flex min-h-[calc(100vh-4rem)] items-center justify-center text-sm text-maroon">{estado.error}</main>;
   }
 
-  const { stats, porSede, porRol } = estado.datos;
+  const { stats, porSede, porRol, usuarios } = estado.datos;
 
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-surface px-4 py-6 sm:px-6 lg:px-8">
@@ -70,7 +98,7 @@ export default function UsuariosPage() {
           <StatCard icon={<Users size={20} />} label="Total de usuarios" value={stats.totalUsuarios} />
           <StatCard icon={<Building2 size={20} />} label="Sedes activas" value={stats.sedesActivas} />
           <StatCard icon={<ShieldCheck size={20} />} label="Admins activos" value={stats.adminsActivos} />
-          <StatCard icon={<UserX size={20} />} label="Cuentas inactivas" value={stats.cuentasInactivas} />
+          <StatCard icon={<UserX size={20} />} label="Cuentas bloqueadas" value={stats.cuentasInactivas} />
         </section>
 
         <section className="mt-4 grid gap-4 lg:grid-cols-[1.5fr_1fr]">
@@ -128,6 +156,28 @@ export default function UsuariosPage() {
                   className="w-full rounded-lg border border-black/10 py-2 pl-9 pr-3 text-xs focus:border-maroon focus:outline-none"
                 />
               </label>
+              <select
+                value={rolFiltro}
+                onChange={(e) => setRolFiltro(e.target.value)}
+                aria-label="Filtrar por rol"
+                className="rounded-lg border border-black/10 py-2 px-3 text-xs focus:border-maroon focus:outline-none"
+              >
+                <option value="">Todos los roles</option>
+                {Object.entries(ROL_LABEL).map(([valor, etiqueta]) => (
+                  <option key={valor} value={valor}>{etiqueta}</option>
+                ))}
+              </select>
+              <select
+                value={sedeFiltro}
+                onChange={(e) => setSedeFiltro(e.target.value)}
+                aria-label="Filtrar por sede"
+                className="rounded-lg border border-black/10 py-2 px-3 text-xs focus:border-maroon focus:outline-none"
+              >
+                <option value="">Todas las sedes</option>
+                {campuses.map((c) => (
+                  <option key={c.id} value={c.id}>{c.nombre}</option>
+                ))}
+              </select>
               <Link
                 to="/superadmin/usuarios/nuevo"
                 className="inline-flex items-center justify-center gap-1 rounded-lg bg-maroon px-4 py-2 text-xs font-semibold text-white hover:bg-maroon-light"
@@ -147,7 +197,7 @@ export default function UsuariosPage() {
                 </tr>
               </thead>
               <tbody>
-                {usuariosFiltrados.map((u) => (
+                {usuarios.map((u) => (
                   <tr key={u.id} className="border-t border-black/5 text-ink/80 hover:bg-surface">
                     <td className="px-4 py-3 font-medium text-ink">{u.nombre}</td>
                     <td className="px-4 py-3">{u.apellidos}</td>
@@ -160,21 +210,41 @@ export default function UsuariosPage() {
                           u.activo ? 'bg-green-100 text-green-700' : 'bg-black/5 text-ink/50'
                         }`}
                       >
-                        {u.activo ? 'Activo' : 'Inactivo'}
+                        {u.activo ? 'Activo' : 'Bloqueado'}
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <Link
-                        to={`/superadmin/usuarios/${u.id}`}
-                        aria-label={`Ver detalle de ${u.nombre}`}
-                        className="inline-flex items-center gap-1 text-ink/50 hover:text-maroon"
-                      >
-                        <Eye size={15} /> Ver detalle
-                      </Link>
+                      <div className="flex items-center gap-3">
+                        <Link
+                          to={`/superadmin/usuarios/${u.id}`}
+                          aria-label={`Ver detalle de ${u.nombre}`}
+                          className="inline-flex items-center gap-1 text-ink/50 hover:text-maroon"
+                        >
+                          <Eye size={15} /> Ver detalle
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => setUsuarioAConfirmar({ id: u.id, nombre: u.nombre, activo: u.activo })}
+                          disabled={u.id === user?.id}
+                          title={u.id === user?.id ? 'No podés dar de baja tu propia cuenta' : undefined}
+                          aria-label={u.activo ? `Dar de baja a ${u.nombre}` : `Reactivar a ${u.nombre}`}
+                          className="inline-flex items-center gap-1 text-ink/50 hover:text-maroon disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-ink/50"
+                        >
+                          {u.activo ? (
+                            <>
+                              <UserX size={15} /> Dar de baja
+                            </>
+                          ) : (
+                            <>
+                              <UserCheck size={15} /> Reactivar
+                            </>
+                          )}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
-                {usuariosFiltrados.length === 0 && (
+                {usuarios.length === 0 && (
                   <tr>
                     <td colSpan={7} className="px-4 py-8 text-center text-ink/40">
                       No se encontraron usuarios con ese criterio.
@@ -185,10 +255,23 @@ export default function UsuariosPage() {
             </table>
           </div>
           <div className="border-t border-black/5 px-4 py-3 text-[10px] text-ink/40">
-            Mostrando {usuariosFiltrados.length} de {stats.totalUsuarios} usuarios
+            Mostrando {usuarios.length} de {stats.totalUsuarios} usuarios
           </div>
         </section>
       </div>
+
+      <ConfirmDialog
+        open={usuarioAConfirmar !== null}
+        titulo={usuarioAConfirmar?.activo ? 'Dar de baja usuario' : 'Reactivar usuario'}
+        mensaje={
+          usuarioAConfirmar?.activo
+            ? `¿Seguro que querés dar de baja a ${usuarioAConfirmar?.nombre}? Va a quedar bloqueado y no podrá iniciar sesión hasta que lo reactives.`
+            : `¿Reactivar a ${usuarioAConfirmar?.nombre}? Va a poder volver a iniciar sesión.`
+        }
+        textoConfirmar={cambiandoEstado ? 'Guardando...' : usuarioAConfirmar?.activo ? 'Dar de baja' : 'Reactivar'}
+        onConfirm={confirmarCambioEstado}
+        onCancel={() => setUsuarioAConfirmar(null)}
+      />
     </main>
   );
 }

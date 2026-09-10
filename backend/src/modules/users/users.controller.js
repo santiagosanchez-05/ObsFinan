@@ -1,9 +1,19 @@
 const usersService = require('./users.service');
-const { registrarUsuarioSchema } = require('./users.validation');
+const {
+  registrarUsuarioSchema,
+  editarUsuarioSchema,
+  cambiarEstadoSchema,
+  listarUsuariosQuerySchema,
+} = require('./users.validation');
 
 async function getUsuarios(req, res) {
+  const parsed = listarUsuariosQuerySchema.safeParse(req.query);
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Filtros inválidos', detalles: parsed.error.flatten() });
+  }
+
   try {
-    const data = await usersService.obtenerDashboardUsuarios();
+    const data = await usersService.obtenerDashboardUsuarios(parsed.data);
     return res.json(data);
   } catch (err) {
     console.error('Error al obtener usuarios:', err);
@@ -93,4 +103,90 @@ async function postRegistrarUsuario(req, res) {
   }
 }
 
-module.exports = { getUsuarios, getUsuarioPorId, getFotoUsuario, getCampuses, postRegistrarUsuario };
+async function patchEditarUsuario(req, res) {
+  const userId = Number(req.params.id);
+  if (!Number.isInteger(userId)) {
+    return res.status(400).json({ error: 'ID inválido' });
+  }
+
+  const parsed = editarUsuarioSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Datos inválidos', detalles: parsed.error.flatten() });
+  }
+
+  try {
+    const usuario = await usersService.editarUsuario(userId, parsed.data, req.user.userId);
+    return res.json({ message: 'Usuario actualizado correctamente', usuario });
+  } catch (err) {
+    if (err.message === 'USUARIO_NO_ENCONTRADO') {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+    if (err.message === 'ROL_INVALIDO') {
+      return res.status(400).json({ error: 'Rol inválido' });
+    }
+    if (err.message === 'SEDE_YA_TIENE_ADMIN') {
+      return res.status(409).json({ error: 'Esta sede ya tiene un administrador activo' });
+    }
+    console.error('Error al editar usuario:', err);
+    return res.status(500).json({ error: 'Error interno del servidor' });
+  }
+}
+
+async function patchEstadoUsuario(req, res) {
+  const userId = Number(req.params.id);
+  if (!Number.isInteger(userId)) {
+    return res.status(400).json({ error: 'ID inválido' });
+  }
+
+  const parsed = cambiarEstadoSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Datos inválidos', detalles: parsed.error.flatten() });
+  }
+
+  try {
+    const usuario = await usersService.cambiarEstadoUsuario(userId, parsed.data.activo, req.user.userId);
+    return res.json({ message: 'Estado actualizado correctamente', usuario });
+  } catch (err) {
+    if (err.message === 'USUARIO_NO_ENCONTRADO') {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+    if (err.message === 'NO_PUEDES_DESACTIVARTE') {
+      return res.status(400).json({ error: 'No podés dar de baja tu propia cuenta' });
+    }
+    console.error('Error al cambiar el estado del usuario:', err);
+    return res.status(500).json({ error: 'Error interno del servidor' });
+  }
+}
+
+async function postResetPasswordUsuario(req, res) {
+  const userId = Number(req.params.id);
+  if (!Number.isInteger(userId)) {
+    return res.status(400).json({ error: 'ID inválido' });
+  }
+
+  try {
+    const resultado = await usersService.resetearPasswordUsuario(userId);
+    return res.json({
+      message: 'Contraseña restablecida correctamente',
+      passwordTemporal: resultado.passwordTemporal,
+      correoEnviado: resultado.correoEnviado,
+    });
+  } catch (err) {
+    if (err.message === 'USUARIO_NO_ENCONTRADO') {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+    console.error('Error al resetear la contraseña:', err);
+    return res.status(500).json({ error: 'Error interno del servidor' });
+  }
+}
+
+module.exports = {
+  getUsuarios,
+  getUsuarioPorId,
+  getFotoUsuario,
+  getCampuses,
+  postRegistrarUsuario,
+  patchEditarUsuario,
+  patchEstadoUsuario,
+  postResetPasswordUsuario,
+};
