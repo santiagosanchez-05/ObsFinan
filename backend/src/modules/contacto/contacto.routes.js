@@ -28,14 +28,14 @@ router.post('/', async (req, res) => {
     // 1. Consultar en la BD el admin activo de la sede seleccionada
     try {
       const query = `
-        SELECT u.email 
-        FROM user u 
-        JOIN userrole r ON r.role_id = u.role_id 
-        WHERE u.campus_id = ? 
-          AND (r.role_name = 'admin' OR r.role_name = 'ADMIN' OR r.role_id = 1) 
-          AND u.status = 1 
-        LIMIT 1;
-      `;
+  SELECT u.email 
+  FROM user u 
+  JOIN role r ON r.role_id = u.role_id 
+  WHERE u.campus_id = ? 
+    AND (r.role_name = 'admin' OR r.role_name = 'ADMIN' OR r.role_id = 1) 
+    AND u.status = 1 
+  LIMIT 1;
+`;
       const [rows] = await db.query(query, [sedeId]);
       
       if (rows && rows.length > 0 && rows[0].email) {
