@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth, ROLES } from '../../../shared/AuthContext';
 import RoleGate from '../../../shared/RoleGate';
+import { Link } from 'react-router-dom';
 import {
   AlertTriangle,
   ArrowDownRight,
@@ -92,7 +93,7 @@ export default function ICAPage() {
     try {
       const res = await fetch('/api/ica/upload', {
         method: 'POST',
-       headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
       const data = await res.json();
@@ -121,7 +122,14 @@ export default function ICAPage() {
             <p className="mt-1 text-sm text-[#6d7673]">Encuesta trimestral aplicada en comunas de las sedes de Univalle</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button className="inline-flex items-center gap-2 rounded-lg border border-[#dce1e4] bg-white px-3 py-2 text-xs font-semibold text-[#59615e] shadow-sm transition hover:border-[#a00046] hover:text-[#a00046]"><History size={14} /> Historial de registros</button>
+            <RoleGate allow={[ROLES.ADMIN, ROLES.SUPERADMIN]}>
+              <Link
+                to="/ica/historial"
+                className="inline-flex items-center gap-2 rounded-lg border border-[#dce1e4] bg-white px-3 py-2 text-xs font-semibold text-[#59615e] shadow-sm transition hover:border-[#a00046] hover:text-[#a00046]"
+              >
+                <History size={14} /> Historial de registros
+              </Link>
+            </RoleGate>
             <RoleGate allow={[ROLES.ADMIN, ROLES.SUPERADMIN]}>
               <button
                 onClick={() => setMostrarUpload((v) => !v)}
