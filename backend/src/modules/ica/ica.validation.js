@@ -19,4 +19,16 @@ const filaIcaSchema = z.object({
   icaMujeres: z.number().min(0).max(100),
 });
 
-module.exports = { uploadIcaMetaSchema, filaIcaSchema, ENCABEZADOS_ESPERADOS };
+const registroIcaSchema = z.object({
+  communityId: z.coerce.number().int().positive('Falta seleccionar la comuna'),
+  quarter: z.coerce.number().int().min(1).max(4, { message: 'Trimestre inválido (1-4)' }),
+  year: z.coerce.number().int().min(2019).max(new Date().getFullYear()),
+  conocimiento: z.coerce.number().min(0).max(100),
+  uso: z.coerce.number().min(0).max(100),
+  educacion: z.coerce.number().min(0).max(100),
+  prevision: z.coerce.number().min(0).max(100),
+  icaHombres: z.coerce.number().min(0).max(100),
+  icaMujeres: z.coerce.number().min(0).max(100),
+});
+
+module.exports = { uploadIcaMetaSchema, filaIcaSchema, registroIcaSchema, ENCABEZADOS_ESPERADOS };

@@ -12,7 +12,6 @@ import {
   Info,
 } from 'lucide-react';
 
-// Datos estáticos — esta pantalla es solo diseño visual, sin fetch real todavía.
 const registros = [
   {
     id: 1,

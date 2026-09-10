@@ -7,6 +7,7 @@ const { filaIcaSchema, ENCABEZADOS_ESPERADOS } = require('./ica.validation');
 // module: 1=ICA, 2=SPE; source_type: 1=individual, 2=archivo
 const MODULE_ICA = 1;
 const SOURCE_TYPE_ARCHIVO = 2;
+const SOURCE_TYPE_INDIVIDUAL = 1;
 
 // Carpeta física donde se guardan los archivos subidos. Queda fuera de src/
 // (backend/uploads/ica) para no mezclar archivos de usuarios con el código fuente.
@@ -116,22 +117,147 @@ async function resolverComunidades(filasValidas, campusId) {
   return { filasConId, noEncontradas };
 }
 
-// Calcula dónde debe vivir el archivo físico de una carga: {data_load_id}.{extensión}.
-// Se separa de guardarArchivoEnDisco porque también la necesita borrarArchivoSiExiste.
+async function obtenerComunidadesPorSede(campusId) {
+  const [comunidades] = await pool.query(
+    `SELECT community_id, community_name FROM community WHERE campus_id = ? AND status = 1`,
+    [campusId],
+  );
+
+  return comunidades;
+}
+
+function promedio(valores) {
+  const validos = valores.filter((valor) => valor !== null && valor !== undefined);
+  return validos.length ? validos.reduce((total, valor) => total + Number(valor), 0) / validos.length : null;
+}
+
+function transformarMedicion(row) {
+  const dimensiones = [row.conocimiento, row.uso, row.educacion, row.prevision];
+  return {
+    id: row.ica_measurement_id,
+    communityId: row.community_id,
+    nombre: row.community_name,
+    conocimiento: Number(row.conocimiento),
+    uso: Number(row.uso),
+    educacion: Number(row.educacion),
+    prevision: Number(row.prevision),
+    hombres: Number(row.ica_hombres),
+    mujeres: Number(row.ica_mujeres),
+    valor: Number(promedio(dimensiones).toFixed(1)),
+  };
+}
+
+async function obtenerDashboard({ campusId, year, quarter, communityId }) {
+  const condiciones = ['c.campus_id = ?', 'c.status = 1', 'm.status = 1'];
+  const parametros = [campusId];
+
+  if (year) {
+    condiciones.push('m.year = ?');
+    parametros.push(year);
+  }
+  if (quarter) {
+    condiciones.push('m.quarter = ?');
+    parametros.push(quarter);
+  }
+  if (communityId) {
+    condiciones.push('m.community_id = ?');
+    parametros.push(communityId);
+  }
+
+  const [filas] = await pool.query(
+    `SELECT m.ica_measurement_id, m.community_id, c.community_name,
+            m.year, m.quarter, m.knowledge_index AS conocimiento,
+            m.usage_index AS uso, m.education_index AS educacion,
+            m.foresight_index AS prevision, m.ica_male AS ica_hombres,
+            m.ica_female AS ica_mujeres
+       FROM ica_measurement m
+       INNER JOIN community c ON c.community_id = m.community_id
+      WHERE ${condiciones.join(' AND ')}
+      ORDER BY m.year DESC, m.quarter DESC, c.community_name ASC`,
+    parametros,
+  );
+
+  if (!filas.length) {
+    return { periodo: null, comunas: [], dimensiones: [], brechas: [], metricas: null };
+  }
+
+  const periodo = { year: Number(filas[0].year), quarter: Number(filas[0].quarter) };
+  const filasPeriodo = filas.filter((fila) => Number(fila.year) === periodo.year && Number(fila.quarter) === periodo.quarter);
+  const comunas = filasPeriodo.map(transformarMedicion);
+  const dimensiones = [
+    { dimension: 'Conocimiento', valor: promedio(comunas.map((fila) => fila.conocimiento)) },
+    { dimension: 'Uso', valor: promedio(comunas.map((fila) => fila.uso)) },
+    { dimension: 'Educación', valor: promedio(comunas.map((fila) => fila.educacion)) },
+    { dimension: 'Previsión', valor: promedio(comunas.map((fila) => fila.prevision)) },
+  ].map((fila) => ({ ...fila, valor: Number(fila.valor.toFixed(1)) }));
+  const brechas = comunas.map((fila) => ({
+    nombre: fila.nombre,
+    hombres: fila.hombres,
+    mujeres: fila.mujeres,
+  }));
+  const mejor = comunas.reduce((actual, fila) => (fila.valor > actual.valor ? fila : actual), comunas[0]);
+  const dimensionCritica = dimensiones.reduce((actual, fila) => (fila.valor < actual.valor ? fila : actual), dimensiones[0]);
+  const brechaMayor = comunas.reduce((actual, fila) => (Math.abs(fila.hombres - fila.mujeres) > Math.abs(actual.hombres - actual.mujeres) ? fila : actual), comunas[0]);
+
+  return {
+    periodo,
+    comunas,
+    dimensiones,
+    brechas,
+    metricas: {
+      general: Number(promedio(comunas.map((fila) => fila.valor)).toFixed(1)),
+      mejorComuna: mejor,
+      dimensionCritica,
+      brechaGenero: { ...brechaMayor, valor: Number(Math.abs(brechaMayor.hombres - brechaMayor.mujeres).toFixed(1)) },
+    },
+  };
+}
+
+async function registrarRegistroIndividual({ communityId, year, quarter, conocimiento, uso, educacion, prevision, icaHombres, icaMujeres, userId, campusId }) {
+  const [comunidades] = await pool.query(
+    'SELECT community_id FROM community WHERE community_id = ? AND campus_id = ? AND status = 1',
+    [communityId, campusId],
+  );
+  if (!comunidades.length) throw new Error('COMUNIDAD_NO_ENCONTRADA');
+
+  const conexion = await pool.getConnection();
+  try {
+    await conexion.beginTransaction();
+    const [carga] = await conexion.query(
+      `INSERT INTO data_load (module, source_type, file_name, total_rows, status, created_modified_by)
+       VALUES (?, ?, ?, 1, 1, ?)`,
+      [MODULE_ICA, SOURCE_TYPE_INDIVIDUAL, 'Registro individual', userId],
+    );
+    await conexion.query(
+      `INSERT INTO ica_measurement
+       (community_id, data_load_id, year, quarter, knowledge_index, usage_index, education_index, foresight_index, ica_male, ica_female, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+      [communityId, carga.insertId, year, quarter, conocimiento, uso, educacion, prevision, icaHombres, icaMujeres],
+    );
+    await conexion.commit();
+    return { dataLoadId: carga.insertId };
+  } catch (err) {
+    await conexion.rollback();
+    throw err;
+  } finally {
+    conexion.release();
+  }
+}
+
+
 function rutaArchivo(dataLoadId, nombreOriginal) {
   const extension = path.extname(nombreOriginal) || '.xlsx';
   return path.join(UPLOAD_DIR, `${dataLoadId}${extension}`);
 }
 
-// Escribe el archivo a disco usando el data_load_id como nombre así no hay colisión de nombres
+
 
 function guardarArchivoEnDisco(buffer, dataLoadId, nombreOriginal) {
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });
   fs.writeFileSync(rutaArchivo(dataLoadId, nombreOriginal), buffer);
 }
 
-// Si algo falla después de haber escrito el archivo,
-// lo borramos para no dejar un .xlsx huérfano sin su data_load correspondiente
+
 function borrarArchivoSiExiste(dataLoadId, nombreOriginal) {
   try {
     const ruta = rutaArchivo(dataLoadId, nombreOriginal);
@@ -166,7 +292,6 @@ async function registrarCargaPorArchivo({ filasValidas, campusId, quarter, year,
     dataLoadId = resultCarga.insertId;
 
     
-    // Si falla el guarado de archivo se hace rollback de los datos.
     try {
       guardarArchivoEnDisco(buffer, dataLoadId, nombreArchivo);
     } catch (errArchivo) {
@@ -197,4 +322,11 @@ async function registrarCargaPorArchivo({ filasValidas, campusId, quarter, year,
   }
 }
 
-module.exports = { parsearArchivoIca, validarFilas, registrarCargaPorArchivo };
+module.exports = {
+  parsearArchivoIca,
+  validarFilas,
+  registrarCargaPorArchivo,
+  obtenerComunidadesPorSede,
+  obtenerDashboard,
+  registrarRegistroIndividual,
+};
