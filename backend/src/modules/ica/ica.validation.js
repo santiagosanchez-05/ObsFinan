@@ -3,7 +3,7 @@ const { z } = require('zod');
 // campusId no va acá: se saca del token en el controller, no del formulario.
 const uploadIcaMetaSchema = z.object({
   quarter: z.coerce.number().int().min(1).max(4, { message: 'Trimestre inválido (1-4)' }),
-  year: z.coerce.number().int().min(2020).max(2100),
+  year: z.coerce.number().int().min(2019).max(new Date().getFullYear()),
 });
 
 // Encabezados esperados en la fila 2 del Excel (mismo formato que TABLAS_ICA.xlsx).
