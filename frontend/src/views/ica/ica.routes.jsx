@@ -1,5 +1,6 @@
 import ICAPage from './pages/ICAPage';
 import ICAHistory from './pages/ICAHistory';
+import ICARegisterPage from './pages/ICARegisterPage';
 import Layout from '../../shared/Layout';
 import ProtectedRoute from '../../shared/ProtectedRoute';
 import { ROLES } from '../../shared/AuthContext';
@@ -17,7 +18,10 @@ const icaRoutes = [
       {
         // Historial ICA, protegido solo para Admin y SuperAdmin 
         element: <ProtectedRoute allow={[ROLES.ADMIN, ROLES.SUPERADMIN]} />,
-        children: [{ path: '/ica/historial', element: <ICAHistory /> }],
+        children: [
+          { path: '/ica/historial', element: <ICAHistory /> },
+          { path: '/ica/registrar', element: <ICARegisterPage /> },
+        ],
       },
     ],
   },

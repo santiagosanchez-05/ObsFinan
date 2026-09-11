@@ -23,7 +23,7 @@ export default function Navbar() {
     logout();
   };
 
-  // Sin usuario logueado, este nav no aplica (se usa PublicHeader en su lugar).
+
   if (!user) return null;
 
   const links = NAV_BY_ROLE[user.role] ?? [];

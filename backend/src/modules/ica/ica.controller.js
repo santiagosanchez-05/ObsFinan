@@ -1,5 +1,62 @@
-const { uploadIcaMetaSchema } = require('./ica.validation');
+const { uploadIcaMetaSchema, registroIcaSchema } = require('./ica.validation');
 const icaService = require('./ica.service');
+
+async function getDashboardIca(req, res) {
+  const campusId = req.user.campusId;
+  if (!campusId) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
+
+  try {
+    const dashboard = await icaService.obtenerDashboard({
+      campusId,
+      year: req.query.year ? Number(req.query.year) : null,
+      quarter: req.query.quarter ? Number(req.query.quarter) : null,
+      communityId: req.query.communityId ? Number(req.query.communityId) : null,
+    });
+    return res.status(200).json(dashboard);
+  } catch (err) {
+    console.error('Error al obtener dashboard ICA:', err);
+    return res.status(500).json({ error: 'No se pudo cargar el dashboard ICA' });
+  }
+}
+
+async function postRegistroIca(req, res) {
+  const parsed = registroIcaSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: 'Datos inválidos', detalles: parsed.error.flatten() });
+  if (!req.user.campusId) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
+
+  try {
+    const resultado = await icaService.registrarRegistroIndividual({
+      ...parsed.data,
+      userId: req.user.userId,
+      campusId: req.user.campusId,
+    });
+    return res.status(201).json({ message: 'Registro ICA guardado correctamente', ...resultado });
+  } catch (err) {
+    if (err.message === 'COMUNIDAD_NO_ENCONTRADA') {
+      return res.status(400).json({ error: 'La comuna no pertenece a tu sede o ya no está disponible' });
+    }
+    console.error('Error al registrar ICA:', err);
+    return res.status(500).json({ error: 'No se pudo guardar el registro ICA' });
+  }
+}
+
+async function getComunidadesIca(req, res) {
+  const campusId = req.user.campusId;
+  if (!campusId) {
+    return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
+  }
+
+  try {
+    const comunidades = await icaService.obtenerComunidadesPorSede(campusId);
+    return res.status(200).json({ comunidades: comunidades.map((comunidad) => ({
+      id: comunidad.community_id,
+      nombre: comunidad.community_name,
+    })) });
+  } catch (err) {
+    console.error('Error al obtener comunidades ICA:', err);
+    return res.status(500).json({ error: 'No se pudieron cargar las comunas' });
+  }
+}
 
 async function postUploadIca(req, res) {
   if (!req.file) {
@@ -67,4 +124,4 @@ async function postUploadIca(req, res) {
   }
 }
 
-module.exports = { postUploadIca };
+module.exports = { getDashboardIca, getComunidadesIca, postRegistroIca, postUploadIca };
