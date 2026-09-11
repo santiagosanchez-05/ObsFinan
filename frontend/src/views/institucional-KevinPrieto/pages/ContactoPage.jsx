@@ -25,7 +25,7 @@ export const ContactoPage = () => {
     setFeedback({ type: '', message: '' });
 
     try {
-      const response = await fetch('http://localhost:3000/api/contacto', {
+      const response = await fetch('/api/contacto', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
