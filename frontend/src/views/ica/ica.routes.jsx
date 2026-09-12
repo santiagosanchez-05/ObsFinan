@@ -1,6 +1,7 @@
 import ICAPage from './pages/ICAPage';
 import ICAHistory from './pages/ICAHistory';
 import ICARegisterPage from './pages/ICARegisterPage';
+import ICAFileDetail from './pages/ICAFileDetail';
 import Layout from '../../shared/Layout';
 import ProtectedRoute from '../../shared/ProtectedRoute';
 import { ROLES } from '../../shared/AuthContext';
@@ -21,6 +22,7 @@ const icaRoutes = [
         children: [
           { path: '/ica/historial', element: <ICAHistory /> },
           { path: '/ica/registrar', element: <ICARegisterPage /> },
+          { path: '/ica/historial/:id', element: <ICAFileDetail /> },
         ],
       },
     ],
