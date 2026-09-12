@@ -85,13 +85,13 @@ async function postUploadIca(req, res) {
       return res.status(400).json({ error: 'El archivo no tiene filas de datos', tipo: 'formato_invalido' });
     }
     console.error('Error al parsear archivo ICA:', err);
-    return res.status(400).json({ error: 'No se pudo leer el archivo. ¿Es un Excel válido?' });
+    return res.status(400).json({ error: 'No se pudo leer el archivo. ¿Es un Excel válido?', tipo: 'formato_invalido' });
   }
 
   const { filasValidas, errores } = icaService.validarFilas(datos);
 
   if (filasValidas.length === 0) {
-    return res.status(400).json({ error: 'Ninguna fila es válida', errores, tipo: 'formato_invalido', tipo: 'formato_invalido'});
+    return res.status(400).json({ error: 'Ninguna fila es válida', errores, tipo: 'formato_invalido'});
   }
 
   try {
@@ -123,5 +123,23 @@ async function postUploadIca(req, res) {
     return res.status(500).json({ error: 'Error interno del servidor' });
   }
 }
+async function getHistorialIca(req, res) {
+  const campusId = req.user.campusId;
+  if (!campusId) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
 
-module.exports = { getDashboardIca, getComunidadesIca, postRegistroIca, postUploadIca };
+  try {
+    const resultado = await icaService.obtenerHistorialIca({
+      campusId,
+      page: req.query.page ? Number(req.query.page) : 1,
+      pageSize: req.query.pageSize ? Number(req.query.pageSize) : 10,
+      tipo: req.query.tipo,
+      communityId: req.query.communityId ? Number(req.query.communityId) : null,
+      busqueda: req.query.busqueda ? String(req.query.busqueda).trim() : '',
+    });
+    return res.status(200).json(resultado);
+  } catch (err) {
+    console.error('Error al obtener historial ICA:', err);
+    return res.status(500).json({ error: 'No se pudo cargar el historial ICA' });
+  }
+}
+module.exports = { getDashboardIca, getComunidadesIca, postRegistroIca, postUploadIca, getHistorialIca };

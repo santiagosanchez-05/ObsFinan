@@ -322,6 +322,102 @@ async function registrarCargaPorArchivo({ filasValidas, campusId, quarter, year,
   }
 }
 
+async function obtenerHistorialIca({ campusId, page = 1, pageSize = 10, tipo, communityId, busqueda }) {
+  const offset = (page - 1) * pageSize;
+
+  const condiciones = ['dl.module = ?', 'dl.status = 1'];
+  const parametros = [MODULE_ICA];
+
+  // Solo data_loads que tengan al menos una medición activa de una comuna de mi sede.
+  condiciones.push(`dl.data_load_id IN (
+    SELECT im.data_load_id FROM ica_measurement im
+    INNER JOIN community c ON c.community_id = im.community_id
+    WHERE c.campus_id = ? AND im.status = 1
+  )`);
+  parametros.push(campusId);
+
+  if (tipo === 'individuales') {
+    condiciones.push('dl.source_type = ?');
+    parametros.push(SOURCE_TYPE_INDIVIDUAL);
+  } else if (tipo === 'archivos') {
+    condiciones.push('dl.source_type = ?');
+    parametros.push(SOURCE_TYPE_ARCHIVO);
+  }
+
+  if (communityId) {
+    condiciones.push(`dl.data_load_id IN (
+      SELECT im.data_load_id FROM ica_measurement im
+      WHERE im.community_id = ? AND im.status = 1
+    )`);
+    parametros.push(communityId);
+  }
+
+  if (busqueda) {
+    condiciones.push(`(
+      dl.file_name LIKE ?
+      OR dl.data_load_id IN (
+        SELECT im.data_load_id FROM ica_measurement im
+        INNER JOIN community c ON c.community_id = im.community_id
+        WHERE c.community_name LIKE ?
+      )
+    )`);
+    parametros.push(`%${busqueda}%`, `%${busqueda}%`);
+  }
+
+  const whereSql = condiciones.join(' AND ');
+
+  const [[{ total }]] = await pool.query(
+    `SELECT COUNT(*) AS total FROM data_load dl WHERE ${whereSql}`,
+    parametros,
+  );
+
+  const [filas] = await pool.query(
+    `SELECT dl.data_load_id, dl.source_type, dl.file_name, dl.total_rows, dl.created_at
+       FROM data_load dl
+      WHERE ${whereSql}
+      ORDER BY dl.created_at DESC
+      LIMIT ? OFFSET ?`,
+    [...parametros, pageSize, offset],
+  );
+
+  if (filas.length === 0) {
+    return { registros: [], total, page, pageSize };
+  }
+
+  const ids = filas.map((f) => f.data_load_id);
+  const [mediciones] = await pool.query(
+    `SELECT im.data_load_id, im.year, im.quarter, im.community_id, c.community_name
+       FROM ica_measurement im
+       INNER JOIN community c ON c.community_id = im.community_id
+      WHERE im.data_load_id IN (?) AND im.status = 1`,
+    [ids],
+  );
+
+  const porCarga = new Map();
+  for (const m of mediciones) {
+    if (!porCarga.has(m.data_load_id)) porCarga.set(m.data_load_id, []);
+    porCarga.get(m.data_load_id).push(m);
+  }
+
+  const registros = filas.map((fila) => {
+    const propias = porCarga.get(fila.data_load_id) || [];
+    const comunasUnicas = [...new Set(propias.map((m) => m.community_name))];
+    const periodosUnicos = [...new Set(propias.map((m) => `Q${m.quarter} ${m.year}`))];
+
+    return {
+      id: fila.data_load_id,
+      tipo: fila.source_type === SOURCE_TYPE_ARCHIVO ? 'masiva' : 'manual',
+      origen: fila.source_type === SOURCE_TYPE_ARCHIVO ? fila.file_name : 'Registro individual',
+      comuna: comunasUnicas.length === 1 ? comunasUnicas[0] : `${comunasUnicas.length} comunas`,
+      periodo: periodosUnicos.length === 1 ? periodosUnicos[0] : 'Varios períodos',
+      registros: propias.length,
+      fecha: fila.created_at,
+    };
+  });
+
+  return { registros, total, page, pageSize };
+}
+
 module.exports = {
   parsearArchivoIca,
   validarFilas,
@@ -329,4 +425,5 @@ module.exports = {
   obtenerComunidadesPorSede,
   obtenerDashboard,
   registrarRegistroIndividual,
+  obtenerHistorialIca,
 };
