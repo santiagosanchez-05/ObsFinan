@@ -169,7 +169,7 @@ export default function ICAPage() {
               </div>
             ) : (
               <div className="mt-5 rounded-lg bg-[#f4f6f8] p-3 text-xs text-[#59615e]">
-                Verificá que el Excel tenga las columnas: Comuna, Conocimiento, Uso, Educación, Previsión, ICA Hombres, ICA Mujeres — sin filas vacías.
+                Verifica que el Excel tenga las columnas: Comuna, Conocimiento, Uso, Educación, Previsión, ICA Hombres, ICA Mujeres — sin filas vacías.
               </div>
             )}
 
@@ -182,8 +182,8 @@ export default function ICAPage() {
             <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               {modalUpload.tipo === 'formato' && (
                 <a
-                  href="/plantillas/formato_ica.xlsx"
-                  download
+                  // href="/plantillas/formato_ica.xlsx"
+                  // download
                   className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#dce1e4] px-4 py-2 text-xs font-semibold text-[#a00046] hover:bg-[#fff3f7]"
                 >
                   <Download size={13} /> Descargar formato

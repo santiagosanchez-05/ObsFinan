@@ -76,7 +76,7 @@ export default function ICAHistory() {
     };
   }, [token]);
 
-  // Historial de registros, cada vez que cambian tab, comuna, búsqueda o página.
+  // Historial de registros
   useEffect(() => {
     let cancelado = false;
 
@@ -320,10 +320,10 @@ export default function ICAHistory() {
             </div>
           </div>
           <a
-            href="/plantillas/formato_ica.xlsx"
-            download
-            className="shrink-0 rounded-lg border border-[#a00046] px-4 py-2 text-xs font-semibold text-[#a00046] transition hover:bg-[#fff3f7]"
-          >
+          //   href="/plantillas/formato_ica.xlsx"
+          //   download
+             className="shrink-0 rounded-lg border border-[#a00046] px-4 py-2 text-xs font-semibold text-[#a00046] transition hover:bg-[#fff3f7]"
+           >
             Ver Guía
           </a>
         </section>
