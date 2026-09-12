@@ -65,7 +65,7 @@ async function postUploadIca(req, res) {
 
   const parsedMeta = uploadIcaMetaSchema.safeParse(req.body);
   if (!parsedMeta.success) {
-    return res.status(400).json({ error: 'Datos inválidos', detalles: parsedMeta.error.flatten() });
+    return res.status(400).json({ error: 'Datos inválidos', detalles: parsedMeta.error.flatten(), tipo: 'formato_invalido' });
   }
   const { quarter, year } = parsedMeta.data;
 
@@ -79,10 +79,10 @@ async function postUploadIca(req, res) {
     datos = icaService.parsearArchivoIca(req.file.buffer);
   } catch (err) {
     if (err.message === 'ENCABEZADOS_INVALIDOS') {
-      return res.status(400).json({ error: 'El archivo no tiene las columnas esperadas', detalle: err.detalle });
+      return res.status(400).json({ error: 'El archivo no tiene las columnas esperadas', detalle: err.detalle, tipo: 'formato_invalido' });
     }
     if (err.message === 'ARCHIVO_SIN_FILAS') {
-      return res.status(400).json({ error: 'El archivo no tiene filas de datos' });
+      return res.status(400).json({ error: 'El archivo no tiene filas de datos', tipo: 'formato_invalido' });
     }
     console.error('Error al parsear archivo ICA:', err);
     return res.status(400).json({ error: 'No se pudo leer el archivo. ¿Es un Excel válido?' });
@@ -91,7 +91,7 @@ async function postUploadIca(req, res) {
   const { filasValidas, errores } = icaService.validarFilas(datos);
 
   if (filasValidas.length === 0) {
-    return res.status(400).json({ error: 'Ninguna fila es válida', errores });
+    return res.status(400).json({ error: 'Ninguna fila es válida', errores, tipo: 'formato_invalido', tipo: 'formato_invalido'});
   }
 
   try {

@@ -7,7 +7,7 @@ const uploadIcaMetaSchema = z.object({
 });
 
 // Encabezados esperados en la fila 2 del Excel (mismo formato que TABLAS_ICA.xlsx).
-const ENCABEZADOS_ESPERADOS = ['Comuna', 'Conocimiento', 'Uso', 'Educación', 'Previsión'];
+const ENCABEZADOS_ESPERADOS = ['Comuna', 'Conocimiento', 'Uso', 'Educación', 'Previsión', 'ICA Hombres', 'ICA Mujeres'];
 
 const filaIcaSchema = z.object({
   comuna: z.string().trim().min(1, 'Falta el nombre de la comuna'),

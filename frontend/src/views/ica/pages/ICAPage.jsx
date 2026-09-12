@@ -39,11 +39,14 @@ const chartTooltip = {
 export default function ICAPage() {
   const [mostrarUpload, setMostrarUpload] = useState(false);
   const [archivo, setArchivo] = useState(null);
-  const [quarter, setQuarter] = useState('');
-  const [year, setYear] = useState(new Date().getFullYear());
+  const fechaActual = new Date();
+  const trimestreActual = Math.floor(fechaActual.getMonth() / 3) + 1;
+
+  const [quarter, setQuarter] = useState(trimestreActual);
+  const [year, setYear] = useState(fechaActual.getFullYear());
   const [estado, setEstado] = useState({ cargando: false, resultado: null, error: null });
   const { user, token } = useAuth();
-  const [mostrarExito, setMostrarExito] = useState(false);
+  const [modalUpload, setModalUpload] = useState(null);
   const [dashboard, setDashboard] = useState(null);
   const [errorDashboard, setErrorDashboard] = useState('');
 
@@ -105,11 +108,18 @@ export default function ICAPage() {
       });
       const data = await res.json();
       if (!res.ok) {
+       
+        const esFormatoInvalido = data.tipo === 'formato_invalido';
+        if (esFormatoInvalido) {
+          setModalUpload({ tipo: 'formato', mensaje: data.error || 'El archivo no tiene las columnas esperadas o contiene filas vacías.' });
+          setEstado({ cargando: false, resultado: null, error: null });
+          return;
+        }
         setEstado({ cargando: false, resultado: null, error: data.error || 'No se pudo subir el archivo' });
         return;
       }
       setEstado({ cargando: false, resultado: data, error: null });
-      setMostrarExito(true);
+      setModalUpload({ tipo: 'exito' });
     } catch {
       setEstado({ cargando: false, resultado: null, error: 'Error de conexión con el servidor' });
     }
@@ -118,68 +128,68 @@ export default function ICAPage() {
   function handleCancelar() {
     setMostrarUpload(false);
     setArchivo(null);
-    setQuarter('');
-    setYear(new Date().getFullYear());
-    setMostrarExito(false);
+    setQuarter(trimestreActual);
+    setYear(fechaActual.getFullYear());
+    setModalUpload(null);
     setEstado({ cargando: false, resultado: null, error: null });
   }
-  function cerrarExito() {
 
-    handleCancelar();
+  function cerrarModalUpload() {
+    if (modalUpload?.tipo === 'exito') {
+      handleCancelar();
+    } else {
+      setModalUpload(null);
+    }
   }
   return (
     <>
-      {mostrarExito && (
-        <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 px-6"
-          onClick={cerrarExito}
-        >
-          <div
-            className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-lg"
-            onClick={(e) => e.stopPropagation()}
-          >
+      {modalUpload && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 px-6" onClick={cerrarModalUpload}>
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-lg" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#eaf6ef] text-[#3c8d66]">
-                <CheckCircle2 size={22} />
+              <div className={`flex h-10 w-10 items-center justify-center rounded-full ${modalUpload.tipo === 'exito' ? 'bg-[#eaf6ef] text-[#3c8d66]' : 'bg-[#fdeceb] text-[#a00046]'
+                }`}>
+                {modalUpload.tipo === 'exito' ? <CheckCircle2 size={22} /> : <AlertTriangle size={22} />}
               </div>
-
               <div>
                 <h2 className="text-lg font-semibold text-[#252927]">
-                  Archivo cargado correctamente
+                  {modalUpload.tipo === 'exito' ? 'Archivo cargado correctamente' : 'Formato de archivo incorrecto'}
                 </h2>
                 <p className="mt-1 text-xs text-[#8a9290]">
-                  La carga se registró correctamente.
+                  {modalUpload.tipo === 'exito' ? 'La carga se registró correctamente.' : modalUpload.mensaje}
                 </p>
               </div>
             </div>
 
-            <div className="mt-5 rounded-lg bg-[#f4f6f8] p-3 text-xs text-[#59615e]">
-              <p>
-                <span className="font-semibold">Archivo:</span> {archivo?.name}
-              </p>
-              <p className="mt-1">
-                <span className="font-semibold">Registros cargados:</span>{' '}
-                {estado.resultado?.filasInsertadas}
-              </p>
-              <p className="mt-1">
-                <span className="font-semibold">Año:</span> {year}
-                {' · '}
-                <span className="font-semibold">Trimestre:</span> Q{quarter}
-              </p>
-            </div>
+            {modalUpload.tipo === 'exito' ? (
+              <div className="mt-5 rounded-lg bg-[#f4f6f8] p-3 text-xs text-[#59615e]">
+                <p><span className="font-semibold">Archivo:</span> {archivo?.name}</p>
+                <p className="mt-1"><span className="font-semibold">Registros cargados:</span> {estado.resultado?.filasInsertadas}</p>
+                <p className="mt-1"><span className="font-semibold">Año:</span> {year} · <span className="font-semibold">Trimestre:</span> Q{quarter}</p>
+              </div>
+            ) : (
+              <div className="mt-5 rounded-lg bg-[#f4f6f8] p-3 text-xs text-[#59615e]">
+                Verificá que el Excel tenga las columnas: Comuna, Conocimiento, Uso, Educación, Previsión, ICA Hombres, ICA Mujeres — sin filas vacías.
+              </div>
+            )}
 
-            {estado.resultado?.filasConError?.length > 0 && (
+            {modalUpload.tipo === 'exito' && estado.resultado?.filasConError?.length > 0 && (
               <p className="mt-3 flex items-center gap-1 text-xs text-[#b77d18]">
-                <AlertCircle size={13} />
-                {estado.resultado.filasConError.length} filas con error.
+                <AlertCircle size={13} /> {estado.resultado.filasConError.length} filas con error.
               </p>
             )}
 
-            <div className="mt-5 flex justify-end">
-              <button
-                onClick={cerrarExito}
-                className="rounded-lg bg-[#a00046] px-4 py-2 text-xs font-semibold text-white hover:bg-[#820039]"
-              >
+            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              {modalUpload.tipo === 'formato' && (
+                <a
+                  href="/plantillas/formato_ica.xlsx"
+                  download
+                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#dce1e4] px-4 py-2 text-xs font-semibold text-[#a00046] hover:bg-[#fff3f7]"
+                >
+                  <Download size={13} /> Descargar formato
+                </a>
+              )}
+              <button onClick={cerrarModalUpload} className="rounded-lg bg-[#a00046] px-4 py-2 text-xs font-semibold text-white hover:bg-[#820039]">
                 Cerrar
               </button>
             </div>
