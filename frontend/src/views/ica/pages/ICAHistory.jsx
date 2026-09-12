@@ -154,11 +154,10 @@ export default function ICAHistory() {
                 <button
                   key={t.id}
                   onClick={() => cambiarTab(t.id)}
-                  className={`rounded-md px-3.5 py-1.5 text-xs font-semibold transition ${
-                    tab === t.id
+                  className={`rounded-md px-3.5 py-1.5 text-xs font-semibold transition ${tab === t.id
                       ? 'bg-white text-[#202522] shadow-sm'
                       : 'text-[#8a9290] hover:text-[#59615e]'
-                  }`}
+                    }`}
                 >
                   {t.label}
                 </button>
@@ -237,18 +236,16 @@ export default function ICAHistory() {
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2.5">
                           <span
-                            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
-                              r.tipo === 'masiva' ? 'bg-[#e8f1fb] text-[#2f6fb0]' : 'bg-[#f3ecfb] text-[#7c4dbd]'
-                            }`}
+                            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${r.tipo === 'masiva' ? 'bg-[#e8f1fb] text-[#2f6fb0]' : 'bg-[#f3ecfb] text-[#7c4dbd]'
+                              }`}
                           >
                             {r.tipo === 'masiva' ? <Folder size={14} /> : <SquarePen size={14} />}
                           </span>
                           <div>
                             <p className="font-semibold text-[#252927]">{r.origen}</p>
                             <p
-                              className={`text-[9px] font-bold uppercase tracking-wider ${
-                                r.tipo === 'masiva' ? 'text-[#2f6fb0]' : 'text-[#7c4dbd]'
-                              }`}
+                              className={`text-[9px] font-bold uppercase tracking-wider ${r.tipo === 'masiva' ? 'text-[#2f6fb0]' : 'text-[#7c4dbd]'
+                                }`}
                             >
                               {r.tipo === 'masiva' ? 'Carga masiva' : 'Manual'}
                             </p>
@@ -266,7 +263,7 @@ export default function ICAHistory() {
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-3 text-[#8a9290]">
                           {r.tipo === 'masiva' ? (
-                            <button className="hover:text-[#a00046]"><Eye size={14} /></button>
+                            <Link to={`/ica/historial/${r.id}`} className="hover:text-[#a00046]"><Eye size={14} /></Link>
                           ) : (
                             <button className="hover:text-[#a00046]"><SquarePen size={14} /></button>
                           )}
@@ -320,10 +317,10 @@ export default function ICAHistory() {
             </div>
           </div>
           <a
-          //   href="/plantillas/formato_ica.xlsx"
-          //   download
-             className="shrink-0 rounded-lg border border-[#a00046] px-4 py-2 text-xs font-semibold text-[#a00046] transition hover:bg-[#fff3f7]"
-           >
+            //   href="/plantillas/formato_ica.xlsx"
+            //   download
+            className="shrink-0 rounded-lg border border-[#a00046] px-4 py-2 text-xs font-semibold text-[#a00046] transition hover:bg-[#fff3f7]"
+          >
             Ver Guía
           </a>
         </section>
