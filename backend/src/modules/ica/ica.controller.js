@@ -19,6 +19,7 @@ async function getDashboardIca(req, res) {
   }
 }
 
+
 async function postRegistroIca(req, res) {
   const parsed = registroIcaSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: 'Datos inválidos', detalles: parsed.error.flatten() });
@@ -42,16 +43,13 @@ async function postRegistroIca(req, res) {
 
 async function getComunidadesIca(req, res) {
   const campusId = req.user.campusId;
-  if (!campusId) {
-    return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
-  }
+  if (!campusId) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
 
   try {
     const comunidades = await icaService.obtenerComunidadesPorSede(campusId);
-    return res.status(200).json({ comunidades: comunidades.map((comunidad) => ({
-      id: comunidad.community_id,
-      nombre: comunidad.community_name,
-    })) });
+    return res.status(200).json({
+      comunidades: comunidades.map((c) => ({ id: c.community_id, nombre: c.community_name })),
+    });
   } catch (err) {
     console.error('Error al obtener comunidades ICA:', err);
     return res.status(500).json({ error: 'No se pudieron cargar las comunas' });
@@ -63,11 +61,13 @@ async function postUploadIca(req, res) {
     return res.status(400).json({ error: 'Falta el archivo (campo "archivo")' });
   }
 
+  // Ahora incluye communityId: el archivo entero es de UNA sola comuna,
+  // elegida en el formulario, ya no viene por columna en el Excel.
   const parsedMeta = uploadIcaMetaSchema.safeParse(req.body);
   if (!parsedMeta.success) {
     return res.status(400).json({ error: 'Datos inválidos', detalles: parsedMeta.error.flatten(), tipo: 'formato_invalido' });
   }
-  const { quarter, year } = parsedMeta.data;
+  const { communityId, quarter, year } = parsedMeta.data;
 
   const campusId = req.user.campusId;
   if (!campusId) {
@@ -79,7 +79,7 @@ async function postUploadIca(req, res) {
     datos = icaService.parsearArchivoIca(req.file.buffer);
   } catch (err) {
     if (err.message === 'ENCABEZADOS_INVALIDOS') {
-      return res.status(400).json({ error: 'El archivo no tiene las columnas esperadas', detalle: err.detalle, tipo: 'formato_invalido' });
+      return res.status(400).json({ error: 'El archivo no tiene las columnas esperadas (las 32 preguntas del instrumento)', detalle: err.detalle, tipo: 'formato_invalido' });
     }
     if (err.message === 'ARCHIVO_SIN_FILAS') {
       return res.status(400).json({ error: 'El archivo no tiene filas de datos', tipo: 'formato_invalido' });
@@ -91,12 +91,13 @@ async function postUploadIca(req, res) {
   const { filasValidas, errores } = icaService.validarFilas(datos);
 
   if (filasValidas.length === 0) {
-    return res.status(400).json({ error: 'Ninguna fila es válida', errores, tipo: 'formato_invalido'});
+    return res.status(400).json({ error: 'Ninguna fila es válida', errores, tipo: 'formato_invalido' });
   }
 
   try {
     const resultado = await icaService.registrarCargaPorArchivo({
       filasValidas,
+      communityId,
       campusId,
       quarter,
       year,
@@ -110,11 +111,10 @@ async function postUploadIca(req, res) {
       dataLoadId: resultado.dataLoadId,
       filasInsertadas: resultado.totalInsertados,
       filasConError: errores,
-      comunasNoEncontradas: resultado.noEncontradas,
     });
   } catch (err) {
-    if (err.message === 'COMUNIDADES_NO_ENCONTRADAS') {
-      return res.status(400).json({ error: 'Ninguna comuna del archivo coincide con las de tu sede', comunas: err.detalle });
+    if (err.message === 'COMUNIDAD_NO_ENCONTRADA') {
+      return res.status(400).json({ error: 'La comuna seleccionada no pertenece a tu sede' });
     }
     if (err.message === 'ARCHIVO_NO_GUARDADO') {
       return res.status(500).json({ error: 'No se pudo guardar el archivo en el servidor. Intentá de nuevo.' });
@@ -123,6 +123,7 @@ async function postUploadIca(req, res) {
     return res.status(500).json({ error: 'Error interno del servidor' });
   }
 }
+
 async function getHistorialIca(req, res) {
   const campusId = req.user.campusId;
   if (!campusId) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
@@ -142,4 +143,5 @@ async function getHistorialIca(req, res) {
     return res.status(500).json({ error: 'No se pudo cargar el historial ICA' });
   }
 }
+
 module.exports = { getDashboardIca, getComunidadesIca, postRegistroIca, postUploadIca, getHistorialIca };
