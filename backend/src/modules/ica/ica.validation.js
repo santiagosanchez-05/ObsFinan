@@ -109,15 +109,15 @@ const filaEncuestaIcaSchema = z.object({
   q22HasLifeInsurance: z.enum(OPCIONES.siNo),
 
   // Condicionales a q22 = 'Sí'
-  q23LifeInsuranceDuration: z.enum(OPCIONES.q23).optional(),
-  q24ReasonAcquired: z.enum(OPCIONES.q24).optional(),
-  q25PolicyReviewFrequency: z.enum(OPCIONES.q25).optional(),
-  q26WouldSwitchProvider: z.enum(OPCIONES.q26).optional(),
-  q27SatisfactionCurrentPolicy: z.enum(OPCIONES.q27).optional(),
+  q23LifeInsuranceDuration: z.enum(OPCIONES.q23).nullable().optional(),
+  q24ReasonAcquired: z.enum(OPCIONES.q24).nullable().optional(),
+  q25PolicyReviewFrequency: z.enum(OPCIONES.q25).nullable().optional(),
+  q26WouldSwitchProvider: z.enum(OPCIONES.q26).nullable().optional(),
+  q27SatisfactionCurrentPolicy: z.enum(OPCIONES.q27).nullable().optional(),
 
   // Condicionales a q22 = 'No'
-  q28LikelihoodFuturePurchase: z.enum(OPCIONES.q28).optional(),
-  q29BarriersToPurchase: z.enum(OPCIONES.q29).optional(),
+  q28LikelihoodFuturePurchase: z.enum(OPCIONES.q28).nullable().optional(),
+  q29BarriersToPurchase: z.enum(OPCIONES.q29).nullable().optional(),
 
   q30TrustInInsurers: z.enum(OPCIONES.q30),
   q31IncomePercentageWilling: z.enum(OPCIONES.q31),
@@ -132,12 +132,12 @@ const filaEncuestaIcaSchema = z.object({
     : [camposSoloSiNoTiene, camposSoloSiTiene];
 
   for (const campo of requeridos) {
-    if (data[campo] === undefined) {
+    if (data[campo] === undefined || data[campo] === null) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: [campo], message: 'Campo obligatorio según la pregunta 22' });
     }
   }
   for (const campo of prohibidos) {
-    if (data[campo] !== undefined) {
+    if (data[campo] !== undefined && data[campo] !== null) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: [campo], message: 'Campo no corresponde según la pregunta 22' });
     }
   }

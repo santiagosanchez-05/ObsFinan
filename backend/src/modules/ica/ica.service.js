@@ -62,7 +62,7 @@ function parsearArchivoIca(buffer) {
   const hoja = libro.Sheets[libro.SheetNames[0]];
   const filas = xlsx.utils.sheet_to_json(hoja, { header: 1, defval: null });
 
-  const encabezados = (filas[1] || []).slice(0, ENCABEZADOS_ESPERADOS.length).map((h) => String(h || '').trim());
+  const encabezados = (filas[0] || []).slice(0, ENCABEZADOS_ESPERADOS.length).map((h) => String(h || '').trim());
   const encabezadosOk = ENCABEZADOS_ESPERADOS.every((esperado, i) => encabezados[i] === esperado);
   if (!encabezadosOk) {
     const err = new Error('ENCABEZADOS_INVALIDOS');
@@ -71,7 +71,7 @@ function parsearArchivoIca(buffer) {
   }
 
   const datos = [];
-  for (let i = 2; i < filas.length; i++) {
+  for (let i = 1; i < filas.length; i++) {
     const fila = filas[i] || [];
 
     // Fin de la tabla de datos: la primera pregunta (q01) vacía marca que
@@ -82,9 +82,15 @@ function parsearArchivoIca(buffer) {
     }
 
     const objetoFila = { filaExcel: i + 1 };
-    CAMPOS_ENCUESTA.forEach(([campoJs], index) => {
-      objetoFila[campoJs] = limpiar(fila[index]);
-    });
+   CAMPOS_ENCUESTA.forEach(([campoJs], index) => {
+  const valor = limpiar(fila[index]);
+
+  if (valor && valor.toUpperCase().startsWith('N/A')) {
+    objetoFila[campoJs] = null;
+  } else {
+    objetoFila[campoJs] = valor;
+  }
+});
 
     datos.push(objetoFila);
   }
@@ -108,6 +114,7 @@ function validarFilas(datos) {
       filasValidas.push(parsed.data);
     }
   }
+ 
 
   return { filasValidas, errores };
 }

@@ -41,6 +41,9 @@ export default function ICAPage() {
   const [archivo, setArchivo] = useState(null);
   const fechaActual = new Date();
   const trimestreActual = Math.floor(fechaActual.getMonth() / 3) + 1;
+  const [comunidades, setComunidades] = useState([]);
+  const [communityId, setCommunityId] = useState('');
+  const [cargandoComunidades, setCargandoComunidades] = useState(false);
 
   const [quarter, setQuarter] = useState(trimestreActual);
   const [year, setYear] = useState(fechaActual.getFullYear());
@@ -69,7 +72,48 @@ export default function ICAPage() {
       cancelado = true;
     };
   }, [token]);
+  useEffect(() => {
+    let cancelado = false;
 
+    async function cargarComunidades() {
+      setCargandoComunidades(true);
+
+      try {
+        const res = await fetch('/api/ica/comunidades', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || 'No se pudieron cargar las comunas');
+        }
+
+        if (!cancelado) {
+          setComunidades(data.comunidades || []);
+        }
+      } catch (err) {
+        if (!cancelado) {
+          setEstado((prev) => ({
+            ...prev,
+            error: err.message
+          }));
+        }
+      } finally {
+        if (!cancelado) {
+          setCargandoComunidades(false);
+        }
+      }
+    }
+
+    if (token) {
+      cargarComunidades();
+    }
+
+    return () => {
+      cancelado = true;
+    };
+  }, [token]);
   const periodo = dashboard?.periodo;
   const periodoLabel = periodo ? `${periodo.year} - Trimestre ${periodo.quarter}` : 'Cargando...';
   const comunas = dashboard?.comunas ?? [];
@@ -78,8 +122,12 @@ export default function ICAPage() {
   const metricas = dashboard?.metricas;
 
   async function handleConfirmarUpload() {
-    if (!archivo || !quarter || !year) {
-      setEstado({ cargando: false, resultado: null, error: 'Completa año, trimestre y archivo.' });
+    if (!communityId || !archivo || !quarter || !year) {
+      setEstado({
+        cargando: false,
+        resultado: null,
+        error: 'Completa comuna, año, trimestre y archivo.'
+      });
       return;
     }
 
@@ -99,6 +147,7 @@ export default function ICAPage() {
     formData.append('archivo', archivo);
     formData.append('quarter', quarter);
     formData.append('year', yearNumber);
+    formData.append('communityId', communityId);
 
     try {
       const res = await fetch('/api/ica/upload', {
@@ -108,7 +157,7 @@ export default function ICAPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-       
+
         const esFormatoInvalido = data.tipo === 'formato_invalido';
         if (esFormatoInvalido) {
           setModalUpload({ tipo: 'formato', mensaje: data.error || 'El archivo no tiene las columnas esperadas o contiene filas vacías.' });
@@ -128,6 +177,7 @@ export default function ICAPage() {
   function handleCancelar() {
     setMostrarUpload(false);
     setArchivo(null);
+    setCommunityId('');
     setQuarter(trimestreActual);
     setYear(fechaActual.getFullYear());
     setModalUpload(null);
@@ -169,8 +219,7 @@ export default function ICAPage() {
               </div>
             ) : (
               <div className="mt-5 rounded-lg bg-[#f4f6f8] p-3 text-xs text-[#59615e]">
-                Verifica que el Excel tenga las columnas: Comuna, Conocimiento, Uso, Educación, Previsión, ICA Hombres, ICA Mujeres — sin filas vacías.
-              </div>
+                Verifica que el Excel corresponda al formato de las 32 preguntas del instrumento ICA y que no contenga columnas adicionales.</div>
             )}
 
             {modalUpload.tipo === 'exito' && estado.resultado?.filasConError?.length > 0 && (
@@ -249,14 +298,35 @@ export default function ICAPage() {
                 <button onClick={handleCancelar} className="text-[#8a9290] hover:text-[#a00046]"><X size={16} /></button>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-3">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <div>
                   <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#8a9290]">Sede</span>
                   <p className="rounded-lg border border-[#dfe4e5] bg-[#f4f6f8] px-3 py-2 text-xs text-[#414845]">
                     {user?.campusName ?? 'Cochabamba'}
                   </p>
                 </div>
+                <label className="block">
+                  <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#8a9290]">
+                    Comuna
+                  </span>
 
+                  <select
+                    value={communityId}
+                    onChange={(e) => setCommunityId(e.target.value)}
+                    disabled={cargandoComunidades}
+                    className="w-full rounded-lg border border-[#dfe4e5] bg-white px-3 py-2 text-xs"
+                  >
+                    <option value="">
+                      {cargandoComunidades ? 'Cargando...' : 'Selecciona una comuna'}
+                    </option>
+
+                    {comunidades.map((comunidad) => (
+                      <option key={comunidad.id} value={comunidad.id}>
+                        {comunidad.nombre}
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 <label className="block">
                   <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#8a9290]">Año</span>
                   <input
@@ -314,8 +384,7 @@ export default function ICAPage() {
 
                 </div>
                 <p className="mt-1 text-[10px] text-[#8a9290]">
-                  Excel (.xlsx/.xls) · Columnas: Comuna, Conocimiento, Uso, Educación, Previsión, ICA Hombres, ICA Mujeres.
-                </p>
+                  Excel (.xlsx/.xls) · Debe contener las 32 preguntas del instrumento ICA.</p>
               </div>
 
               {estado.error && <p className="mt-2 flex items-center gap-1 text-xs text-[#a00046]"><AlertCircle size={13} /> {estado.error}</p>}
