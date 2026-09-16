@@ -185,10 +185,12 @@ async function obtenerDashboard({ campusId, year, quarter, communityId }) {
     condiciones.push('m.year = ?');
     parametros.push(year);
   }
+
   if (quarter) {
     condiciones.push('m.quarter = ?');
     parametros.push(quarter);
   }
+
   if (communityId) {
     condiciones.push('m.community_id = ?');
     parametros.push(communityId);
@@ -196,9 +198,12 @@ async function obtenerDashboard({ campusId, year, quarter, communityId }) {
 
   const [filas] = await pool.query(
     `SELECT m.ica_measurement_id, m.community_id, c.community_name,
-            m.year, m.quarter, m.knowledge_index AS conocimiento,
-            m.usage_index AS uso, m.education_index AS educacion,
-            m.foresight_index AS prevision, m.ica_male AS ica_hombres,
+            m.year, m.quarter,
+            m.knowledge_index AS conocimiento,
+            m.usage_index AS uso,
+            m.education_index AS educacion,
+            m.foresight_index AS prevision,
+            m.ica_male AS ica_hombres,
             m.ica_female AS ica_mujeres
        FROM ica_measurement m
        INNER JOIN community c ON c.community_id = m.community_id
@@ -207,34 +212,183 @@ async function obtenerDashboard({ campusId, year, quarter, communityId }) {
     parametros,
   );
 
+  // ------------------------------------------------------------
+  // OPCIONES REALES PARA LOS FILTROS
+  // ------------------------------------------------------------
+
+  const [opciones] = await pool.query(
+    `SELECT DISTINCT
+            m.year,
+            m.quarter,
+            m.community_id,
+            c.community_name
+       FROM ica_measurement m
+       INNER JOIN community c ON c.community_id = m.community_id
+      WHERE c.campus_id = ?
+        AND c.status = 1
+        AND m.status = 1
+      ORDER BY m.year DESC, m.quarter DESC, c.community_name ASC`,
+    [campusId],
+  );
+
+  const periodosDisponibles = [
+    ...new Map(
+      opciones.map((fila) => [
+        `${fila.year}-${fila.quarter}`,
+        {
+          year: Number(fila.year),
+          quarter: Number(fila.quarter),
+        },
+      ]),
+    ).values(),
+  ];
+
+  const comunidadesDisponibles = [
+    ...new Map(
+      opciones.map((fila) => [
+        fila.community_id,
+        {
+          communityId: Number(fila.community_id),
+          nombre: fila.community_name,
+        },
+      ]),
+    ).values(),
+  ];
+
+  const dimensionesDisponibles = [
+    'Conocimiento',
+    'Uso',
+    'Educación',
+    'Previsión',
+  ];
+
+  // ------------------------------------------------------------
+  // SI NO HAY DATOS PARA EL FILTRO ACTUAL
+  // ------------------------------------------------------------
+
   if (!filas.length) {
-    return { periodo: null, comunas: [], dimensiones: [], brechas: [], metricas: null };
+    return {
+      periodo: null,
+      comunas: [],
+      dimensiones: [],
+      brechas: [],
+      metricas: null,
+      opcionesFiltros: {
+        periodos: periodosDisponibles,
+        comunidades: comunidadesDisponibles,
+        dimensiones: dimensionesDisponibles,
+      },
+    };
   }
 
-  const periodo = { year: Number(filas[0].year), quarter: Number(filas[0].quarter) };
-  const filasPeriodo = filas.filter((fila) => Number(fila.year) === periodo.year && Number(fila.quarter) === periodo.quarter);
+  // ------------------------------------------------------------
+  // PERÍODO DEL DASHBOARD
+  // ------------------------------------------------------------
+
+  const periodo = {
+    year: Number(filas[0].year),
+    quarter: Number(filas[0].quarter),
+  };
+
+  const filasPeriodo = filas.filter(
+    (fila) =>
+      Number(fila.year) === periodo.year &&
+      Number(fila.quarter) === periodo.quarter,
+  );
+
   const comunas = filasPeriodo.map(transformarMedicion);
+
+  // ------------------------------------------------------------
+  // DIMENSIONES
+  // ------------------------------------------------------------
+
   const dimensiones = [
-    { dimension: 'Conocimiento', valor: promedio(comunas.map((fila) => fila.conocimiento)) },
-    { dimension: 'Uso', valor: promedio(comunas.map((fila) => fila.uso)) },
-    { dimension: 'Educación', valor: promedio(comunas.map((fila) => fila.educacion)) },
-    { dimension: 'Previsión', valor: promedio(comunas.map((fila) => fila.prevision)) },
-  ].map((fila) => ({ ...fila, valor: Number(fila.valor.toFixed(1)) }));
-  const brechas = comunas.map((fila) => ({ nombre: fila.nombre, hombres: fila.hombres, mujeres: fila.mujeres }));
-  const mejor = comunas.reduce((actual, fila) => (fila.valor > actual.valor ? fila : actual), comunas[0]);
-  const dimensionCritica = dimensiones.reduce((actual, fila) => (fila.valor < actual.valor ? fila : actual), dimensiones[0]);
-  const brechaMayor = comunas.reduce((actual, fila) => (Math.abs(fila.hombres - fila.mujeres) > Math.abs(actual.hombres - actual.mujeres) ? fila : actual), comunas[0]);
+    {
+      dimension: 'Conocimiento',
+      valor: promedio(comunas.map((fila) => fila.conocimiento)),
+    },
+    {
+      dimension: 'Uso',
+      valor: promedio(comunas.map((fila) => fila.uso)),
+    },
+    {
+      dimension: 'Educación',
+      valor: promedio(comunas.map((fila) => fila.educacion)),
+    },
+    {
+      dimension: 'Previsión',
+      valor: promedio(comunas.map((fila) => fila.prevision)),
+    },
+  ].map((fila) => ({
+    ...fila,
+    valor: Number(fila.valor.toFixed(1)),
+  }));
+
+  // ------------------------------------------------------------
+  // BRECHA DE GÉNERO
+  // ------------------------------------------------------------
+
+  const brechas = comunas.map((fila) => ({
+    nombre: fila.nombre,
+    hombres: fila.hombres,
+    mujeres: fila.mujeres,
+  }));
+
+  // ------------------------------------------------------------
+  // MÉTRICAS
+  // ------------------------------------------------------------
+
+  const mejor = comunas.reduce(
+    (actual, fila) =>
+      fila.valor > actual.valor ? fila : actual,
+    comunas[0],
+  );
+
+  const dimensionCritica = dimensiones.reduce(
+    (actual, fila) =>
+      fila.valor < actual.valor ? fila : actual,
+    dimensiones[0],
+  );
+
+  const brechaMayor = comunas.reduce(
+    (actual, fila) =>
+      Math.abs(fila.hombres - fila.mujeres) >
+      Math.abs(actual.hombres - actual.mujeres)
+        ? fila
+        : actual,
+    comunas[0],
+  );
 
   return {
     periodo,
     comunas,
     dimensiones,
     brechas,
+
     metricas: {
-      general: Number(promedio(comunas.map((fila) => fila.valor)).toFixed(1)),
+      general: Number(
+        promedio(comunas.map((fila) => fila.valor)).toFixed(1),
+      ),
+
       mejorComuna: mejor,
+
       dimensionCritica,
-      brechaGenero: { ...brechaMayor, valor: Number(Math.abs(brechaMayor.hombres - brechaMayor.mujeres).toFixed(1)) },
+
+      brechaGenero: {
+        ...brechaMayor,
+        valor: Number(
+          Math.abs(
+            brechaMayor.hombres - brechaMayor.mujeres,
+          ).toFixed(1),
+        ),
+      },
+    },
+
+    
+    opcionesFiltros: {
+      periodos: periodosDisponibles,
+      comunidades: comunidadesDisponibles,
+      dimensiones: dimensionesDisponibles,
     },
   };
 }

@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../../shared/AuthContext';
@@ -156,8 +155,8 @@ export default function ICAHistory() {
                   key={t.id}
                   onClick={() => cambiarTab(t.id)}
                   className={`rounded-md px-3.5 py-1.5 text-xs font-semibold transition ${tab === t.id
-                      ? 'bg-white text-[#202522] shadow-sm'
-                      : 'text-[#8a9290] hover:text-[#59615e]'
+                    ? 'bg-white text-[#202522] shadow-sm'
+                    : 'text-[#8a9290] hover:text-[#59615e]'
                     }`}
                 >
                   {t.label}

@@ -52,7 +52,7 @@ export default function ICAPage() {
   const [modalUpload, setModalUpload] = useState(null);
   const [dashboard, setDashboard] = useState(null);
   const [errorDashboard, setErrorDashboard] = useState('');
-  const [filtros, setFiltros] = useState({ year: '', quarter: '', communityId: '' });
+  const [filtros, setFiltros] = useState({ year: '', quarter: '', communityId: '', dimension: '', });
   const [filtrosAplicados, setFiltrosAplicados] = useState({});
 
   useEffect(() => {
@@ -127,6 +127,15 @@ export default function ICAPage() {
   const comunas = dashboard?.comunas ?? [];
   const dimensiones = dashboard?.dimensiones ?? [];
   const brechas = dashboard?.brechas ?? [];
+  const opcionesFiltros = dashboard?.opcionesFiltros ?? {
+    periodos: [],
+    comunidades: [],
+    dimensiones: [],
+  };
+
+  const periodosDisponibles = opcionesFiltros.periodos ?? [];
+  const comunidadesDisponibles = opcionesFiltros.comunidades ?? [];
+  const dimensionesDisponibles = opcionesFiltros.dimensiones ?? [];
   const metricas = dashboard?.metricas;
   const comunaMinima = comunas.reduce((minima, comuna) => (!minima || comuna.valor < minima.valor ? comuna : minima), null);
 
@@ -294,9 +303,46 @@ export default function ICAPage() {
           <section className="mb-5 rounded-xl border border-[#e2e6e8] bg-white p-4 shadow-sm">
             <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#777f7c]"><Filter size={14} className="text-[#a00046]" /> Filtros de consulta</div>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_auto]">
-              <label className="block"><span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#8a9290]">Período</span><select value={filtros.year && filtros.quarter ? `${filtros.year}-${filtros.quarter}` : ''} onChange={(event) => { const [yearValue, quarterValue] = event.target.value.split('-'); setFiltros((actual) => ({ ...actual, year: yearValue || '', quarter: quarterValue || '' })); }} className="w-full rounded-lg border border-[#dfe4e5] bg-white px-3 py-2 text-xs text-[#414845]"><option value="">Más reciente</option>{periodo && <option value={`${periodo.year}-${periodo.quarter}`}>{periodoLabel}</option>}</select></label>
-              <label className="block"><span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#8a9290]">Comuna</span><select value={filtros.communityId} onChange={(event) => setFiltros((actual) => ({ ...actual, communityId: event.target.value }))} className="w-full rounded-lg border border-[#dfe4e5] bg-white px-3 py-2 text-xs text-[#414845]"><option value="">Todas</option>{comunas.map((comuna) => <option key={comuna.communityId} value={comuna.communityId}>{comuna.nombre}</option>)}</select></label>
-              <FilterSelect label="Dimensión" value="Todas" />
+              <label className="block"><span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#8a9290]">Período</span><select value={filtros.year && filtros.quarter ? `${filtros.year}-${filtros.quarter}` : ''} onChange={(event) => { const [yearValue, quarterValue] = event.target.value.split('-'); setFiltros((actual) => ({ ...actual, year: yearValue || '', quarter: quarterValue || '' })); }} className="w-full rounded-lg border border-[#dfe4e5] bg-white px-3 py-2 text-xs text-[#414845]"><option value="">Más reciente</option>{periodosDisponibles.map((periodoDisponible) => (
+                <option
+                  key={`${periodoDisponible.year}-${periodoDisponible.quarter}`}
+                  value={`${periodoDisponible.year}-${periodoDisponible.quarter}`}
+                >
+                  {periodoDisponible.year} - Trimestre {periodoDisponible.quarter}
+                </option>
+              ))}</select></label>
+              <label className="block"><span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#8a9290]">Comuna</span><select value={filtros.communityId} onChange={(event) => setFiltros((actual) => ({ ...actual, communityId: event.target.value }))} className="w-full rounded-lg border border-[#dfe4e5] bg-white px-3 py-2 text-xs text-[#414845]"><option value="">Todas</option>{comunidadesDisponibles.map((comunidad) => (
+                <option
+                  key={comunidad.communityId}
+                  value={comunidad.communityId}
+                >
+                  {comunidad.nombre}
+                </option>
+              ))}</select></label>
+              <label className="block">
+                <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#8a9290]">
+                  Dimensión
+                </span>
+
+                <select
+                  value={filtros.dimension}
+                  onChange={(event) =>
+                    setFiltros((actual) => ({
+                      ...actual,
+                      dimension: event.target.value,
+                    }))
+                  }
+                  className="w-full rounded-lg border border-[#dfe4e5] bg-white px-3 py-2 text-xs text-[#414845] outline-none focus:border-[#a00046]"
+                >
+                  <option value="">Todas</option>
+
+                  {dimensionesDisponibles.map((dimension) => (
+                    <option key={dimension} value={dimension}>
+                      {dimension}
+                    </option>
+                  ))}
+                </select>
+              </label>
               <button onClick={() => setFiltrosAplicados(filtros)} className="rounded-lg bg-[#252927] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#a00046]">Aplicar filtros</button>
             </div>
           </section>
