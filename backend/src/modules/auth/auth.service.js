@@ -10,10 +10,11 @@ const CODIGO_VALIDO_POR_MINUTOS = 15;
 
 async function buscarUsuarioPorCorreo(email) {
   const [rows] = await pool.query(
-    `SELECT u.user_id, u.first_name, u.paternal_last_name, u.email, u.password_hash,
-            u.status, u.campus_id, r.role_name
+    `SELECT u.user_id, u.first_name, u.paternal_last_name, u.maternal_last_name, u.email, u.password_hash,
+            u.status, u.campus_id, c.campus_name, r.role_name
      FROM user u
      JOIN role r ON r.role_id = u.role_id
+     LEFT JOIN campus c ON c.campus_id = u.campus_id
      WHERE u.email = ?
      LIMIT 1`,
     [email],
@@ -51,10 +52,17 @@ async function login(email, password) {
     token,
     user: {
       id: usuario.user_id,
-      nombre: `${usuario.first_name} ${usuario.paternal_last_name}`,
+      nombre: `${usuario.first_name} ${usuario.paternal_last_name}`.trim(),
+      first_name: usuario.first_name,
+      paternal_last_name: usuario.paternal_last_name,
+      maternal_last_name: usuario.maternal_last_name || '',
+      nombres: usuario.first_name,
+      apellidoPaterno: usuario.paternal_last_name,
+      apellidoMaterno: usuario.maternal_last_name || '',
       correo: usuario.email,
       role: usuario.role_name,
       campusId: usuario.campus_id,
+      sede: usuario.campus_name || '',
       debeCambiarPassword,
     },
   };
@@ -164,6 +172,52 @@ async function cambiarPasswordPropia(userId, currentPassword, newPassword) {
   await pool.query('UPDATE user SET password_hash = ? WHERE user_id = ?', [passwordHash, userId]);
 }
 
+async function actualizarPerfil(userId, datos) {
+  const firstName = (datos.first_name ?? datos.nombres ?? '').trim();
+  const paternalLastName = (datos.paternal_last_name ?? datos.apellidoPaterno ?? '').trim();
+  const maternalLastNameRaw = datos.maternal_last_name !== undefined ? datos.maternal_last_name : datos.apellidoMaterno;
+  const maternalLastName = maternalLastNameRaw ? maternalLastNameRaw.trim() : null;
+
+  const [userRows] = await pool.query('SELECT user_id FROM user WHERE user_id = ? AND status = 1', [userId]);
+  if (!userRows.length) {
+    throw new Error('USUARIO_NO_ENCONTRADO');
+  }
+
+  await pool.query(
+    `UPDATE user
+     SET first_name = ?, paternal_last_name = ?, maternal_last_name = ?, updated_at = NOW()
+     WHERE user_id = ?`,
+    [firstName, paternalLastName, maternalLastName, userId],
+  );
+
+  const [rows] = await pool.query(
+    `SELECT u.user_id, u.first_name, u.paternal_last_name, u.maternal_last_name,
+            u.email, u.status, u.campus_id, c.campus_name, r.role_name
+     FROM user u
+     JOIN role r ON r.role_id = u.role_id
+     LEFT JOIN campus c ON c.campus_id = u.campus_id
+     WHERE u.user_id = ?
+     LIMIT 1`,
+    [userId],
+  );
+
+  const usuario = rows[0];
+  return {
+    id: usuario.user_id,
+    first_name: usuario.first_name,
+    paternal_last_name: usuario.paternal_last_name,
+    maternal_last_name: usuario.maternal_last_name || '',
+    nombres: usuario.first_name,
+    apellidoPaterno: usuario.paternal_last_name,
+    apellidoMaterno: usuario.maternal_last_name || '',
+    nombre: [usuario.first_name, usuario.paternal_last_name].filter(Boolean).join(' '),
+    correo: usuario.email,
+    role: usuario.role_name,
+    campusId: usuario.campus_id,
+    sede: usuario.campus_name || '',
+  };
+}
+
 module.exports = {
   login,
   buscarUsuarioPorCorreo,
@@ -171,4 +225,6 @@ module.exports = {
   verificarCodigo,
   restablecerContrasena,
   cambiarPasswordPropia,
+  actualizarPerfil,
 };
+

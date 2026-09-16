@@ -263,3 +263,71 @@ describe('POST /api/auth/change-password', () => {
     expect(pool.query).toHaveBeenLastCalledWith(expect.stringContaining('UPDATE user'), [expect.any(String), 7]);
   });
 });
+
+describe('PUT /api/auth/update-profile', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  function tokenSesion(userId = 1) {
+    return jwt.sign({ userId, role: 'cliente', campusId: 1 }, process.env.JWT_SECRET, { expiresIn: '1h' });
+  }
+
+  it('sin token, responde 401', async () => {
+    const res = await request(app)
+      .put('/api/auth/update-profile')
+      .send({ first_name: 'Carlos', paternal_last_name: 'Mendez' });
+    expect(res.status).toBe(401);
+  });
+
+  it('con datos inválidos (faltan nombres), responde 400', async () => {
+    const res = await request(app)
+      .put('/api/auth/update-profile')
+      .set('Authorization', `Bearer ${tokenSesion()}`)
+      .send({ first_name: '', paternal_last_name: '' });
+    expect(res.status).toBe(400);
+  });
+
+  it('actualiza el perfil y devuelve el usuario con first_name, paternal_last_name, maternal_last_name', async () => {
+    const usuarioActualizado = {
+      user_id: 1,
+      first_name: 'Carlos Eduardo',
+      paternal_last_name: 'Mendez',
+      maternal_last_name: 'Rojas',
+      email: 'carlos@test.com',
+      status: 1,
+      campus_id: 1,
+      campus_name: 'Cochabamba',
+      role_name: 'cliente',
+    };
+
+    pool.query
+      .mockResolvedValueOnce([[{ user_id: 1 }]]) // SELECT user_id FROM user WHERE user_id = ? AND status = 1
+      .mockResolvedValueOnce([{}]) // UPDATE user SET ...
+      .mockResolvedValueOnce([[usuarioActualizado]]); // SELECT u.user_id, ...
+
+    const res = await request(app)
+      .put('/api/auth/update-profile')
+      .set('Authorization', `Bearer ${tokenSesion(1)}`)
+      .send({
+        first_name: 'Carlos Eduardo',
+        paternal_last_name: 'Mendez',
+        maternal_last_name: 'Rojas',
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.message).toBe('Perfil actualizado correctamente');
+    expect(res.body.user).toMatchObject({
+      id: 1,
+      first_name: 'Carlos Eduardo',
+      paternal_last_name: 'Mendez',
+      maternal_last_name: 'Rojas',
+      nombre: 'Carlos Eduardo Mendez',
+    });
+    expect(pool.query).toHaveBeenCalledWith(
+      expect.stringContaining('UPDATE user'),
+      ['Carlos Eduardo', 'Mendez', 'Rojas', 1],
+    );
+  });
+});
+

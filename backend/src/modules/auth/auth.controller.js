@@ -4,8 +4,10 @@ const {
   verifyCodeSchema,
   resetPasswordSchema,
   changePasswordSchema,
+  updateProfileSchema,
 } = require('./auth.validation');
 const authService = require('./auth.service');
+
 
 async function postLogin(req, res) {
   const parsed = loginSchema.safeParse(req.body);
@@ -110,4 +112,38 @@ async function postChangePassword(req, res) {
   }
 }
 
-module.exports = { postLogin, postForgotPassword, postVerifyCode, postResetPassword, postChangePassword };
+async function putUpdateProfile(req, res) {
+  const userId = req.user?.userId || req.user?.id;
+  if (!userId) {
+    return res.status(401).json({ error: 'No autenticado' });
+  }
+
+  const parsed = updateProfileSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Datos inválidos', detalles: parsed.error.flatten() });
+  }
+
+  try {
+    const updatedUser = await authService.actualizarPerfil(userId, parsed.data);
+    return res.status(200).json({
+      message: 'Perfil actualizado correctamente',
+      user: updatedUser,
+    });
+  } catch (err) {
+    if (err.message === 'USUARIO_NO_ENCONTRADO') {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+    console.error('Error al actualizar perfil:', err);
+    return res.status(500).json({ error: 'Error interno del servidor' });
+  }
+}
+
+module.exports = {
+  postLogin,
+  postForgotPassword,
+  postVerifyCode,
+  postResetPassword,
+  postChangePassword,
+  putUpdateProfile,
+};
+
