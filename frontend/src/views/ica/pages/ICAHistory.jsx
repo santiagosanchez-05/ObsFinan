@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../../shared/AuthContext';
@@ -185,6 +186,8 @@ export default function ICAHistory() {
                 value={busquedaInput}
                 onChange={(e) => setBusquedaInput(e.target.value)}
                 placeholder="Buscar por archivo o comuna..."
+                value={busqueda}
+                onChange={(event) => setBusqueda(event.target.value)}
                 className="w-64 rounded-lg border border-[#dfe4e5] bg-white py-2 pl-8 pr-3 text-xs text-[#414845] outline-none focus:border-[#a00046]"
               />
             </label>

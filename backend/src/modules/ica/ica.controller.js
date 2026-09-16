@@ -56,6 +56,19 @@ async function getComunidadesIca(req, res) {
   }
 }
 
+async function getHistorialIca(req, res) {
+  const campusId = req.user.campusId;
+  if (!campusId) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
+
+  try {
+    const registros = await icaService.obtenerHistorial({ campusId });
+    return res.status(200).json({ registros });
+  } catch (err) {
+    console.error('Error al obtener historial ICA:', err);
+    return res.status(500).json({ error: 'No se pudo cargar el historial ICA' });
+  }
+}
+
 async function postUploadIca(req, res) {
   if (!req.file) {
     return res.status(400).json({ error: 'Falta el archivo (campo "archivo")' });

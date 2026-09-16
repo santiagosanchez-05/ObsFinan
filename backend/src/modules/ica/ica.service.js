@@ -127,6 +127,32 @@ async function obtenerComunidadesPorSede(campusId) {
   return comunidades;
 }
 
+async function obtenerHistorial({ campusId }) {
+  const [filas] = await pool.query(
+    `SELECT dl.data_load_id, dl.source_type, dl.file_name, dl.total_rows, dl.created_at,
+            MIN(m.year) AS year, MIN(m.quarter) AS quarter,
+            COUNT(DISTINCT m.community_id) AS communities,
+            GROUP_CONCAT(DISTINCT c.community_name ORDER BY c.community_name SEPARATOR ', ') AS community_names
+       FROM data_load dl
+       INNER JOIN ica_measurement m ON m.data_load_id = dl.data_load_id AND m.status = 1
+       INNER JOIN community c ON c.community_id = m.community_id AND c.status = 1
+      WHERE dl.module = ? AND dl.status = 1 AND c.campus_id = ?
+      GROUP BY dl.data_load_id, dl.source_type, dl.file_name, dl.total_rows, dl.created_at
+      ORDER BY dl.created_at DESC`,
+    [MODULE_ICA, campusId],
+  );
+
+  return filas.map((fila) => ({
+    id: fila.data_load_id,
+    tipo: Number(fila.source_type) === SOURCE_TYPE_ARCHIVO ? 'masiva' : 'manual',
+    origen: fila.file_name,
+    comuna: Number(fila.communities) === 1 ? fila.community_names : `${fila.communities} comunas`,
+    periodo: `${fila.year} - Q${fila.quarter}`,
+    total: Number(fila.total_rows),
+    fecha: fila.created_at,
+  }));
+}
+
 function promedio(valores) {
   const validos = valores.filter((valor) => valor !== null && valor !== undefined);
   return validos.length ? validos.reduce((total, valor) => total + Number(valor), 0) / validos.length : null;
@@ -474,6 +500,7 @@ module.exports = {
   validarFilas,
   registrarCargaPorArchivo,
   obtenerComunidadesPorSede,
+  obtenerHistorial,
   obtenerDashboard,
   registrarRegistroIndividual,
   obtenerHistorialIca,

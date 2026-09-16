@@ -52,16 +52,24 @@ export default function ICAPage() {
   const [modalUpload, setModalUpload] = useState(null);
   const [dashboard, setDashboard] = useState(null);
   const [errorDashboard, setErrorDashboard] = useState('');
+  const [filtros, setFiltros] = useState({ year: '', quarter: '', communityId: '' });
+  const [filtrosAplicados, setFiltrosAplicados] = useState({});
 
   useEffect(() => {
     let cancelado = false;
 
     async function cargarDashboard() {
       try {
-        const res = await fetch('/api/ica', { headers: { Authorization: `Bearer ${token}` } });
+        const params = new URLSearchParams(
+          Object.entries(filtrosAplicados).filter(([, value]) => value !== '' && value !== null),
+        );
+        const res = await fetch(`/api/ica${params.toString() ? `?${params}` : ''}`, { headers: { Authorization: `Bearer ${token}` } });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'No se pudo cargar el dashboard ICA');
-        if (!cancelado) setDashboard(data);
+        if (!cancelado) {
+          setDashboard(data);
+          setErrorDashboard('');
+        }
       } catch (err) {
         if (!cancelado) setErrorDashboard(err.message);
       }
@@ -120,6 +128,7 @@ export default function ICAPage() {
   const dimensiones = dashboard?.dimensiones ?? [];
   const brechas = dashboard?.brechas ?? [];
   const metricas = dashboard?.metricas;
+  const comunaMinima = comunas.reduce((minima, comuna) => (!minima || comuna.valor < minima.valor ? comuna : minima), null);
 
   async function handleConfirmarUpload() {
     if (!communityId || !archivo || !quarter || !year) {
@@ -285,10 +294,10 @@ export default function ICAPage() {
           <section className="mb-5 rounded-xl border border-[#e2e6e8] bg-white p-4 shadow-sm">
             <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#777f7c]"><Filter size={14} className="text-[#a00046]" /> Filtros de consulta</div>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_auto]">
-              <FilterSelect label="Período" value={periodoLabel} />
-              <FilterSelect label="Comuna" value="Todas" />
+              <label className="block"><span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#8a9290]">Período</span><select value={filtros.year && filtros.quarter ? `${filtros.year}-${filtros.quarter}` : ''} onChange={(event) => { const [yearValue, quarterValue] = event.target.value.split('-'); setFiltros((actual) => ({ ...actual, year: yearValue || '', quarter: quarterValue || '' })); }} className="w-full rounded-lg border border-[#dfe4e5] bg-white px-3 py-2 text-xs text-[#414845]"><option value="">Más reciente</option>{periodo && <option value={`${periodo.year}-${periodo.quarter}`}>{periodoLabel}</option>}</select></label>
+              <label className="block"><span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#8a9290]">Comuna</span><select value={filtros.communityId} onChange={(event) => setFiltros((actual) => ({ ...actual, communityId: event.target.value }))} className="w-full rounded-lg border border-[#dfe4e5] bg-white px-3 py-2 text-xs text-[#414845]"><option value="">Todas</option>{comunas.map((comuna) => <option key={comuna.communityId} value={comuna.communityId}>{comuna.nombre}</option>)}</select></label>
               <FilterSelect label="Dimensión" value="Todas" />
-              <button className="rounded-lg bg-[#252927] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#a00046]">Aplicar filtros</button>
+              <button onClick={() => setFiltrosAplicados(filtros)} className="rounded-lg bg-[#252927] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#a00046]">Aplicar filtros</button>
             </div>
           </section>
           {mostrarUpload && (
@@ -431,7 +440,7 @@ export default function ICAPage() {
             <h2 className="mb-3 text-sm font-bold text-[#252927]">Hallazgos clave</h2>
             <div className="grid gap-3 lg:grid-cols-4">
               {metricas && <>
-                <Finding tone="red" icon={<ArrowDownRight size={14} />} text={`${comunas[comunas.length - 1]?.nombre ?? 'La última comuna'} tiene el ICA más bajo del período con ${comunas[comunas.length - 1]?.valor ?? '-'} pts.`} />
+                <Finding tone="red" icon={<ArrowDownRight size={14} />} text={`${comunaMinima?.nombre ?? 'Sin comuna'} tiene el ICA más bajo del período con ${comunaMinima?.valor ?? '-'} pts.`} />
                 <Finding tone="gold" icon={<ArrowUpRight size={14} />} text={`${metricas.brechaGenero.nombre} presenta la mayor brecha: ${metricas.brechaGenero.valor} puntos entre hombres y mujeres.`} />
                 <Finding tone="gray" icon={<Info size={14} />} text={`${metricas.dimensionCritica.dimension} es la dimensión más débil con ${metricas.dimensionCritica.valor} pts promedio.`} />
                 <Finding tone="green" icon={<ArrowUpRight size={14} />} text={`${metricas.mejorComuna.nombre} lidera el índice general con ${metricas.mejorComuna.valor} pts.`} />
