@@ -416,6 +416,58 @@ async function obtenerHistorialIca({ campusId, page = 1, pageSize = 10, tipo, co
 
   return { registros, total, page, pageSize };
 }
+async function obtenerDetalleArchivoIca({ campusId, dataLoadId }) {
+  const [cargas] = await pool.query(
+    `SELECT dl.data_load_id, dl.source_type, dl.file_name, dl.status, dl.created_at,
+            u.first_name, u.paternal_last_name
+       FROM data_load dl
+       LEFT JOIN user u ON u.user_id = dl.created_modified_by
+      WHERE dl.data_load_id = ? AND dl.module = ?`,
+    [dataLoadId, MODULE_ICA],
+  );
+  if (!cargas.length) throw new Error('ARCHIVO_NO_ENCONTRADO');
+  const carga = cargas[0];
+
+  const columnas = CAMPOS_ENCUESTA.map(([, col]) => col);
+  const [respuestas] = await pool.query(
+    `SELECT sr.survey_response_id, sr.community_id, c.community_name, c.campus_id, sr.year, sr.quarter,
+            ${columnas.join(', ')}
+       FROM ica_survey_response sr
+       INNER JOIN community c ON c.community_id = sr.community_id
+      WHERE sr.data_load_id = ? AND sr.status = 1`,
+    [dataLoadId],
+  );
+
+  // El archivo es de UNA sola comuna, así que si no hay filas, o la comuna
+  // no pertenece a la sede del usuario, no existe para él.
+  if (!respuestas.length || respuestas[0].campus_id !== campusId) {
+    throw new Error('ARCHIVO_NO_ENCONTRADO');
+  }
+
+  const registros = respuestas.map((fila) => {
+    const objeto = { id: fila.survey_response_id };
+    CAMPOS_ENCUESTA.forEach(([campoJs, col]) => {
+      objeto[campoJs] = fila[col];
+    });
+    return objeto;
+  });
+
+  const nombreUsuario = [carga.first_name, carga.paternal_last_name].filter(Boolean).join(' ') || 'Usuario del sistema';
+
+  return {
+    archivo: {
+      id: carga.data_load_id,
+      nombre: carga.file_name,
+      fechaCarga: carga.created_at,
+      subidoPor: nombreUsuario,
+      totalRegistros: respuestas.length,
+      estado: carga.status === 1 ? 'Verificado' : 'Inactivo',
+      comunidad: respuestas[0].community_name,
+      periodo: `Q${respuestas[0].quarter} ${respuestas[0].year}`,
+    },
+    registros,
+  };
+}
 
 module.exports = {
   parsearArchivoIca,
@@ -425,4 +477,5 @@ module.exports = {
   obtenerDashboard,
   registrarRegistroIndividual,
   obtenerHistorialIca,
+  obtenerDetalleArchivoIca,
 };

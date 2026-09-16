@@ -143,5 +143,24 @@ async function getHistorialIca(req, res) {
     return res.status(500).json({ error: 'No se pudo cargar el historial ICA' });
   }
 }
+async function getDetalleArchivoIca(req, res) {
+  const campusId = req.user.campusId;
+  if (!campusId) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
 
-module.exports = { getDashboardIca, getComunidadesIca, postRegistroIca, postUploadIca, getHistorialIca };
+  const dataLoadId = Number(req.params.id);
+  if (!Number.isInteger(dataLoadId) || dataLoadId <= 0) {
+    return res.status(400).json({ error: 'Id de archivo inválido' });
+  }
+
+  try {
+    const detalle = await icaService.obtenerDetalleArchivoIca({ campusId, dataLoadId });
+    return res.status(200).json(detalle);
+  } catch (err) {
+    if (err.message === 'ARCHIVO_NO_ENCONTRADO') {
+      return res.status(404).json({ error: 'No se encontró el archivo, o no pertenece a tu sede' });
+    }
+    console.error('Error al obtener detalle de archivo ICA:', err);
+    return res.status(500).json({ error: 'No se pudo cargar el detalle del archivo' });
+  }
+}
+module.exports = { getDashboardIca, getComunidadesIca, postRegistroIca, postUploadIca, getHistorialIca, getDetalleArchivoIca };

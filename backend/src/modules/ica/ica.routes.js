@@ -2,7 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const router = express.Router();
 const { requireAuth, requireRole } = require('../../middlewares/auth.middleware');
-const { getDashboardIca, getComunidadesIca, postRegistroIca, postUploadIca, getHistorialIca } = require('./ica.controller');
+const { getDashboardIca, getComunidadesIca, postRegistroIca, postUploadIca, getHistorialIca, getDetalleArchivoIca } = require('./ica.controller');
 
 
 const upload = multer({
@@ -17,6 +17,7 @@ const upload = multer({
 router.get('/', requireAuth, getDashboardIca);
 router.get('/comunidades', requireAuth, getComunidadesIca);
 router.get('/historial', requireAuth, requireRole('admin', 'superadmin'), getHistorialIca);
+router.get('/files/:id', requireAuth, requireRole('admin', 'superadmin'), getDetalleArchivoIca);
 router.post('/', requireAuth, requireRole('admin', 'superadmin'), postRegistroIca);
 router.post('/upload', requireAuth, requireRole('admin', 'superadmin'), upload.single('archivo'), postUploadIca);
 
