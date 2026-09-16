@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -11,72 +11,7 @@ import {
   Trash2,
   Info,
 } from 'lucide-react';
-
-const registros = [
-  {
-    id: 1,
-    tipo: 'masiva',
-    origen: 'ica_consolidado_q3_2026.xlsx',
-    comuna: '6 comunas',
-    periodo: 'Q3 2026',
-    total: 24,
-    fecha: '15/10/2026',
-  },
-  {
-    id: 2,
-    tipo: 'manual',
-    origen: 'Registro individual',
-    comuna: 'Adela Zamudio',
-    periodo: 'Q3 2026',
-    total: 1,
-    fecha: '14/10/2026',
-  },
-  {
-    id: 3,
-    tipo: 'manual',
-    origen: 'Registro individual',
-    comuna: 'Itocta',
-    periodo: 'Q3 2026',
-    total: 1,
-    fecha: '14/10/2026',
-  },
-  {
-    id: 4,
-    tipo: 'masiva',
-    origen: 'encuesta_anual_2025.csv',
-    comuna: 'Varias comunas',
-    periodo: '2025',
-    total: 120,
-    fecha: '10/01/2026',
-  },
-  {
-    id: 5,
-    tipo: 'manual',
-    origen: 'Registro individual',
-    comuna: 'Molle',
-    periodo: 'Q4 2025',
-    total: 1,
-    fecha: '05/12/2025',
-  },
-  {
-    id: 6,
-    tipo: 'manual',
-    origen: 'Registro individual',
-    comuna: 'Tunari',
-    periodo: 'Q4 2025',
-    total: 1,
-    fecha: '05/12/2025',
-  },
-  {
-    id: 7,
-    tipo: 'manual',
-    origen: 'Registro individual',
-    comuna: 'Valle Hermoso',
-    periodo: 'Q4 2025',
-    total: 1,
-    fecha: '04/12/2025',
-  },
-];
+import { useAuth } from '../../../shared/AuthContext';
 
 const TABS = [
   { id: 'todos', label: 'Todos' },
@@ -86,13 +21,32 @@ const TABS = [
 
 export default function ICAHistory() {
   const [tab, setTab] = useState('todos');
+  const [registros, setRegistros] = useState([]);
+  const [busqueda, setBusqueda] = useState('');
+  const [error, setError] = useState('');
+  const { token } = useAuth();
+
+  useEffect(() => {
+    async function cargarHistorial() {
+      try {
+        const res = await fetch('/api/ica/historial', { headers: { Authorization: `Bearer ${token}` } });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'No se pudo cargar el historial ICA');
+        setRegistros(data.registros ?? []);
+      } catch (err) {
+        setError(err.message);
+      }
+    }
+    cargarHistorial();
+  }, [token]);
 
   const filas =
     tab === 'todos'
       ? registros
       : tab === 'individuales'
         ? registros.filter((r) => r.tipo === 'manual')
-        : registros.filter((r) => r.tipo === 'masiva');
+          : registros.filter((r) => r.tipo === 'masiva');
+        const filasVisibles = filas.filter((r) => `${r.origen} ${r.comuna ?? ''}`.toLowerCase().includes(busqueda.toLowerCase()));
 
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-[#f4f6f8] px-4 py-5 sm:px-6 lg:px-8">
@@ -143,6 +97,8 @@ export default function ICAHistory() {
               <input
                 type="text"
                 placeholder="Buscar por archivo o comuna..."
+                value={busqueda}
+                onChange={(event) => setBusqueda(event.target.value)}
                 className="w-64 rounded-lg border border-[#dfe4e5] bg-white py-2 pl-8 pr-3 text-xs text-[#414845] outline-none focus:border-[#a00046]"
               />
             </label>
@@ -152,6 +108,8 @@ export default function ICAHistory() {
             <Plus size={14} /> Nuevo Registro
           </button>
         </section>
+
+        {error && <p className="mb-5 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
 
         {/* Tabla */}
         <section className="overflow-hidden rounded-xl border border-[#e2e6e8] bg-white shadow-sm">
@@ -168,7 +126,7 @@ export default function ICAHistory() {
                 </tr>
               </thead>
               <tbody>
-                {filas.map((r) => (
+                {filasVisibles.map((r) => (
                   <tr key={r.id} className="border-t border-[#f0f2f2] text-[#48504d] hover:bg-[#fff8fa]">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2.5">
@@ -216,7 +174,7 @@ export default function ICAHistory() {
           </div>
 
           <div className="flex flex-col gap-2 border-t border-[#edf0f1] px-4 py-3 text-[10px] text-[#8a9290] sm:flex-row sm:items-center sm:justify-between">
-            <span>Mostrando {filas.length} de 142 registros</span>
+            <span>Mostrando {filasVisibles.length} registros reales</span>
             <div className="flex items-center gap-1.5">
               <button disabled className="rounded border border-[#e4e8e8] px-2 py-1 disabled:opacity-50">
                 <ChevronDown size={12} className="rotate-90" />
