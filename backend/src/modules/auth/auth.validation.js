@@ -36,6 +36,19 @@ const changePasswordSchema = z.object({
   newPassword: passwordSchema,
 });
 
+const updateProfileSchema = z
+  .object({
+    first_name: z.string().trim().min(1, 'El nombre es obligatorio').optional(),
+    paternal_last_name: z.string().trim().min(1, 'El apellido paterno es obligatorio').optional(),
+    maternal_last_name: z.string().trim().nullable().optional(),
+    nombres: z.string().trim().min(1, 'El nombre es obligatorio').optional(),
+    apellidoPaterno: z.string().trim().min(1, 'El apellido paterno es obligatorio').optional(),
+    apellidoMaterno: z.string().trim().nullable().optional(),
+  })
+  .refine((data) => (data.first_name || data.nombres) && (data.paternal_last_name || data.apellidoPaterno), {
+    message: 'El nombre y apellido paterno son obligatorios',
+  });
+
 module.exports = {
   loginSchema,
   forgotPasswordSchema,
@@ -43,4 +56,6 @@ module.exports = {
   passwordSchema,
   resetPasswordSchema,
   changePasswordSchema,
+  updateProfileSchema,
 };
+

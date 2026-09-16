@@ -1,14 +1,45 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Camera, Lock, Eye, EyeOff, CheckCircle2, Circle } from 'lucide-react';
+import { useAuth } from '../../../shared/AuthContext';
+
+function obtenerUsuarioInicial(user) {
+  try {
+    const authRaw = localStorage.getItem('bfu_auth');
+    if (authRaw) {
+      const parsed = JSON.parse(authRaw);
+      if (parsed?.user) {
+        return parsed.user;
+      }
+    }
+  } catch (e) {
+    console.error('Error al leer bfu_auth en MiPerfilPage:', e);
+  }
+  return user || null;
+}
 
 export default function MiPerfilPage() {
-  const [nombres, setNombres] = useState('Carlos Eduardo');
-  const [apellidoPaterno, setApellidoPaterno] = useState('Mendez');
-  const [apellidoMaterno, setApellidoMaterno] = useState('Rojas');
+  const { user, token, actualizarUsuario } = useAuth();
+
+  const [nombres, setNombres] = useState(() => {
+    const u = obtenerUsuarioInicial(user);
+    return u?.first_name || u?.nombres || '';
+  });
+  const [apellidoPaterno, setApellidoPaterno] = useState(() => {
+    const u = obtenerUsuarioInicial(user);
+    return u?.paternal_last_name || u?.apellidoPaterno || '';
+  });
+  const [apellidoMaterno, setApellidoMaterno] = useState(() => {
+    const u = obtenerUsuarioInicial(user);
+    return u?.maternal_last_name || u?.apellidoMaterno || '';
+  });
+  const [guardandoPerfil, setGuardandoPerfil] = useState(false);
+  const [mensajePerfil, setMensajePerfil] = useState({ tipo: '', texto: '' });
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [guardandoPassword, setGuardandoPassword] = useState(false);
+  const [mensajePassword, setMensajePassword] = useState({ tipo: '', texto: '' });
 
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
@@ -18,35 +49,143 @@ export default function MiPerfilPage() {
   const hasUpper = /[A-Z]/.test(newPassword);
   const hasNumber = /[0-9]/.test(newPassword);
 
-  // 1. Manejo del botón Guardar Cambios (Modo Simulación)
-  const handleSaveProfile = (e) => {
+  // Sincronización cuando user cambia externamente
+  useEffect(() => {
+    const u = obtenerUsuarioInicial(user);
+    if (u) {
+      setNombres(u.first_name || u.nombres || '');
+      setApellidoPaterno(u.paternal_last_name || u.apellidoPaterno || '');
+      setApellidoMaterno(u.maternal_last_name || u.apellidoMaterno || '');
+    }
+  }, [user]);
+
+
+  // 1. Manejo del botón Guardar Cambios con persistencia en MySQL y localStorage (bfu_auth)
+  const handleSaveProfile = async (e) => {
     e.preventDefault();
-    setTimeout(() => {
-      alert('¡Perfil actualizado con éxito!');
-    }, 300);
+    setMensajePerfil({ tipo: '', texto: '' });
+
+    const trimmedNombres = nombres.trim();
+    const trimmedApellidoPaterno = apellidoPaterno.trim();
+    const trimmedApellidoMaterno = apellidoMaterno.trim();
+
+    if (!trimmedNombres || !trimmedApellidoPaterno) {
+      setMensajePerfil({ tipo: 'error', texto: 'El nombre y apellido paterno son obligatorios' });
+      return;
+    }
+
+    setGuardandoPerfil(true);
+    try {
+      const res = await fetch('/api/auth/update-profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          first_name: trimmedNombres,
+          paternal_last_name: trimmedApellidoPaterno,
+          maternal_last_name: trimmedApellidoMaterno || null,
+          nombres: trimmedNombres,
+          apellidoPaterno: trimmedApellidoPaterno,
+          apellidoMaterno: trimmedApellidoMaterno || '',
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setMensajePerfil({ tipo: 'error', texto: data.error || 'Error al actualizar el perfil' });
+        return;
+      }
+
+      const updatedUser = data.user;
+
+      // Actualizar el estado en AuthContext
+      if (actualizarUsuario) {
+        actualizarUsuario(updatedUser);
+      }
+
+      // Sincronizar explícitamente localStorage ('bfu_auth') manteniendo la estructura { token, user }
+      try {
+        const rawAuth = localStorage.getItem('bfu_auth');
+        const currentAuth = rawAuth ? JSON.parse(rawAuth) : {};
+        const newAuth = {
+          ...currentAuth,
+          token: currentAuth.token || token,
+          user: {
+            ...(currentAuth.user || {}),
+            ...updatedUser,
+            first_name: updatedUser.first_name || trimmedNombres,
+            paternal_last_name: updatedUser.paternal_last_name || trimmedApellidoPaterno,
+            maternal_last_name: updatedUser.maternal_last_name !== undefined ? updatedUser.maternal_last_name : trimmedApellidoMaterno,
+            nombres: updatedUser.first_name || trimmedNombres,
+            apellidoPaterno: updatedUser.paternal_last_name || trimmedApellidoPaterno,
+            apellidoMaterno: updatedUser.maternal_last_name !== undefined ? updatedUser.maternal_last_name : trimmedApellidoMaterno,
+            nombre: updatedUser.nombre || `${trimmedNombres} ${trimmedApellidoPaterno}`.trim(),
+          },
+        };
+        localStorage.setItem('bfu_auth', JSON.stringify(newAuth));
+      } catch (err) {
+        console.error('Error al persistir en localStorage:', err);
+      }
+
+      setNombres(updatedUser.first_name || trimmedNombres);
+      setApellidoPaterno(updatedUser.paternal_last_name || trimmedApellidoPaterno);
+      setApellidoMaterno(updatedUser.maternal_last_name || trimmedApellidoMaterno || '');
+
+      setMensajePerfil({ tipo: 'success', texto: '¡Perfil actualizado con éxito!' });
+    } catch (err) {
+      console.error('Error en update-profile:', err);
+      setMensajePerfil({ tipo: 'error', texto: 'Error de conexión con el servidor. Intentá de nuevo.' });
+    } finally {
+      setGuardandoPerfil(false);
+    }
   };
 
-  // 2. Manejo del botón Actualizar Contraseña (Modo Simulación)
-  const handleUpdatePassword = (e) => {
+  // 2. Manejo del botón Actualizar Contraseña conectado con /api/auth/change-password
+  const handleUpdatePassword = async (e) => {
     e.preventDefault();
+    setMensajePassword({ tipo: '', texto: '' });
 
     if (!hasMinLength || !hasUpper || !hasNumber) {
-      alert('La nueva contraseña no cumple con todos los requisitos de seguridad.');
+      setMensajePassword({ tipo: 'error', texto: 'La nueva contraseña no cumple con todos los requisitos de seguridad.' });
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      alert('Las contraseñas no coinciden');
+      setMensajePassword({ tipo: 'error', texto: 'Las contraseñas no coinciden' });
       return;
     }
 
-    setTimeout(() => {
-      alert('¡Contraseña actualizada con éxito!');
+    setGuardandoPassword(true);
+    try {
+      const res = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setMensajePassword({ tipo: 'error', texto: data.error || 'Error al actualizar la contraseña' });
+        return;
+      }
+
+      setMensajePassword({ tipo: 'success', texto: '¡Contraseña actualizada con éxito!' });
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
-    }, 300);
+    } catch (err) {
+      console.error('Error al cambiar contraseña:', err);
+      setMensajePassword({ tipo: 'error', texto: 'Error de conexión con el servidor. Intentá de nuevo.' });
+    } finally {
+      setGuardandoPassword(false);
+    }
   };
+
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 space-y-6">
@@ -63,6 +202,18 @@ export default function MiPerfilPage() {
         <h2 className="text-lg font-bold text-slate-900 mb-6">Información personal</h2>
 
         <form onSubmit={handleSaveProfile} className="space-y-6">
+          {mensajePerfil.texto && (
+            <div
+              className={`p-3 rounded-xl text-xs font-medium ${
+                mensajePerfil.tipo === 'success'
+                  ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                  : 'bg-red-50 text-red-800 border border-red-200'
+              }`}
+            >
+              {mensajePerfil.texto}
+            </div>
+          )}
+
           {/* Avatar con enlace de la imagen */}
           <div className="flex items-center gap-4">
             <div className="relative">
@@ -141,19 +292,19 @@ export default function MiPerfilPage() {
               <div>
                 <span className="text-slate-400 block mb-0.5">Correo electrónico</span>
                 <span className="font-medium text-slate-600 flex items-center gap-1.5">
-                  carlos.mendez@univalle.edu <Lock size={12} className="text-slate-400" />
+                  {user?.correo || 'Sin correo'} <Lock size={12} className="text-slate-400" />
                 </span>
               </div>
               <div>
                 <span className="text-slate-400 block mb-0.5">Rol</span>
                 <span className="font-medium text-slate-600 flex items-center gap-1.5">
-                  Superadmin <Lock size={12} className="text-slate-400" />
+                  {user?.role ? (user.role.charAt(0).toUpperCase() + user.role.slice(1)) : 'Usuario'} <Lock size={12} className="text-slate-400" />
                 </span>
               </div>
               <div>
                 <span className="text-slate-400 block mb-0.5">Sede</span>
                 <span className="font-medium text-slate-600 flex items-center gap-1.5">
-                  Cochabamba <Lock size={12} className="text-slate-400" />
+                  {user?.sede || 'Cochabamba'} <Lock size={12} className="text-slate-400" />
                 </span>
               </div>
               <div>
@@ -172,9 +323,10 @@ export default function MiPerfilPage() {
           <div className="flex justify-end pt-2">
             <button
               type="submit"
-              className="rounded-xl bg-maroon px-6 py-2.5 text-sm font-bold text-white shadow-sm hover:opacity-90"
+              disabled={guardandoPerfil}
+              className="rounded-xl bg-maroon px-6 py-2.5 text-sm font-bold text-white shadow-sm hover:opacity-90 disabled:opacity-50"
             >
-              Guardar cambios
+              {guardandoPerfil ? 'Guardando...' : 'Guardar cambios'}
             </button>
           </div>
         </form>
@@ -185,6 +337,18 @@ export default function MiPerfilPage() {
         <h2 className="text-lg font-bold text-slate-900 mb-6">Cambiar contraseña</h2>
 
         <form onSubmit={handleUpdatePassword} className="space-y-5">
+          {mensajePassword.texto && (
+            <div
+              className={`p-3 rounded-xl text-xs font-medium ${
+                mensajePassword.tipo === 'success'
+                  ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                  : 'bg-red-50 text-red-800 border border-red-200'
+              }`}
+            >
+              {mensajePassword.texto}
+            </div>
+          )}
+
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1.5">
               Contraseña actual
@@ -292,13 +456,14 @@ export default function MiPerfilPage() {
           <div className="pt-3">
             <button
               type="submit"
-              className="rounded-xl bg-maroon px-6 py-2.5 text-sm font-bold text-white shadow-sm hover:opacity-90"
+              disabled={guardandoPassword}
+              className="rounded-xl bg-maroon px-6 py-2.5 text-sm font-bold text-white shadow-sm hover:opacity-90 disabled:opacity-50"
             >
-              Actualizar contraseña
+              {guardandoPassword ? 'Actualizando...' : 'Actualizar contraseña'}
             </button>
           </div>
         </form>
       </div>
     </div>
   );
-}
+}
