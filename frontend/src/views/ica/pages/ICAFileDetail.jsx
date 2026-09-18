@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { useAuth } from '../../../shared/AuthContext';
+import { useAuth, ROLES } from '../../../shared/AuthContext';
+import RoleGate from '../../../shared/RoleGate';
 import {
   ArrowLeft,
   Trash2,
@@ -13,11 +14,11 @@ import {
   Info,
   CheckCircle2,
   Loader2,
+  X,
+  ShieldCheck,
 } from 'lucide-react';
 
-// Etiqueta corta + texto completo (para el tooltip del encabezado) de cada
-// una de las 32 preguntas del instrumento ICA, en el mismo orden que
-// CAMPOS_ENCUESTA del backend.
+// Etiqueta corta + texto completo de cada una de las 32 preguntas
 const PREGUNTAS = [
   ['q01ContributesFinancially', 'Contribuye económicamente', '¿Usted contribuye económicamente en su hogar y/o participa en la toma de decisiones financieras?'],
   ['q02Age', 'Edad', '¿Qué edad tiene?'],
@@ -76,6 +77,27 @@ export default function ICAFileDetail() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
 
+  // Búsqueda
+  const [busqueda, setBusqueda] = useState('');
+
+  // Filtros
+  const [mostrarFiltros, setMostrarFiltros] = useState(false);
+  const [filtroContribuye, setFiltroContribuye] = useState('');
+  const [filtroSexo, setFiltroSexo] = useState('');
+  const [filtroEducacion, setFiltroEducacion] = useState('');
+  const [filtroSeguroVida, setFiltroSeguroVida] = useState('');
+
+  // Modal y eliminación de entrevista
+  const [registroAEliminar, setRegistroAEliminar] = useState(null);
+  const [eliminando, setEliminando] = useState(false);
+
+  // Modal y eliminación de archivo
+  const [mostrarModalArchivo, setMostrarModalArchivo] = useState(false);
+  const [eliminandoArchivo, setEliminandoArchivo] = useState(false);
+
+  // Verificación de archivo
+  const [verificandoArchivo, setVerificandoArchivo] = useState(false);
+
   // Paginación
   const [paginaActual, setPaginaActual] = useState(1);
   const registrosPorPagina = 10;
@@ -104,7 +126,7 @@ export default function ICAFileDetail() {
 
         if (!cancelado) {
           setArchivo(data.archivo);
-          setRegistros(data.registros ?? []);
+          setRegistros(data.registros || []);
           setPaginaActual(1);
         }
       } catch (err) {
@@ -127,9 +149,84 @@ export default function ICAFileDetail() {
     };
   }, [id, token]);
 
-  // Paginación
+  // Buscar y filtrar registros
+  const registrosFiltrados = useMemo(() => {
+    const texto = busqueda.trim().toLowerCase();
+
+    return registros.filter((registro) => {
+      // Búsqueda libre en las 32 respuestas
+      if (texto) {
+        const coincide = PREGUNTAS.some(([campo]) => {
+          const valor = registro[campo];
+
+          if (valor === null || valor === undefined) {
+            return false;
+          }
+
+          return String(valor).toLowerCase().includes(texto);
+        });
+
+        if (!coincide) {
+          return false;
+        }
+      }
+
+      // Contribución económica
+      if (
+        filtroContribuye &&
+        String(registro.q01ContributesFinancially) !== filtroContribuye
+      ) {
+        return false;
+      }
+
+      // Sexo
+      if (
+        filtroSexo &&
+        String(registro.q03Sex) !== filtroSexo
+      ) {
+        return false;
+      }
+
+      // Nivel de instrucción
+      if (
+        filtroEducacion &&
+        String(registro.q04EducationLevel) !== filtroEducacion
+      ) {
+        return false;
+      }
+
+      // Seguro de vida
+      if (
+        filtroSeguroVida &&
+        String(registro.q22HasLifeInsurance) !== filtroSeguroVida
+      ) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [
+    registros,
+    busqueda,
+    filtroContribuye,
+    filtroSexo,
+    filtroEducacion,
+    filtroSeguroVida,
+  ]);
+
+  // Volver a la primera página cuando cambia búsqueda o filtros
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [
+    busqueda,
+    filtroContribuye,
+    filtroSexo,
+    filtroEducacion,
+    filtroSeguroVida,
+  ]);
+
   const totalPaginas = Math.ceil(
-    registros.length / registrosPorPagina
+    registrosFiltrados.length / registrosPorPagina
   );
 
   const indiceInicio =
@@ -138,10 +235,141 @@ export default function ICAFileDetail() {
   const indiceFin =
     indiceInicio + registrosPorPagina;
 
-  const registrosPagina = registros.slice(
+  const registrosPagina = registrosFiltrados.slice(
     indiceInicio,
     indiceFin
   );
+
+  const hayFiltrosActivos =
+    filtroContribuye ||
+    filtroSexo ||
+    filtroEducacion ||
+    filtroSeguroVida;
+
+  function limpiarFiltros() {
+    setFiltroContribuye('');
+    setFiltroSexo('');
+    setFiltroEducacion('');
+    setFiltroSeguroVida('');
+  }
+
+  // Verificar archivo
+  async function verificarArchivo() {
+    if (!archivo) return;
+
+    setVerificandoArchivo(true);
+    setError('');
+
+    try {
+      const res = await fetch(`/api/ica/files/${id}/verify`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(
+          data.error || 'No se pudo verificar el archivo'
+        );
+      }
+
+      setArchivo((actual) => ({
+        ...actual,
+        estado: 'Verificado',
+      }));
+    } catch (err) {
+      setError(
+        err.message || 'No se pudo verificar el archivo'
+      );
+    } finally {
+      setVerificandoArchivo(false);
+    }
+  }
+
+  // Eliminar una entrevista individual
+  async function confirmarEliminacion() {
+    if (!registroAEliminar) return;
+
+    setEliminando(true);
+    setError('');
+
+    try {
+      const res = await fetch(
+        `/api/ica/responses/${registroAEliminar.id}`,
+        {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(
+          data.error || 'No se pudo eliminar la entrevista'
+        );
+      }
+
+      // Quitamos la entrevista de la tabla
+      const nuevosRegistros = registros.filter(
+        (registro) => registro.id !== registroAEliminar.id
+      );
+
+      setRegistros(nuevosRegistros);
+
+      // Actualizamos el total mostrado arriba
+      setArchivo((actual) => ({
+        ...actual,
+        totalRegistros: nuevosRegistros.length,
+      }));
+
+      setRegistroAEliminar(null);
+    } catch (err) {
+      setError(
+        err.message || 'No se pudo eliminar la entrevista'
+      );
+      setRegistroAEliminar(null);
+    } finally {
+      setEliminando(false);
+    }
+  }
+
+  // Eliminar archivo completo
+  async function confirmarEliminacionArchivo() {
+    if (!archivo) return;
+
+    setEliminandoArchivo(true);
+    setError('');
+
+    try {
+      const res = await fetch(`/api/ica/files/${id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(
+          data.error || 'No se pudo eliminar el archivo'
+        );
+      }
+
+      window.location.href = '/ica/historial';
+    } catch (err) {
+      setError(
+        err.message || 'No se pudo eliminar el archivo'
+      );
+      setEliminandoArchivo(false);
+    }
+  }
 
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-[#f4f6f8] px-4 py-5 sm:px-6 lg:px-8">
@@ -162,10 +390,42 @@ export default function ICAFileDetail() {
             Detalle de archivo
           </h1>
 
-          <button className="inline-flex items-center gap-2 self-start rounded-lg border border-[#f0b9c7] bg-[#fff5f7] px-4 py-2 text-xs font-semibold text-[#a00046] transition hover:bg-[#fde8ee] sm:self-auto">
-            <Trash2 size={14} />
-            Eliminar archivo
-          </button>
+          <div className="flex items-center gap-2">
+
+            {/* Verificar archivo */}
+            <RoleGate allow={[ROLES.SUPERADMIN]}>
+              {archivo?.estado === 'No verificado' && (
+                <button
+                  onClick={verificarArchivo}
+                  disabled={verificandoArchivo}
+                  className="inline-flex items-center gap-2 rounded-lg border border-[#cfe2d6] bg-[#f5faf7] px-4 py-2 text-xs font-semibold text-[#2f7d4b] transition hover:bg-[#eaf6ef] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {verificandoArchivo ? (
+                    <Loader2
+                      size={14}
+                      className="animate-spin"
+                    />
+                  ) : (
+                    <ShieldCheck size={14} />
+                  )}
+
+                  {verificandoArchivo
+                    ? 'Verificando...'
+                    : 'Verificar archivo'}
+                </button>
+              )}
+            </RoleGate>
+
+            {/* Eliminar archivo */}
+            <button
+              onClick={() => setMostrarModalArchivo(true)}
+              className="inline-flex items-center gap-2 self-start rounded-lg border border-[#f0b9c7] bg-[#fff5f7] px-4 py-2 text-xs font-semibold text-[#a00046] transition hover:bg-[#fde8ee] sm:self-auto"
+            >
+              <Trash2 size={14} />
+              Eliminar archivo
+            </button>
+
+          </div>
         </div>
 
         {error && (
@@ -181,7 +441,7 @@ export default function ICAFileDetail() {
           </div>
         ) : archivo ? (
           <>
-            {/* Tarjeta de metadatos del archivo */}
+            {/* Tarjeta de metadatos */}
             <section className="mb-5 rounded-xl border border-[#e2e6e8] bg-white p-4 shadow-sm">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
 
@@ -241,36 +501,165 @@ export default function ICAFileDetail() {
             {/* Tabla */}
             <section className="overflow-hidden rounded-xl border border-[#e2e6e8] bg-white shadow-sm">
 
-              <div className="flex items-center justify-between border-b border-[#edf0f1] px-4 py-4">
-                <h2 className="text-sm font-bold text-[#252927]">
-                  Contenido del archivo
-                </h2>
+              {/* Barra superior */}
+              <div className="border-b border-[#edf0f1] px-4 py-4">
 
-                <div className="flex items-center gap-3 text-[#8a9290]">
-                  <button className="hover:text-[#a00046]">
-                    <Search size={14} />
-                  </button>
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
 
-                  <button className="hover:text-[#a00046]">
-                    <Filter size={14} />
-                  </button>
+                  <h2 className="text-sm font-bold text-[#252927]">
+                    Contenido del archivo
+                  </h2>
 
-                  <button className="hover:text-[#a00046]">
-                    <Download size={14} />
-                  </button>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+
+                    {/* Búsqueda */}
+                    <div className="relative">
+                      <Search
+                        size={14}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8a9290]"
+                      />
+
+                      <input
+                        type="text"
+                        value={busqueda}
+                        onChange={(e) =>
+                          setBusqueda(e.target.value)
+                        }
+                        placeholder="Buscar en las respuestas..."
+                        className="w-full rounded-lg border border-[#e1e5e5] bg-white py-2 pl-9 pr-8 text-xs text-[#414845] outline-none transition placeholder:text-[#a1a8a6] focus:border-[#a00046] sm:w-[260px]"
+                      />
+
+                      {busqueda && (
+                        <button
+                          onClick={() => setBusqueda('')}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-[#8a9290] hover:text-[#a00046]"
+                        >
+                          <X size={13} />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Filtros */}
+                    <button
+                      onClick={() =>
+                        setMostrarFiltros(!mostrarFiltros)
+                      }
+                      className={`inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition ${
+                        mostrarFiltros || hayFiltrosActivos
+                          ? 'border-[#e8b6c6] bg-[#fff5f7] text-[#a00046]'
+                          : 'border-[#e1e5e5] bg-white text-[#59615e] hover:bg-[#f7f8f8]'
+                      }`}
+                    >
+                      <Filter size={14} />
+                      Filtros
+
+                      {hayFiltrosActivos && (
+                        <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-[#a00046] px-1 text-[9px] text-white">
+                          4
+                        </span>
+                      )}
+                    </button>
+
+                    {/* Descargar */}
+                    <button
+                      className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#e1e5e5] bg-white px-3 py-2 text-xs font-semibold text-[#59615e] transition hover:bg-[#f7f8f8] hover:text-[#a00046]"
+                      title="Descargar"
+                    >
+                      <Download size={14} />
+                      <span className="sm:hidden">
+                        Descargar
+                      </span>
+                    </button>
+
+                  </div>
                 </div>
+
+                {/* Panel de filtros */}
+                {mostrarFiltros && (
+                  <div className="mt-4 rounded-lg border border-[#e6e9e9] bg-[#fafbfb] p-4">
+
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+
+                      <FiltroSelect
+                        label="Contribución económica"
+                        value={filtroContribuye}
+                        onChange={setFiltroContribuye}
+                        opciones={[
+                          ['Sí', 'Sí'],
+                          ['No', 'No'],
+                        ]}
+                      />
+
+                      <FiltroSelect
+                        label="Sexo"
+                        value={filtroSexo}
+                        onChange={setFiltroSexo}
+                        opciones={[
+                          ['Mujer', 'Mujer'],
+                          ['Hombre', 'Hombre'],
+                        ]}
+                      />
+
+                      <FiltroSelect
+                        label="Nivel de instrucción"
+                        value={filtroEducacion}
+                        onChange={setFiltroEducacion}
+                        opciones={[
+                          ['Bachiller', 'Bachiller'],
+                          ['Técnico', 'Técnico'],
+                          ['Universidad', 'Universidad'],
+                          ['Postgrado', 'Postgrado'],
+                        ]}
+                      />
+
+                      <FiltroSelect
+                        label="¿Tiene seguro de vida?"
+                        value={filtroSeguroVida}
+                        onChange={setFiltroSeguroVida}
+                        opciones={[
+                          ['Sí', 'Sí'],
+                          ['No', 'No'],
+                        ]}
+                      />
+
+                    </div>
+
+                    {hayFiltrosActivos && (
+                      <div className="mt-3 flex justify-end">
+                        <button
+                          onClick={limpiarFiltros}
+                          className="text-[11px] font-semibold text-[#a00046] hover:underline"
+                        >
+                          Limpiar filtros
+                        </button>
+                      </div>
+                    )}
+
+                  </div>
+                )}
+
+                {/* Resultado */}
+                {(busqueda || hayFiltrosActivos) && (
+                  <p className="mt-3 text-[10px] text-[#8a9290]">
+                    Mostrando {registrosFiltrados.length} de{' '}
+                    {registros.length} registros
+                  </p>
+                )}
+
               </div>
 
+              {/* Tabla */}
               <div className="overflow-x-auto">
                 <table
                   className="w-full text-left text-xs"
                   style={{
-                    minWidth: `${140 + PREGUNTAS.length * 160}px`,
+                    minWidth: `${220 + PREGUNTAS.length * 160}px`,
                   }}
                 >
                   <thead className="bg-[#fafbfb] text-[9px] font-bold uppercase tracking-wider text-[#8a9290]">
                     <tr>
-                      <th className="sticky left-0 z-10 bg-[#fafbfb] px-4 py-3">
+
+                      <th className="sticky left-0 z-20 w-[55px] min-w-[55px] bg-[#fafbfb] px-4 py-3">
                         #
                       </th>
 
@@ -285,17 +674,22 @@ export default function ICAFileDetail() {
                           </th>
                         )
                       )}
+
+                      <th className="sticky right-0 z-20 w-[80px] min-w-[80px] bg-[#fafbfb] px-4 py-3 text-center">
+                        Acciones
+                      </th>
+
                     </tr>
                   </thead>
 
                   <tbody>
-                    {registros.length === 0 ? (
+                    {registrosFiltrados.length === 0 ? (
                       <tr>
                         <td
-                          colSpan={PREGUNTAS.length + 1}
+                          colSpan={PREGUNTAS.length + 2}
                           className="px-4 py-8 text-center text-[#8a9290]"
                         >
-                          Este archivo no tiene entrevistas activas.
+                          No se encontraron entrevistas con los criterios seleccionados.
                         </td>
                       </tr>
                     ) : (
@@ -304,6 +698,7 @@ export default function ICAFileDetail() {
                           key={r.id}
                           className="border-t border-[#f0f2f2] text-[#48504d] hover:bg-[#fff8fa]"
                         >
+
                           <td className="sticky left-0 z-10 bg-white px-4 py-3 font-semibold text-[#252927]">
                             {indiceInicio + index + 1}
                           </td>
@@ -313,9 +708,22 @@ export default function ICAFileDetail() {
                               key={campo}
                               className="whitespace-nowrap px-4 py-3"
                             >
-                              {r[campo] ?? '—'}
+                              {r[campo] || '—'}
                             </td>
                           ))}
+
+                          <td className="sticky right-0 z-10 bg-white px-4 py-3 text-center">
+                            <button
+                              onClick={() =>
+                                setRegistroAEliminar(r)
+                              }
+                              className="rounded-lg p-1.5 text-[#a00046] transition hover:bg-[#fff0f4]"
+                              title="Eliminar entrevista"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </td>
+
                         </tr>
                       ))
                     )}
@@ -328,15 +736,15 @@ export default function ICAFileDetail() {
 
                 <span>
                   Mostrando{' '}
-                  {registros.length === 0
+                  {registrosFiltrados.length === 0
                     ? 0
                     : indiceInicio + 1}
                   -
                   {Math.min(
                     indiceFin,
-                    registros.length
+                    registrosFiltrados.length
                   )}{' '}
-                  de {registros.length} registros
+                  de {registrosFiltrados.length} registros
                 </span>
 
                 {totalPaginas > 1 && (
@@ -385,10 +793,11 @@ export default function ICAFileDetail() {
 
                   </div>
                 )}
+
               </div>
             </section>
 
-            {/* Resumen del archivo */}
+            {/* Resumen */}
             <section className="mt-5 grid gap-3 lg:grid-cols-3">
 
               <SummaryCard
@@ -429,7 +838,141 @@ export default function ICAFileDetail() {
           </>
         ) : null}
       </div>
+
+      {/* Modal: eliminar entrevista */}
+      {registroAEliminar && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-xl">
+
+            <div className="flex items-start gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#fff0f4] text-[#a00046]">
+                <Trash2 size={17} />
+              </span>
+
+              <div>
+                <h3 className="text-sm font-bold text-[#252927]">
+                  Eliminar entrevista
+                </h3>
+
+                <p className="mt-1 text-xs leading-relaxed text-[#747d79]">
+                  Esta entrevista dejará de estar activa y ya no contará para los datos del archivo.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                onClick={() => setRegistroAEliminar(null)}
+                disabled={eliminando}
+                className="rounded-lg border border-[#e1e5e5] px-4 py-2 text-xs font-semibold text-[#59615e] hover:bg-[#f5f6f6] disabled:opacity-60"
+              >
+                Cancelar
+              </button>
+
+              <button
+                onClick={confirmarEliminacion}
+                disabled={eliminando}
+                className="inline-flex items-center gap-2 rounded-lg bg-[#a00046] px-4 py-2 text-xs font-semibold text-white hover:bg-[#86003a] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {eliminando && (
+                  <Loader2
+                    size={13}
+                    className="animate-spin"
+                  />
+                )}
+
+                Eliminar
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* Modal: eliminar archivo */}
+      {mostrarModalArchivo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-xl">
+
+            <div className="flex items-start gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#fff0f4] text-[#a00046]">
+                <Trash2 size={17} />
+              </span>
+
+              <div>
+                <h3 className="text-sm font-bold text-[#252927]">
+                  Eliminar archivo
+                </h3>
+
+                <p className="mt-1 text-xs leading-relaxed text-[#747d79]">
+                  Se eliminará el archivo y todas las entrevistas asociadas. Esta acción hará que dejen de contar para los datos del ICA.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                onClick={() =>
+                  setMostrarModalArchivo(false)
+                }
+                disabled={eliminandoArchivo}
+                className="rounded-lg border border-[#e1e5e5] px-4 py-2 text-xs font-semibold text-[#59615e] hover:bg-[#f5f6f6] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Cancelar
+              </button>
+
+              <button
+                onClick={confirmarEliminacionArchivo}
+                disabled={eliminandoArchivo}
+                className="inline-flex items-center gap-2 rounded-lg bg-[#a00046] px-4 py-2 text-xs font-semibold text-white hover:bg-[#86003a] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {eliminandoArchivo ? (
+                  <Loader2
+                    size={13}
+                    className="animate-spin"
+                  />
+                ) : (
+                  <Trash2 size={13} />
+                )}
+
+                Eliminar archivo
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
     </main>
+  );
+}
+
+function FiltroSelect({
+  label,
+  value,
+  onChange,
+  opciones,
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-[#8a9290]">
+        {label}
+      </span>
+
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-lg border border-[#e1e5e5] bg-white px-3 py-2 text-xs text-[#414845] outline-none focus:border-[#a00046]"
+      >
+        <option value="">Todos</option>
+
+        {opciones.map(([valor, etiqueta]) => (
+          <option key={valor} value={valor}>
+            {etiqueta}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 

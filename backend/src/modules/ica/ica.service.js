@@ -566,39 +566,234 @@ const orderSql = columnasOrden.map((col) => `${col} ${direccion}`).join(', ');
 
   return { registros, total, page, pageSize };
 }
-async function eliminarRegistroIndividual({ campusId, dataLoadId }) {
-  const [cargas] = await pool.query(
-    'SELECT data_load_id FROM data_load WHERE data_load_id = ? AND module = ? AND source_type = ? AND status != 0',
-    [dataLoadId, MODULE_ICA, SOURCE_TYPE_INDIVIDUAL],
-  );
-  if (!cargas.length) throw new Error('REGISTRO_NO_ENCONTRADO');
+//Eliminar registro individual(0) y cambio de estado de carga individual a eliminado (0) 
+async function eliminarRegistroIndividual({ campusId, surveyResponseId }) {
+  const conexion = await pool.getConnection();
 
-  const [pertenencia] = await pool.query(
-    `SELECT 1 FROM ica_measurement m INNER JOIN community c ON c.community_id = m.community_id
-      WHERE m.data_load_id = ? AND c.campus_id = ? LIMIT 1`,
-    [dataLoadId, campusId],
-  );
-  if (!pertenencia.length) throw new Error('REGISTRO_NO_ENCONTRADO');
+  try {
+    await conexion.beginTransaction();
 
-  await pool.query('UPDATE data_load SET status = 0 WHERE data_load_id = ?', [dataLoadId]);
+    const [respuestas] = await conexion.query(
+      `SELECT sr.survey_response_id,
+              sr.data_load_id
+         FROM ica_survey_response sr
+         INNER JOIN data_load dl
+           ON dl.data_load_id = sr.data_load_id
+         INNER JOIN community c
+           ON c.community_id = sr.community_id
+        WHERE sr.survey_response_id = ?
+          AND sr.status = 1
+          AND dl.module = ?
+          AND dl.source_type = ?
+          AND dl.status != 0
+          AND c.campus_id = ?
+        LIMIT 1`,
+      [
+        surveyResponseId,
+        MODULE_ICA,
+        SOURCE_TYPE_INDIVIDUAL,
+        campusId,
+      ],
+    );
+
+    if (!respuestas.length) {
+      throw new Error('REGISTRO_NO_ENCONTRADO');
+    }
+
+    const dataLoadId = respuestas[0].data_load_id;
+
+    // Eliminar lógicamente la respuesta
+    await conexion.query(
+      `UPDATE ica_survey_response
+          SET status = 0
+        WHERE survey_response_id = ?`,
+      [surveyResponseId],
+    );
+
+    // Eliminar lógicamente la carga individual
+    await conexion.query(
+      `UPDATE data_load
+          SET status = 0
+        WHERE data_load_id = ?`,
+      [dataLoadId],
+    );
+
+    await conexion.commit();
+  } catch (err) {
+    await conexion.rollback();
+    throw err;
+  } finally {
+    conexion.release();
+  }
 }
-
+// Eliminar archivo (0) y cambio de estado de carga masiva a eliminado (0)
 async function eliminarArchivoIca({ campusId, dataLoadId }) {
-  const [cargas] = await pool.query(
-    'SELECT data_load_id FROM data_load WHERE data_load_id = ? AND module = ? AND source_type = ? AND status != 0',
-    [dataLoadId, MODULE_ICA, SOURCE_TYPE_ARCHIVO],
-  );
-  if (!cargas.length) throw new Error('ARCHIVO_NO_ENCONTRADO');
+  const conexion = await pool.getConnection();
 
-  const [pertenencia] = await pool.query(
-    `SELECT 1 FROM ica_survey_response sr INNER JOIN community c ON c.community_id = sr.community_id
-      WHERE sr.data_load_id = ? AND c.campus_id = ? LIMIT 1`,
-    [dataLoadId, campusId],
-  );
-  if (!pertenencia.length) throw new Error('ARCHIVO_NO_ENCONTRADO');
+  try {
+    await conexion.beginTransaction();
 
-  await pool.query('UPDATE data_load SET status = 0 WHERE data_load_id = ?', [dataLoadId]);
+    const [cargas] = await conexion.query(
+      `SELECT dl.data_load_id
+         FROM data_load dl
+        WHERE dl.data_load_id = ?
+          AND dl.module = ?
+          AND dl.source_type = ?
+          AND dl.status != 0`,
+      [
+        dataLoadId,
+        MODULE_ICA,
+        SOURCE_TYPE_ARCHIVO,
+      ],
+    );
+
+    if (!cargas.length) {
+      throw new Error('ARCHIVO_NO_ENCONTRADO');
+    }
+
+    const [pertenencia] = await conexion.query(
+      `SELECT 1
+         FROM ica_survey_response sr
+         INNER JOIN community c
+           ON c.community_id = sr.community_id
+        WHERE sr.data_load_id = ?
+          AND sr.status = 1
+          AND c.campus_id = ?
+        LIMIT 1`,
+      [dataLoadId, campusId],
+    );
+
+    if (!pertenencia.length) {
+      throw new Error('ARCHIVO_NO_ENCONTRADO');
+    }
+
+    // Eliminar lógicamente todas las respuestas del archivo
+    await conexion.query(
+      `UPDATE ica_survey_response
+          SET status = 0
+        WHERE data_load_id = ?
+          AND status = 1`,
+      [dataLoadId],
+    );
+
+    // Eliminar lógicamente el archivo
+    await conexion.query(
+      `UPDATE data_load
+          SET status = 0
+        WHERE data_load_id = ?`,
+      [dataLoadId],
+    );
+
+    await conexion.commit();
+  } catch (err) {
+    await conexion.rollback();
+    throw err;
+  } finally {
+    conexion.release();
+  }
 }
+// Eliminar respuesta individual (0) y actualización de total_rows del archivo
+async function eliminarRespuestaIca({ campusId, surveyResponseId }) {
+  const conexion = await pool.getConnection();
+
+  try {
+    await conexion.beginTransaction();
+
+    const [respuestas] = await conexion.query(
+      `SELECT sr.survey_response_id,
+              sr.data_load_id
+         FROM ica_survey_response sr
+         INNER JOIN data_load dl
+           ON dl.data_load_id = sr.data_load_id
+         INNER JOIN community c
+           ON c.community_id = sr.community_id
+        WHERE sr.survey_response_id = ?
+          AND sr.status = 1
+          AND dl.module = ?
+          AND dl.source_type = ?
+          AND dl.status != 0
+          AND c.campus_id = ?
+        LIMIT 1`,
+      [
+        surveyResponseId,
+        MODULE_ICA,
+        SOURCE_TYPE_ARCHIVO,
+        campusId,
+      ],
+    );
+
+    if (!respuestas.length) {
+      throw new Error('RESPUESTA_NO_ENCONTRADA');
+    }
+
+    const dataLoadId = respuestas[0].data_load_id;
+
+    // Eliminar solamente esta entrevista
+    await conexion.query(
+      `UPDATE ica_survey_response
+          SET status = 0
+        WHERE survey_response_id = ?`,
+      [surveyResponseId],
+    );
+
+    // Actualizar cantidad de registros activos del archivo
+    await conexion.query(
+      `UPDATE data_load
+          SET total_rows = (
+            SELECT COUNT(*)
+              FROM ica_survey_response
+             WHERE data_load_id = ?
+               AND status = 1
+          )
+        WHERE data_load_id = ?`,
+      [dataLoadId, dataLoadId],
+    );
+
+    await conexion.commit();
+  } catch (err) {
+    await conexion.rollback();
+    throw err;
+  } finally {
+    conexion.release();
+  }
+}
+//Cambia el estado de un archivo a verificado (2) cuando un superadmin lo aprueba. Esto no recalcula el agregado, solo cambia el estado de la carga.
+async function verificarArchivoIca({ campusId, dataLoadId }) {
+  const [cargas] = await pool.query(
+    `SELECT dl.data_load_id
+       FROM data_load dl
+       INNER JOIN ica_survey_response sr
+         ON sr.data_load_id = dl.data_load_id
+        AND sr.status = 1
+       INNER JOIN community c
+         ON c.community_id = sr.community_id
+      WHERE dl.data_load_id = ?
+        AND dl.module = ?
+        AND dl.source_type = ?
+        AND dl.status = 1
+        AND c.campus_id = ?
+      LIMIT 1`,
+    [
+      dataLoadId,
+      MODULE_ICA,
+      SOURCE_TYPE_ARCHIVO,
+      campusId,
+    ],
+  );
+
+  if (!cargas.length) {
+    throw new Error('ARCHIVO_NO_ENCONTRADO');
+  }
+
+  await pool.query(
+    `UPDATE data_load
+        SET status = 2
+      WHERE data_load_id = ?
+        AND status = 1`,
+    [dataLoadId],
+  );
+}
+
 async function obtenerDetalleArchivoIca({ campusId, dataLoadId }) {
   const [cargas] = await pool.query(
     `SELECT dl.data_load_id, dl.source_type, dl.file_name, dl.status, dl.created_at,
@@ -661,5 +856,7 @@ module.exports = {
   obtenerHistorialIca,
   eliminarRegistroIndividual,
   eliminarArchivoIca,
+  eliminarRespuestaIca,
   obtenerDetalleArchivoIca,
+  verificarArchivoIca,
 };

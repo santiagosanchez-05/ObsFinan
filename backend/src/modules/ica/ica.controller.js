@@ -172,43 +172,164 @@ async function getDetalleArchivoIca(req, res) {
 }
 async function deleteRegistroIca(req, res) {
   const campusId = req.user.campusId;
-  if (!campusId) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
 
-  const dataLoadId = Number(req.params.id);
-  if (!Number.isInteger(dataLoadId) || dataLoadId <= 0) {
-    return res.status(400).json({ error: 'Id inválido' });
+  if (!campusId) {
+    return res.status(400).json({
+      error: 'Tu usuario no tiene una sede asignada',
+    });
+  }
+
+  const surveyResponseId = Number(req.params.id);
+
+  if (!Number.isInteger(surveyResponseId) || surveyResponseId <= 0) {
+    return res.status(400).json({
+      error: 'Id de registro inválido',
+    });
   }
 
   try {
-    await icaService.eliminarRegistroIndividual({ campusId, dataLoadId });
-    return res.status(200).json({ message: 'Registro eliminado correctamente' });
+    await icaService.eliminarRegistroIndividual({
+      campusId,
+      surveyResponseId,
+    });
+
+    return res.status(200).json({
+      message: 'Registro eliminado correctamente',
+    });
   } catch (err) {
     if (err.message === 'REGISTRO_NO_ENCONTRADO') {
-      return res.status(404).json({ error: 'No se encontró el registro, o no pertenece a tu sede' });
+      return res.status(404).json({
+        error: 'No se encontró el registro, o no pertenece a tu sede',
+      });
     }
+
     console.error('Error al eliminar registro individual ICA:', err);
-    return res.status(500).json({ error: 'No se pudo eliminar el registro' });
+
+    return res.status(500).json({
+      error: 'No se pudo eliminar el registro',
+    });
   }
 }
 
 async function deleteArchivoIca(req, res) {
   const campusId = req.user.campusId;
-  if (!campusId) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
+
+  if (!campusId) {
+    return res.status(400).json({
+      error: 'Tu usuario no tiene una sede asignada',
+    });
+  }
 
   const dataLoadId = Number(req.params.id);
+
   if (!Number.isInteger(dataLoadId) || dataLoadId <= 0) {
-    return res.status(400).json({ error: 'Id inválido' });
+    return res.status(400).json({
+      error: 'Id inválido',
+    });
   }
 
   try {
-    await icaService.eliminarArchivoIca({ campusId, dataLoadId });
-    return res.status(200).json({ message: 'Archivo eliminado correctamente' });
+    await icaService.eliminarArchivoIca({
+      campusId,
+      dataLoadId,
+    });
+
+    return res.status(200).json({
+      message: 'Archivo eliminado correctamente',
+    });
   } catch (err) {
     if (err.message === 'ARCHIVO_NO_ENCONTRADO') {
-      return res.status(404).json({ error: 'No se encontró el archivo, o no pertenece a tu sede' });
+      return res.status(404).json({
+        error: 'No se encontró el archivo, o no pertenece a tu sede',
+      });
     }
+
     console.error('Error al eliminar archivo ICA:', err);
-    return res.status(500).json({ error: 'No se pudo eliminar el archivo' });
+
+    return res.status(500).json({
+      error: 'No se pudo eliminar el archivo',
+    });
   }
 }
-module.exports = { getDashboardIca, getComunidadesIca, postRegistroIca, postUploadIca, getHistorialIca, getDetalleArchivoIca, deleteRegistroIca, deleteArchivoIca };
+async function deleteRespuestaIca(req, res) {
+  const campusId = req.user.campusId;
+
+  if (!campusId) {
+    return res.status(400).json({
+      error: 'Tu usuario no tiene una sede asignada',
+    });
+  }
+
+  const surveyResponseId = Number(req.params.id);
+
+  if (!Number.isInteger(surveyResponseId) || surveyResponseId <= 0) {
+    return res.status(400).json({
+      error: 'Id de entrevista inválido',
+    });
+  }
+
+  try {
+    await icaService.eliminarRespuestaIca({
+      campusId,
+      surveyResponseId,
+    });
+
+    return res.status(200).json({
+      message: 'Entrevista eliminada correctamente',
+    });
+  } catch (err) {
+    if (err.message === 'RESPUESTA_NO_ENCONTRADA') {
+      return res.status(404).json({
+        error: 'No se encontró la entrevista, o no pertenece a tu sede',
+      });
+    }
+
+    console.error('Error al eliminar entrevista ICA:', err);
+
+    return res.status(500).json({
+      error: 'No se pudo eliminar la entrevista',
+    });
+  }
+}
+// Función para verificar un archivo ICA (cambio de estado a 2)
+async function verifyArchivoIca(req, res) {
+  const campusId = req.user.campusId;
+
+  if (!campusId) {
+    return res.status(400).json({
+      error: 'Tu usuario no tiene una sede asignada',
+    });
+  }
+
+  const dataLoadId = Number(req.params.id);
+
+  if (!Number.isInteger(dataLoadId) || dataLoadId <= 0) {
+    return res.status(400).json({
+      error: 'Id inválido',
+    });
+  }
+
+  try {
+    await icaService.verificarArchivoIca({
+      campusId,
+      dataLoadId,
+    });
+
+    return res.status(200).json({
+      message: 'Archivo verificado correctamente',
+    });
+  } catch (err) {
+    if (err.message === 'ARCHIVO_NO_ENCONTRADO') {
+      return res.status(404).json({
+        error: 'No se encontró el archivo, o no pertenece a tu sede',
+      });
+    }
+
+    console.error('Error al verificar archivo ICA:', err);
+
+    return res.status(500).json({
+      error: 'No se pudo verificar el archivo',
+    });
+  }
+}
+module.exports = { getDashboardIca, getComunidadesIca, postRegistroIca, postUploadIca, getHistorialIca, getDetalleArchivoIca, deleteRegistroIca, deleteArchivoIca, deleteRespuestaIca,verifyArchivoIca  };
