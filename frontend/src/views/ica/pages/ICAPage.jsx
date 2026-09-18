@@ -13,8 +13,12 @@ import {
   Info,
   Medal,
   Plus,
-  Users, Upload, X, Loader2, CheckCircle2, AlertCircle
-
+  Users,
+  Upload,
+  X,
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
 } from 'lucide-react';
 import {
   Bar,
@@ -54,6 +58,10 @@ export default function ICAPage() {
   const [errorDashboard, setErrorDashboard] = useState('');
   const [filtros, setFiltros] = useState({ year: '', quarter: '', communityId: '', dimension: '', });
   const [filtrosAplicados, setFiltrosAplicados] = useState({});
+  const [vista, setVista] = useState('dashboard');
+  const [preguntaSeleccionada, setPreguntaSeleccionada] = useState(null);
+  const [explorador, setExplorador] = useState({ periodo: null, total: 0, preguntas: [] });
+  const [errorExplorador, setErrorExplorador] = useState('');
 
   useEffect(() => {
     let cancelado = false;
@@ -79,7 +87,32 @@ export default function ICAPage() {
     return () => {
       cancelado = true;
     };
-  }, [token]);
+  }, [token, filtrosAplicados]);
+
+  useEffect(() => {
+    let cancelado = false;
+
+    async function cargarExplorador() {
+      try {
+        const params = new URLSearchParams(
+          Object.entries(filtrosAplicados).filter(([, value]) => value !== '' && value !== null),
+        );
+        const res = await fetch(`/api/ica/questions${params.toString() ? `?${params}` : ''}`, { headers: { Authorization: `Bearer ${token}` } });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'No se pudo cargar el explorador de preguntas');
+        if (!cancelado) {
+          setExplorador(data);
+          setPreguntaSeleccionada(data.preguntas?.[0] || null);
+          setErrorExplorador('');
+        }
+      } catch (err) {
+        if (!cancelado) setErrorExplorador(err.message);
+      }
+    }
+
+    if (token) cargarExplorador();
+    return () => { cancelado = true; };
+  }, [token, filtrosAplicados]);
   useEffect(() => {
     let cancelado = false;
 
@@ -299,6 +332,19 @@ export default function ICAPage() {
             </div>
           </div>
 
+          <nav className="mb-5 flex flex-wrap gap-1 rounded-xl border border-[#e2e6e8] bg-white p-1.5 shadow-sm" aria-label="Vistas del módulo ICA">
+            {[
+              ['dashboard', 'Dashboard ICA'],
+              ['dimensiones', 'Perfil de dimensiones'],
+              ['preguntas', 'Explorador de preguntas'],
+            ].map(([id, label]) => (
+              <button key={id} type="button" onClick={() => setVista(id)} className={`rounded-lg px-3 py-2 text-xs font-semibold transition sm:px-4 ${vista === id ? 'bg-[#a00046] text-white shadow-sm' : 'text-[#69716e] hover:bg-[#fff3f7] hover:text-[#a00046]'}`}>
+                {label}
+              </button>
+            ))}
+          </nav>
+
+          {vista === 'dashboard' && <>
           {errorDashboard && <p className="mb-5 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{errorDashboard}</p>}
           <section className="mb-5 rounded-xl border border-[#e2e6e8] bg-white p-4 shadow-sm">
             <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#777f7c]"><Filter size={14} className="text-[#a00046]" /> Filtros de consulta</div>
@@ -499,9 +545,52 @@ export default function ICAPage() {
             <div className="overflow-x-auto"><table className="w-full min-w-[760px] text-left text-xs"><thead className="bg-[#fafbfb] text-[9px] font-bold uppercase tracking-wider text-[#8a9290]"><tr>{['Comuna', 'Conocimiento', 'Uso', 'Educación', 'Previsión', 'ICA hombres', 'ICA mujeres', 'Índice general'].map((heading) => <th key={heading} className="px-4 py-3">{heading}</th>)}</tr></thead><tbody>{comunas.map((row, index) => <tr key={row.id} className="border-t border-[#f0f2f2] text-[#48504d] hover:bg-[#fff8fa]"><td className="px-4 py-3 font-semibold text-[#252927]">{row.nombre}</td>{[row.conocimiento, row.uso, row.educacion, row.prevision, row.hombres, row.mujeres].map((value, cellIndex) => <td key={`${row.id}-${cellIndex}`} className={`px-4 py-3 ${cellIndex === 2 ? 'font-semibold text-[#a00046]' : ''}`}>{value}</td>)}<td className="px-4 py-3 font-bold"><span className={`rounded-full px-2 py-1 text-[10px] ${index === 0 ? 'bg-[#f9e5ed] text-[#a00046]' : 'bg-[#f1f3f3] text-[#414845]'}`}>{row.valor}</span></td></tr>)}</tbody></table></div>
             <div className="flex items-center justify-between border-t border-[#edf0f1] px-4 py-3 text-[10px] text-[#8a9290]"><span>Mostrando {comunas.length} comunas registradas</span><div className="flex gap-2"><button disabled className="rounded border border-[#e4e8e8] px-2 py-1 disabled:opacity-50">Anterior</button><button className="rounded border border-[#e4e8e8] px-2 py-1 hover:border-[#a00046]">Siguiente</button></div></div>
           </section>
+          </>}
+
+          {vista === 'dimensiones' && <DimensionProfileView dimensiones={dimensiones} metricas={metricas} periodoLabel={periodoLabel} />}
+          {vista === 'preguntas' && <QuestionExplorerView preguntas={explorador.preguntas} pregunta={preguntaSeleccionada} onSelect={setPreguntaSeleccionada} periodoLabel={explorador.periodo ? `${explorador.periodo.year} - Trimestre ${explorador.periodo.quarter}` : periodoLabel} total={explorador.total} error={errorExplorador} />}
         </div>
       </main>
     </>
+  );
+}
+
+function DimensionProfileView({ dimensiones, metricas, periodoLabel }) {
+  const datos = dimensiones;
+
+  return (
+    <section className="mb-5 space-y-4">
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+        <div><p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#a00046]">Módulo ICA · Perfil de dimensiones</p><h2 className="text-xl font-bold text-[#252927]">Comparativa multidimensional</h2><p className="mt-1 text-xs text-[#8a9290]">Lectura del bienestar financiero por dimensión y período.</p></div>
+        <span className="text-[11px] text-[#8a9290]">{periodoLabel}</span>
+      </div>
+      {!datos.length && <p className="rounded-lg border border-[#e2e6e8] bg-white px-4 py-5 text-sm text-[#6d7673]">No hay mediciones ICA para el período seleccionado.</p>}
+      <div className={`grid gap-4 lg:grid-cols-[1.25fr_.75fr] ${datos.length ? '' : 'hidden'}`}>
+        <ChartPanel title="Perfil del ICA">
+          <ResponsiveContainer width="100%" height="100%"><RadarChart data={datos} outerRadius="68%"><PolarGrid stroke="#d7dcdb" /><PolarAngleAxis dataKey="dimension" tick={{ fontSize: 10, fill: '#59615e' }} /><PolarRadiusAxis domain={[0, 100]} tick={{ fontSize: 8, fill: '#8a9290' }} /><Radar dataKey="valor" stroke="#a00046" fill="#a00046" fillOpacity={0.2} strokeWidth={2} /><Tooltip {...chartTooltip} formatter={(value) => [`${value} pts`, 'Puntaje']} /></RadarChart></ResponsiveContainer>
+        </ChartPanel>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">{datos.map((item) => <MetricCard key={item.dimension} label={item.dimension} value={item.valor} detail="Puntaje promedio" accent="/100" warning={item.valor < 60} icon={<BarChart3 size={18} />} />)}</div>
+      </div>
+      <section className="rounded-xl border border-[#e2e6e8] bg-white p-4 shadow-sm"><div className="mb-3 flex items-center justify-between"><div><h3 className="text-sm font-bold text-[#252927]">Ranking de dimensiones</h3><p className="mt-1 text-[11px] text-[#8a9290]">Ordenado por puntaje promedio actual</p></div><span className="text-[10px] text-[#8a9290]">Mayor a menor</span></div><div className="space-y-3">{[...datos].sort((a, b) => b.valor - a.valor).map((item, index) => <div key={item.dimension} className="flex items-center gap-3"><span className="w-5 text-center text-[10px] font-bold text-[#a00046]">{index + 1}</span><span className="w-24 text-[11px] text-[#59615e]">{item.dimension}</span><div className="h-2 flex-1 overflow-hidden rounded-full bg-[#f0f2f2]"><div className="h-full rounded-full bg-[#a00046]" style={{ width: `${item.valor}%` }} /></div><span className="w-10 text-right text-[11px] font-bold text-[#252927]">{item.valor}</span></div>)}</div></section>
+      {metricas && <p className="rounded-lg border-l-2 border-[#a00046] bg-white px-3 py-3 text-[11px] text-[#59615e] shadow-sm">La dimensión crítica del período es <strong className="text-[#a00046]">{metricas.dimensionCritica.dimension}</strong>, con un promedio de {metricas.dimensionCritica.valor} puntos.</p>}
+    </section>
+  );
+}
+
+function QuestionExplorerView({ preguntas, pregunta, onSelect, periodoLabel, total, error }) {
+  if (error) return <p className="mb-5 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>;
+  if (!pregunta || !preguntas.length) return <p className="mb-5 rounded-lg border border-[#e2e6e8] bg-white px-4 py-5 text-sm text-[#6d7673]">No hay respuestas de encuestas para los filtros seleccionados.</p>;
+
+  const { id: codigo, dimension, pregunta: texto, respuestas = [], total: totalPregunta = total } = pregunta;
+
+  return (
+    <section className="mb-5 space-y-4">
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#a00046]">Módulo ICA · Explorador</p><h2 className="text-xl font-bold text-[#252927]">Explorador de preguntas</h2><p className="mt-1 text-xs text-[#8a9290]">Seleccioná una pregunta para consultar cómo se distribuyen las respuestas.</p></div><span className="text-[11px] text-[#8a9290]">{periodoLabel}</span></div>
+      <div className="grid gap-4 xl:grid-cols-[.72fr_1.28fr]">
+        <section className="rounded-xl border border-[#e2e6e8] bg-white p-3 shadow-sm"><div className="mb-3 flex items-center justify-between"><div><h3 className="text-sm font-bold text-[#252927]">Listado de preguntas</h3><p className="mt-1 text-[10px] text-[#8a9290]">Seleccioná una para actualizar el gráfico</p></div><span className="text-[10px] text-[#8a9290]">{preguntas.length} visibles</span></div><div className="max-h-[620px] space-y-2 overflow-y-auto pr-1">{preguntas.map((item, index) => <button key={item.id} type="button" onClick={() => onSelect(item)} className={`w-full rounded-lg border p-3 text-left transition ${codigo === item.id ? 'border-[#a00046] bg-[#fff5f8] shadow-sm' : 'border-[#edf0f1] hover:border-[#d6a4b7]'}`}><span className="text-[9px] font-bold uppercase tracking-wider text-[#a00046]">{item.dimension}</span><span className="mt-1 block text-[11px] font-semibold leading-4 text-[#414845]"><span className="mr-1 text-[#a00046]">{String(index + 1).padStart(2, '0')}</span>{item.pregunta}</span><span className="mt-1 block text-[9px] text-[#8a9290]">{item.total.toLocaleString('es-BO')} respuestas</span></button>)}</div></section>
+        <section className="self-start rounded-xl border border-[#e2e6e8] bg-white p-4 shadow-sm xl:sticky xl:top-5"><div className="flex items-start justify-between gap-3 border-b border-[#edf0f1] pb-4"><div><span className="text-[9px] font-bold uppercase tracking-wider text-[#a00046]">Dimensión {dimension}</span><h3 className="mt-1 max-w-2xl text-base font-bold leading-6 text-[#252927]">{texto}</h3></div><button type="button" className="text-[10px] font-bold text-[#a00046] hover:underline">Exportar data</button></div><div className="mt-5"><div className="mb-3 flex items-center justify-between"><h4 className="text-xs font-bold text-[#252927]">Distribución de respuestas</h4><span className="text-[10px] text-[#8a9290]">{totalPregunta.toLocaleString('es-BO')} respuestas · {periodoLabel}</span></div><div className="space-y-4">{respuestas.map((item, index) => <div key={item.respuesta} className="grid grid-cols-[minmax(0,1fr)_2fr_42px] items-center gap-3"><span className="text-[10px] text-[#59615e]">{item.respuesta}</span><div className="h-6 overflow-hidden rounded-sm bg-[#f0f2f2]"><div className={`h-full rounded-sm ${index === 0 ? 'bg-[#a00046]' : 'bg-[#d9dddf]'}`} style={{ width: `${item.porcentaje}%` }} /></div><span className="text-right text-[10px] font-bold text-[#59615e]">{item.porcentaje}%</span></div>)}</div></div><div className="mt-6 rounded-lg border border-[#d8eee1] bg-[#f1faf4] p-3 text-[11px] leading-5 text-[#4e6c59]"><strong className="text-[#3c8d66]">Hallazgo principal</strong><br />La opción más seleccionada concentra {respuestas[0]?.porcentaje ?? 0}% de las respuestas del período.</div></section>
+      </div>
+    </section>
   );
 }
 

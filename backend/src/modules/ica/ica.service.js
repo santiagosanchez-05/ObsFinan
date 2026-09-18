@@ -368,6 +368,82 @@ async function obtenerDashboard({ campusId, year, quarter, communityId }) {
   };
 }
 
+const DIMENSIONES_PREGUNTAS = [
+  'Conocimiento', 'Conocimiento', 'Conocimiento', 'Conocimiento',
+  'Conocimiento', 'Conocimiento', 'Conocimiento', 'Conocimiento',
+  'Conocimiento', 'Conocimiento', 'Conocimiento', 'Conocimiento',
+  'Conocimiento', 'Conocimiento', 'Educación', 'Educación',
+  'Educación', 'Educación', 'Uso', 'Previsión', 'Previsión',
+  'Previsión', 'Previsión', 'Previsión', 'Previsión', 'Previsión',
+  'Previsión', 'Previsión', 'Previsión', 'Uso', 'Uso', 'Uso',
+];
+
+async function obtenerExploradorPreguntas({ campusId, year, quarter, communityId }) {
+  const columnas = CAMPOS_ENCUESTA.map(([, columna]) => columna);
+  const condiciones = ['c.campus_id = ?', 'c.status = 1', 'sr.status = 1'];
+  const parametros = [campusId];
+
+  if (year) {
+    condiciones.push('sr.year = ?');
+    parametros.push(year);
+  }
+  if (quarter) {
+    condiciones.push('sr.quarter = ?');
+    parametros.push(quarter);
+  }
+  if (communityId) {
+    condiciones.push('sr.community_id = ?');
+    parametros.push(communityId);
+  }
+
+  const [filas] = await pool.query(
+    `SELECT sr.year, sr.quarter, ${columnas.join(', ')}
+       FROM ica_survey_response sr
+       INNER JOIN community c ON c.community_id = sr.community_id
+      WHERE ${condiciones.join(' AND ')}
+      ORDER BY sr.year DESC, sr.quarter DESC`,
+    parametros,
+  );
+
+  let filasPeriodo = filas;
+  let periodo = null;
+  if (filas.length) {
+    periodo = { year: Number(filas[0].year), quarter: Number(filas[0].quarter) };
+    if (!year && !quarter) {
+      filasPeriodo = filas.filter((fila) => Number(fila.year) === periodo.year && Number(fila.quarter) === periodo.quarter);
+    }
+  }
+
+  const preguntas = CAMPOS_ENCUESTA.map(([campo, columna], index) => {
+    const conteos = new Map();
+    filasPeriodo.forEach((fila) => {
+      const valor = fila[columna] === null || fila[columna] === undefined || fila[columna] === ''
+        ? 'No sabe / No responde'
+        : String(fila[columna]);
+      conteos.set(valor, (conteos.get(valor) || 0) + 1);
+    });
+    const total = filasPeriodo.length;
+    const respuestas = [...conteos.entries()]
+      .map(([respuesta, cantidad]) => ({
+        respuesta,
+        cantidad,
+        porcentaje: total ? Number(((cantidad / total) * 100).toFixed(1)) : 0,
+      }))
+      .sort((a, b) => b.cantidad - a.cantidad);
+
+    return {
+      id: campo,
+      numero: index + 1,
+      dimension: DIMENSIONES_PREGUNTAS[index],
+      pregunta: ENCABEZADOS_ESPERADOS[index],
+      total,
+      respuestas,
+    };
+  });
+
+  return { periodo, total: filasPeriodo.length, preguntas };
+}
+
 
 //postRegistroIca (US18).
 
@@ -897,6 +973,7 @@ module.exports = {
   registrarCargaPorArchivo,
   obtenerComunidadesPorSede,
   obtenerDashboard,
+  obtenerExploradorPreguntas,
   registrarRegistroIndividual,
   obtenerHistorialIca,
   eliminarRegistroIndividual,

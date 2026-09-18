@@ -19,6 +19,24 @@ async function getDashboardIca(req, res) {
   }
 }
 
+async function getExploradorPreguntasIca(req, res) {
+  const campusId = req.user.campusId;
+  if (!campusId) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
+
+  try {
+    const resultado = await icaService.obtenerExploradorPreguntas({
+      campusId,
+      year: req.query.year ? Number(req.query.year) : null,
+      quarter: req.query.quarter ? Number(req.query.quarter) : null,
+      communityId: req.query.communityId ? Number(req.query.communityId) : null,
+    });
+    return res.status(200).json(resultado);
+  } catch (err) {
+    console.error('Error al obtener explorador de preguntas ICA:', err);
+    return res.status(500).json({ error: 'No se pudo cargar el explorador de preguntas ICA' });
+  }
+}
+
 
 async function postRegistroIca(req, res) {
   const parsed = registroIcaSchema.safeParse(req.body);
@@ -380,4 +398,4 @@ async function verifyArchivoIca(req, res) {
     });
   }
 }
-module.exports = { getDashboardIca, getComunidadesIca, postRegistroIca, postUploadIca, getHistorialIca, getDetalleArchivoIca, deleteRegistroIca, deleteArchivoIca, deleteRespuestaIca,verifyArchivoIca, downloadArchivoIca };
+module.exports = { getDashboardIca, getExploradorPreguntasIca, getComunidadesIca, postRegistroIca, postUploadIca, getHistorialIca, getDetalleArchivoIca, deleteRegistroIca, deleteArchivoIca, deleteRespuestaIca, verifyArchivoIca, downloadArchivoIca };
