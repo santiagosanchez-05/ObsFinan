@@ -56,18 +56,7 @@ async function getComunidadesIca(req, res) {
   }
 }
 
-async function getHistorialIca(req, res) {
-  const campusId = req.user.campusId;
-  if (!campusId) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
 
-  try {
-    const registros = await icaService.obtenerHistorial({ campusId });
-    return res.status(200).json({ registros });
-  } catch (err) {
-    console.error('Error al obtener historial ICA:', err);
-    return res.status(500).json({ error: 'No se pudo cargar el historial ICA' });
-  }
-}
 
 async function postUploadIca(req, res) {
   if (!req.file) {
@@ -149,13 +138,18 @@ async function getHistorialIca(req, res) {
       tipo: req.query.tipo,
       communityId: req.query.communityId ? Number(req.query.communityId) : null,
       busqueda: req.query.busqueda ? String(req.query.busqueda).trim() : '',
+      estado: req.query.estado,
+      sortBy: req.query.sortBy,
+      sortDir: req.query.sortDir,
     });
+
     return res.status(200).json(resultado);
   } catch (err) {
     console.error('Error al obtener historial ICA:', err);
     return res.status(500).json({ error: 'No se pudo cargar el historial ICA' });
   }
 }
+
 async function getDetalleArchivoIca(req, res) {
   const campusId = req.user.campusId;
   if (!campusId) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
@@ -176,4 +170,45 @@ async function getDetalleArchivoIca(req, res) {
     return res.status(500).json({ error: 'No se pudo cargar el detalle del archivo' });
   }
 }
-module.exports = { getDashboardIca, getComunidadesIca, postRegistroIca, postUploadIca, getHistorialIca, getDetalleArchivoIca };
+async function deleteRegistroIca(req, res) {
+  const campusId = req.user.campusId;
+  if (!campusId) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
+
+  const dataLoadId = Number(req.params.id);
+  if (!Number.isInteger(dataLoadId) || dataLoadId <= 0) {
+    return res.status(400).json({ error: 'Id inválido' });
+  }
+
+  try {
+    await icaService.eliminarRegistroIndividual({ campusId, dataLoadId });
+    return res.status(200).json({ message: 'Registro eliminado correctamente' });
+  } catch (err) {
+    if (err.message === 'REGISTRO_NO_ENCONTRADO') {
+      return res.status(404).json({ error: 'No se encontró el registro, o no pertenece a tu sede' });
+    }
+    console.error('Error al eliminar registro individual ICA:', err);
+    return res.status(500).json({ error: 'No se pudo eliminar el registro' });
+  }
+}
+
+async function deleteArchivoIca(req, res) {
+  const campusId = req.user.campusId;
+  if (!campusId) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
+
+  const dataLoadId = Number(req.params.id);
+  if (!Number.isInteger(dataLoadId) || dataLoadId <= 0) {
+    return res.status(400).json({ error: 'Id inválido' });
+  }
+
+  try {
+    await icaService.eliminarArchivoIca({ campusId, dataLoadId });
+    return res.status(200).json({ message: 'Archivo eliminado correctamente' });
+  } catch (err) {
+    if (err.message === 'ARCHIVO_NO_ENCONTRADO') {
+      return res.status(404).json({ error: 'No se encontró el archivo, o no pertenece a tu sede' });
+    }
+    console.error('Error al eliminar archivo ICA:', err);
+    return res.status(500).json({ error: 'No se pudo eliminar el archivo' });
+  }
+}
+module.exports = { getDashboardIca, getComunidadesIca, postRegistroIca, postUploadIca, getHistorialIca, getDetalleArchivoIca, deleteRegistroIca, deleteArchivoIca };

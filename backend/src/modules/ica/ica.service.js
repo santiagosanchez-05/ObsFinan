@@ -82,15 +82,15 @@ function parsearArchivoIca(buffer) {
     }
 
     const objetoFila = { filaExcel: i + 1 };
-   CAMPOS_ENCUESTA.forEach(([campoJs], index) => {
-  const valor = limpiar(fila[index]);
+    CAMPOS_ENCUESTA.forEach(([campoJs], index) => {
+      const valor = limpiar(fila[index]);
 
-  if (valor && valor.toUpperCase().startsWith('N/A')) {
-    objetoFila[campoJs] = null;
-  } else {
-    objetoFila[campoJs] = valor;
-  }
-});
+      if (valor && valor.toUpperCase().startsWith('N/A')) {
+        objetoFila[campoJs] = null;
+      } else {
+        objetoFila[campoJs] = valor;
+      }
+    });
 
     datos.push(objetoFila);
   }
@@ -114,7 +114,7 @@ function validarFilas(datos) {
       filasValidas.push(parsed.data);
     }
   }
- 
+
 
   return { filasValidas, errores };
 }
@@ -127,31 +127,6 @@ async function obtenerComunidadesPorSede(campusId) {
   return comunidades;
 }
 
-async function obtenerHistorial({ campusId }) {
-  const [filas] = await pool.query(
-    `SELECT dl.data_load_id, dl.source_type, dl.file_name, dl.total_rows, dl.created_at,
-            MIN(m.year) AS year, MIN(m.quarter) AS quarter,
-            COUNT(DISTINCT m.community_id) AS communities,
-            GROUP_CONCAT(DISTINCT c.community_name ORDER BY c.community_name SEPARATOR ', ') AS community_names
-       FROM data_load dl
-       INNER JOIN ica_measurement m ON m.data_load_id = dl.data_load_id AND m.status = 1
-       INNER JOIN community c ON c.community_id = m.community_id AND c.status = 1
-      WHERE dl.module = ? AND dl.status = 1 AND c.campus_id = ?
-      GROUP BY dl.data_load_id, dl.source_type, dl.file_name, dl.total_rows, dl.created_at
-      ORDER BY dl.created_at DESC`,
-    [MODULE_ICA, campusId],
-  );
-
-  return filas.map((fila) => ({
-    id: fila.data_load_id,
-    tipo: Number(fila.source_type) === SOURCE_TYPE_ARCHIVO ? 'masiva' : 'manual',
-    origen: fila.file_name,
-    comuna: Number(fila.communities) === 1 ? fila.community_names : `${fila.communities} comunas`,
-    periodo: `${fila.year} - Q${fila.quarter}`,
-    total: Number(fila.total_rows),
-    fecha: fila.created_at,
-  }));
-}
 
 function promedio(valores) {
   const validos = valores.filter((valor) => valor !== null && valor !== undefined);
@@ -353,7 +328,7 @@ async function obtenerDashboard({ campusId, year, quarter, communityId }) {
   const brechaMayor = comunas.reduce(
     (actual, fila) =>
       Math.abs(fila.hombres - fila.mujeres) >
-      Math.abs(actual.hombres - actual.mujeres)
+        Math.abs(actual.hombres - actual.mujeres)
         ? fila
         : actual,
     comunas[0],
@@ -384,7 +359,7 @@ async function obtenerDashboard({ campusId, year, quarter, communityId }) {
       },
     },
 
-    
+
     opcionesFiltros: {
       periodos: periodosDisponibles,
       comunidades: comunidadesDisponibles,
@@ -507,17 +482,17 @@ async function registrarCargaPorArchivo({ filasValidas, communityId, campusId, q
   }
 }
 
-async function obtenerHistorialIca({ campusId, page = 1, pageSize = 10, tipo, communityId, busqueda }) {
-  const offset = (page - 1) * pageSize;
-  const condiciones = ['dl.module = ?', 'dl.status = 1'];
-  const parametros = [MODULE_ICA];
+const COLUMNAS_ORDEN = {
+  comuna: ['comuna_nombre'],
+  periodo: ['year', 'quarter'],
+  fecha: ['dl.created_at'],
+};
 
-  condiciones.push(`dl.data_load_id IN (
-    SELECT sr.data_load_id FROM ica_survey_response sr
-    INNER JOIN community c ON c.community_id = sr.community_id
-    WHERE c.campus_id = ? AND sr.status = 1
-  )`);
-  parametros.push(campusId);
+async function obtenerHistorialIca({ campusId, page = 1, pageSize = 10, tipo, communityId, busqueda, estado, sortBy, sortDir }) {
+  const offset = (page - 1) * pageSize;
+
+  const condiciones = ['dl.module = ?', 'dl.status != 0', 'c.campus_id = ?'];
+  const parametros = [MODULE_ICA, campusId];
 
   if (tipo === 'individuales') {
     condiciones.push('dl.source_type = ?');
@@ -528,73 +503,101 @@ async function obtenerHistorialIca({ campusId, page = 1, pageSize = 10, tipo, co
   }
 
   if (communityId) {
-    condiciones.push(`dl.data_load_id IN (
-      SELECT sr.data_load_id FROM ica_survey_response sr WHERE sr.community_id = ? AND sr.status = 1
-    )`);
+    condiciones.push('sr.community_id = ?');
     parametros.push(communityId);
   }
 
   if (busqueda) {
-    condiciones.push(`(
-      dl.file_name LIKE ?
-      OR dl.data_load_id IN (
-        SELECT sr.data_load_id FROM ica_survey_response sr
-        INNER JOIN community c ON c.community_id = sr.community_id
-        WHERE c.community_name LIKE ?
-      )
-    )`);
+    condiciones.push('(dl.file_name LIKE ? OR c.community_name LIKE ?)');
     parametros.push(`%${busqueda}%`, `%${busqueda}%`);
   }
+  if (estado === 'verificado') {
+  condiciones.push('dl.status = ?');
+  parametros.push(2);
+} else if (estado === 'no_verificado') {
+  condiciones.push('dl.status = ?');
+  parametros.push(1);
+}
 
   const whereSql = condiciones.join(' AND ');
+  const columnasOrden = COLUMNAS_ORDEN[sortBy] || COLUMNAS_ORDEN.fecha;
+const direccion = sortDir === 'asc' ? 'ASC' : 'DESC';
+const orderSql = columnasOrden.map((col) => `${col} ${direccion}`).join(', ');
 
-  const [[{ total }]] = await pool.query(`SELECT COUNT(*) AS total FROM data_load dl WHERE ${whereSql}`, parametros);
+  const [[{ total }]] = await pool.query(
+    `SELECT COUNT(*) AS total FROM (
+       SELECT dl.data_load_id
+         FROM data_load dl
+         INNER JOIN ica_survey_response sr ON sr.data_load_id = dl.data_load_id AND sr.status = 1
+         INNER JOIN community c ON c.community_id = sr.community_id
+        WHERE ${whereSql}
+        GROUP BY dl.data_load_id
+     ) sub`,
+    parametros,
+  );
 
   const [filas] = await pool.query(
-    `SELECT dl.data_load_id, dl.source_type, dl.file_name, dl.total_rows, dl.created_at
+    `SELECT dl.data_load_id, dl.source_type, dl.file_name, dl.status, dl.created_at,
+            MIN(c.community_name) AS comuna_nombre,
+            COUNT(DISTINCT sr.community_id) AS num_comunidades,
+            MIN(sr.year) AS year, MIN(sr.quarter) AS quarter,
+            COUNT(DISTINCT CONCAT(sr.year, '-', sr.quarter)) AS num_periodos,
+            COUNT(sr.survey_response_id) AS total_registros
        FROM data_load dl
+       INNER JOIN ica_survey_response sr ON sr.data_load_id = dl.data_load_id AND sr.status = 1
+       INNER JOIN community c ON c.community_id = sr.community_id
       WHERE ${whereSql}
-      ORDER BY dl.created_at DESC
+      GROUP BY dl.data_load_id, dl.source_type, dl.file_name, dl.status, dl.created_at
+      ORDER BY ${orderSql}
       LIMIT ? OFFSET ?`,
     [...parametros, pageSize, offset],
   );
 
-  if (filas.length === 0) {
-    return { registros: [], total, page, pageSize };
-  }
-
-  const ids = filas.map((f) => f.data_load_id);
-  const [entrevistas] = await pool.query(
-    `SELECT sr.data_load_id, sr.year, sr.quarter, sr.community_id, c.community_name
-       FROM ica_survey_response sr
-       INNER JOIN community c ON c.community_id = sr.community_id
-      WHERE sr.data_load_id IN (?) AND sr.status = 1`,
-    [ids],
-  );
-
-  const porCarga = new Map();
-  for (const e of entrevistas) {
-    if (!porCarga.has(e.data_load_id)) porCarga.set(e.data_load_id, []);
-    porCarga.get(e.data_load_id).push(e);
-  }
-
-  const registros = filas.map((fila) => {
-    const propias = porCarga.get(fila.data_load_id) || [];
-    const comunasUnicas = [...new Set(propias.map((e) => e.community_name))];
-    const periodosUnicos = [...new Set(propias.map((e) => `Q${e.quarter} ${e.year}`))];
-
-    return {
-      id: fila.data_load_id,
-      tipo: fila.source_type === SOURCE_TYPE_ARCHIVO ? 'masiva' : 'manual',
-      origen: fila.source_type === SOURCE_TYPE_ARCHIVO ? fila.file_name : 'Registro individual',
-      comuna: comunasUnicas.length === 1 ? comunasUnicas[0] : `${comunasUnicas.length} comunas`,
-      periodo: periodosUnicos.length === 1 ? periodosUnicos[0] : 'Varios períodos',
-      registros: propias.length,
-      fecha: fila.created_at,
-    };
-  });
+  const registros = filas.map((fila) => ({
+    id: fila.data_load_id,
+    tipo: Number(fila.source_type) === SOURCE_TYPE_ARCHIVO ? 'masiva' : 'manual',
+    origen: Number(fila.source_type) === SOURCE_TYPE_ARCHIVO ? fila.file_name : 'Registro individual',
+    comuna: Number(fila.num_comunidades) === 1 ? fila.comuna_nombre : `${fila.num_comunidades} comunas`,
+    periodo: Number(fila.num_periodos) === 1 ? `Q${fila.quarter} ${fila.year}` : 'Varios períodos',
+    registros: Number(fila.total_registros),
+    fecha: fila.created_at,
+    estado: Number(fila.status) === 2 ? 'Verificado' : 'No verificado',
+  }));
 
   return { registros, total, page, pageSize };
+}
+async function eliminarRegistroIndividual({ campusId, dataLoadId }) {
+  const [cargas] = await pool.query(
+    'SELECT data_load_id FROM data_load WHERE data_load_id = ? AND module = ? AND source_type = ? AND status != 0',
+    [dataLoadId, MODULE_ICA, SOURCE_TYPE_INDIVIDUAL],
+  );
+  if (!cargas.length) throw new Error('REGISTRO_NO_ENCONTRADO');
+
+  const [pertenencia] = await pool.query(
+    `SELECT 1 FROM ica_measurement m INNER JOIN community c ON c.community_id = m.community_id
+      WHERE m.data_load_id = ? AND c.campus_id = ? LIMIT 1`,
+    [dataLoadId, campusId],
+  );
+  if (!pertenencia.length) throw new Error('REGISTRO_NO_ENCONTRADO');
+
+  await pool.query('UPDATE data_load SET status = 0 WHERE data_load_id = ?', [dataLoadId]);
+}
+
+async function eliminarArchivoIca({ campusId, dataLoadId }) {
+  const [cargas] = await pool.query(
+    'SELECT data_load_id FROM data_load WHERE data_load_id = ? AND module = ? AND source_type = ? AND status != 0',
+    [dataLoadId, MODULE_ICA, SOURCE_TYPE_ARCHIVO],
+  );
+  if (!cargas.length) throw new Error('ARCHIVO_NO_ENCONTRADO');
+
+  const [pertenencia] = await pool.query(
+    `SELECT 1 FROM ica_survey_response sr INNER JOIN community c ON c.community_id = sr.community_id
+      WHERE sr.data_load_id = ? AND c.campus_id = ? LIMIT 1`,
+    [dataLoadId, campusId],
+  );
+  if (!pertenencia.length) throw new Error('ARCHIVO_NO_ENCONTRADO');
+
+  await pool.query('UPDATE data_load SET status = 0 WHERE data_load_id = ?', [dataLoadId]);
 }
 async function obtenerDetalleArchivoIca({ campusId, dataLoadId }) {
   const [cargas] = await pool.query(
@@ -602,7 +605,7 @@ async function obtenerDetalleArchivoIca({ campusId, dataLoadId }) {
             u.first_name, u.paternal_last_name
        FROM data_load dl
        LEFT JOIN user u ON u.user_id = dl.created_modified_by
-      WHERE dl.data_load_id = ? AND dl.module = ?`,
+      WHERE dl.data_load_id = ? AND dl.module = ? AND dl.status != 0`,
     [dataLoadId, MODULE_ICA],
   );
   if (!cargas.length) throw new Error('ARCHIVO_NO_ENCONTRADO');
@@ -641,22 +644,22 @@ async function obtenerDetalleArchivoIca({ campusId, dataLoadId }) {
       fechaCarga: carga.created_at,
       subidoPor: nombreUsuario,
       totalRegistros: respuestas.length,
-      estado: carga.status === 1 ? 'Verificado' : 'Inactivo',
+      estado: Number(carga.status) === 2 ? 'Verificado' : 'No verificado',
       comunidad: respuestas[0].community_name,
       periodo: `Q${respuestas[0].quarter} ${respuestas[0].year}`,
     },
     registros,
   };
 }
-
 module.exports = {
   parsearArchivoIca,
   validarFilas,
   registrarCargaPorArchivo,
   obtenerComunidadesPorSede,
-  obtenerHistorial,
   obtenerDashboard,
   registrarRegistroIndividual,
   obtenerHistorialIca,
+  eliminarRegistroIndividual,
+  eliminarArchivoIca,
   obtenerDetalleArchivoIca,
 };

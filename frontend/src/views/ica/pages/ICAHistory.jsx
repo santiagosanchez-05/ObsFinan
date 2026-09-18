@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../../shared/AuthContext';
+import ConfirmDialog from '../../../shared/ConfirmDialog';
 import {
   ArrowLeft,
   ChevronDown,
+  ChevronUp,
+  ChevronsUpDown,
   Search,
   Plus,
   Folder,
@@ -20,6 +23,13 @@ const TABS = [
   { id: 'archivos', label: 'Archivos', tipo: 'archivos' },
 ];
 
+// Columnas sobre las que se puede ordenar, clickeando su encabezado.
+const COLUMNAS_ORDENABLES = {
+  comuna: 'Comuna',
+  periodo: 'Periodo',
+  fecha: 'Fecha de carga',
+};
+
 const PAGE_SIZE = 10;
 
 function formatearFecha(valor) {
@@ -29,6 +39,13 @@ function formatearFecha(valor) {
   return fecha.toLocaleDateString('es-BO', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
+// US24: la ruta de borrado depende del tipo de registro — cada uno vive
+// en su propio endpoint (DELETE /api/ica/:id para manuales, DELETE
+// /api/ica/files/:id para archivos).
+function rutaEliminar(registro) {
+  return registro.tipo === 'masiva' ? `/api/ica/files/${registro.id}` : `/api/ica/${registro.id}`;
+}
+
 export default function ICAHistory() {
   const { token } = useAuth();
 
@@ -36,7 +53,10 @@ export default function ICAHistory() {
   const [busquedaInput, setBusquedaInput] = useState('');
   const [busqueda, setBusqueda] = useState('');
   const [communityId, setCommunityId] = useState('');
+  const [estado, setEstado] = useState('');
   const [page, setPage] = useState(1);
+  const [sortBy, setSortBy] = useState('fecha');
+  const [sortDir, setSortDir] = useState('desc');
 
   const [comunidades, setComunidades] = useState([]);
 
@@ -44,6 +64,11 @@ export default function ICAHistory() {
   const [total, setTotal] = useState(0);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
+  const [recargarClave, setRecargarClave] = useState(0);
+
+  // Registro pendiente de confirmar borrado (o null si el diálogo está cerrado).
+  const [registroAEliminar, setRegistroAEliminar] = useState(null);
+  const [eliminando, setEliminando] = useState(false);
 
   // Debounce del buscador: esperamos 400ms sin tipeo antes de disparar la consulta,
   // para no pegarle al backend en cada tecla.
@@ -85,11 +110,16 @@ export default function ICAHistory() {
       setError('');
 
       const tipoActual = TABS.find((t) => t.id === tab)?.tipo;
-      const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+      const params = new URLSearchParams({
+        page: String(page),
+        pageSize: String(PAGE_SIZE),
+        sortBy,
+        sortDir,
+      });
       if (tipoActual) params.set('tipo', tipoActual);
       if (communityId) params.set('communityId', communityId);
       if (busqueda) params.set('busqueda', busqueda);
-
+      if (estado) params.set('estado', estado);
       try {
         const res = await fetch(`/api/ica/historial?${params.toString()}`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -111,7 +141,7 @@ export default function ICAHistory() {
     return () => {
       cancelado = true;
     };
-  }, [token, tab, communityId, busqueda, page]);
+  }, [token, tab, communityId, estado, busqueda, page, sortBy, sortDir, recargarClave]);
 
   const totalPaginas = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -125,8 +155,56 @@ export default function ICAHistory() {
     setPage(1);
   }
 
+  function alternarOrden(columna) {
+    if (sortBy === columna) {
+      setSortDir((dir) => (dir === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortBy(columna);
+      setSortDir('asc');
+    }
+    setPage(1);
+  }
+
+  function IconoOrden({ columna }) {
+    if (sortBy !== columna) return <ChevronsUpDown size={11} className="text-[#c3c9c7]" />;
+    return sortDir === 'asc' ? <ChevronUp size={11} /> : <ChevronDown size={11} />;
+  }
+
+  async function confirmarEliminacion() {
+    if (!registroAEliminar) return;
+    setEliminando(true);
+    try {
+      const res = await fetch(rutaEliminar(registroAEliminar), {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'No se pudo eliminar el registro');
+      setRegistroAEliminar(null);
+      setRecargarClave((c) => c + 1);
+    } catch (err) {
+      setError(err.message || 'No se pudo eliminar el registro');
+      setRegistroAEliminar(null);
+    } finally {
+      setEliminando(false);
+    }
+  }
+
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-[#f4f6f8] px-4 py-5 sm:px-6 lg:px-8">
+      <ConfirmDialog
+        open={Boolean(registroAEliminar)}
+        titulo={registroAEliminar?.tipo === 'masiva' ? '¿Eliminar este archivo?' : '¿Eliminar este registro?'}
+        mensaje={
+          registroAEliminar?.tipo === 'masiva'
+            ? `Se eliminará "${registroAEliminar?.origen}" y todas sus entrevistas asociadas. Esta acción no se puede deshacer.`
+            : 'Este registro individual dejará de contar para los dashboards. Esta acción no se puede deshacer.'
+        }
+        textoConfirmar={eliminando ? 'Eliminando...' : 'Eliminar'}
+        onConfirm={confirmarEliminacion}
+        onCancel={() => setRegistroAEliminar(null)}
+      />
+
       <div className="mx-auto max-w-[1120px]">
         {/* Breadcrumb */}
         <Link
@@ -155,8 +233,8 @@ export default function ICAHistory() {
                   key={t.id}
                   onClick={() => cambiarTab(t.id)}
                   className={`rounded-md px-3.5 py-1.5 text-xs font-semibold transition ${tab === t.id
-                    ? 'bg-white text-[#202522] shadow-sm'
-                    : 'text-[#8a9290] hover:text-[#59615e]'
+                      ? 'bg-white text-[#202522] shadow-sm'
+                      : 'text-[#8a9290] hover:text-[#59615e]'
                     }`}
                 >
                   {t.label}
@@ -177,7 +255,25 @@ export default function ICAHistory() {
               </select>
               <ChevronDown size={13} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8a9290]" />
             </div>
+            <div className="relative">
+              <select
+                value={estado}
+                onChange={(e) => {
+                  setEstado(e.target.value);
+                  setPage(1);
+                }}
+                className="appearance-none rounded-lg border border-[#dfe4e5] bg-white py-2 pl-3 pr-8 text-xs font-semibold text-[#59615e] outline-none focus:border-[#a00046]"
+              >
+                <option value="">Filtrar por Estado</option>
+                <option value="verificado">Verificado</option>
+                <option value="no_verificado">No verificado</option>
+              </select>
 
+              <ChevronDown
+                size={13}
+                className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8a9290]"
+              />
+            </div>
             <label className="relative">
               <Search size={13} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8a9290]" />
               <input
@@ -185,8 +281,6 @@ export default function ICAHistory() {
                 value={busquedaInput}
                 onChange={(e) => setBusquedaInput(e.target.value)}
                 placeholder="Buscar por archivo o comuna..."
-                value={busqueda}
-                onChange={(event) => setBusqueda(event.target.value)}
                 className="w-64 rounded-lg border border-[#dfe4e5] bg-white py-2 pl-8 pr-3 text-xs text-[#414845] outline-none focus:border-[#a00046]"
               />
             </label>
@@ -207,28 +301,41 @@ export default function ICAHistory() {
         {/* Tabla */}
         <section className="overflow-hidden rounded-xl border border-[#e2e6e8] bg-white shadow-sm">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] text-left text-xs">
+            <table className="w-full min-w-[880px] text-left text-xs">
               <thead className="bg-[#fafbfb] text-[9px] font-bold uppercase tracking-wider text-[#8a9290]">
                 <tr>
                   <th className="px-4 py-3">Origen</th>
-                  <th className="px-4 py-3">Comuna</th>
-                  <th className="px-4 py-3">Periodo</th>
+                  <th className="px-4 py-3">
+                    <button onClick={() => alternarOrden('comuna')} className="inline-flex items-center gap-1 hover:text-[#a00046]">
+                      {COLUMNAS_ORDENABLES.comuna} <IconoOrden columna="comuna" />
+                    </button>
+                  </th>
+                  <th className="px-4 py-3">
+                    <button onClick={() => alternarOrden('periodo')} className="inline-flex items-center gap-1 hover:text-[#a00046]">
+                      {COLUMNAS_ORDENABLES.periodo} <IconoOrden columna="periodo" />
+                    </button>
+                  </th>
                   <th className="px-4 py-3">Registros</th>
-                  <th className="px-4 py-3">Fecha de carga</th>
+                  <th className="px-4 py-3">
+                    <button onClick={() => alternarOrden('fecha')} className="inline-flex items-center gap-1 hover:text-[#a00046]">
+                      {COLUMNAS_ORDENABLES.fecha} <IconoOrden columna="fecha" />
+                    </button>
+                  </th>
+                  <th className="px-4 py-3">Estado</th>
                   <th className="px-4 py-3 text-right">Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {cargando ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-[#8a9290]">
+                    <td colSpan={7} className="px-4 py-8 text-center text-[#8a9290]">
                       <Loader2 size={16} className="mx-auto mb-2 animate-spin" />
                       Cargando historial...
                     </td>
                   </tr>
                 ) : registros.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-[#8a9290]">
+                    <td colSpan={7} className="px-4 py-8 text-center text-[#8a9290]">
                       No hay registros que coincidan con los filtros seleccionados.
                     </td>
                   </tr>
@@ -263,13 +370,23 @@ export default function ICAHistory() {
                       </td>
                       <td className="px-4 py-3">{formatearFecha(r.fecha)}</td>
                       <td className="px-4 py-3">
+                        <span
+                          className={`rounded-full px-2 py-1 text-[10px] font-bold ${r.estado === 'Verificado' ? 'bg-[#eaf6ef] text-[#2f9e58]' : 'bg-[#fbf1de] text-[#b7891e]'
+                            }`}
+                        >
+                          {r.estado}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-3 text-[#8a9290]">
                           {r.tipo === 'masiva' ? (
                             <Link to={`/ica/historial/${r.id}`} className="hover:text-[#a00046]"><Eye size={14} /></Link>
                           ) : (
                             <button className="hover:text-[#a00046]"><SquarePen size={14} /></button>
                           )}
-                          <button className="hover:text-[#a00046]"><Trash2 size={14} /></button>
+                          <button onClick={() => setRegistroAEliminar(r)} className="hover:text-[#a00046]">
+                            <Trash2 size={14} />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -318,13 +435,12 @@ export default function ICAHistory() {
               </p>
             </div>
           </div>
-          <a
-            //   href="/plantillas/formato_ica.xlsx"
-            //   download
+          <button
+            type="button"
             className="shrink-0 rounded-lg border border-[#a00046] px-4 py-2 text-xs font-semibold text-[#a00046] transition hover:bg-[#fff3f7]"
           >
             Ver Guía
-          </a>
+          </button>
         </section>
       </div>
     </main>
