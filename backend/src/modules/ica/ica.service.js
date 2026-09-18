@@ -412,6 +412,50 @@ function guardarArchivoEnDisco(buffer, dataLoadId, nombreOriginal) {
   fs.writeFileSync(rutaArchivo(dataLoadId, nombreOriginal), buffer);
 }
 
+async function obtenerArchivoParaDescarga({ campusId, dataLoadId }) {
+  const [filas] = await pool.query(
+    `SELECT dl.data_load_id, dl.file_name
+       FROM data_load dl
+       INNER JOIN ica_survey_response sr
+         ON sr.data_load_id = dl.data_load_id
+        AND sr.status = 1
+       INNER JOIN community c
+         ON c.community_id = sr.community_id
+      WHERE dl.data_load_id = ?
+        AND dl.module = ?
+        AND dl.source_type = ?
+        AND dl.status != 0
+        AND c.campus_id = ?
+      LIMIT 1`,
+    [
+      dataLoadId,
+      MODULE_ICA,
+      SOURCE_TYPE_ARCHIVO,
+      campusId,
+    ],
+  );
+
+  if (!filas.length) {
+    throw new Error('ARCHIVO_NO_ENCONTRADO');
+  }
+
+  const archivo = filas[0];
+
+  const ruta = rutaArchivo(
+    archivo.data_load_id,
+    archivo.file_name
+  );
+
+  if (!fs.existsSync(ruta)) {
+    throw new Error('ARCHIVO_NO_DISPONIBLE');
+  }
+
+  return {
+    ruta,
+    nombreArchivo: archivo.file_name,
+  };
+}
+
 function borrarArchivoSiExiste(dataLoadId, nombreOriginal) {
   try {
     const ruta = rutaArchivo(dataLoadId, nombreOriginal);
@@ -836,6 +880,7 @@ async function obtenerDetalleArchivoIca({ campusId, dataLoadId }) {
     archivo: {
       id: carga.data_load_id,
       nombre: carga.file_name,
+      tipoCarga: Number(carga.source_type),
       fechaCarga: carga.created_at,
       subidoPor: nombreUsuario,
       totalRegistros: respuestas.length,
@@ -859,4 +904,5 @@ module.exports = {
   eliminarRespuestaIca,
   obtenerDetalleArchivoIca,
   verificarArchivoIca,
+  obtenerArchivoParaDescarga,
 };

@@ -98,6 +98,9 @@ export default function ICAFileDetail() {
   // Verificación de archivo
   const [verificandoArchivo, setVerificandoArchivo] = useState(false);
 
+  // Descarga
+  const [descargando, setDescargando] = useState(false);
+
   // Paginación
   const [paginaActual, setPaginaActual] = useState(1);
   const registrosPorPagina = 10;
@@ -251,6 +254,76 @@ export default function ICAFileDetail() {
     setFiltroSexo('');
     setFiltroEducacion('');
     setFiltroSeguroVida('');
+  }
+
+  // Descargar archivo según el tipo de carga
+  async function descargarArchivo() {
+    if (!archivo) return;
+
+    setDescargando(true);
+    setError('');
+
+    try {
+      // Carga masiva: descargar el Excel original
+      if (Number(archivo.tipoCarga) === 2) {
+        const res = await fetch(
+          `/api/ica/files/${id}/download`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (!res.ok) {
+          let mensaje = 'No se pudo descargar el archivo';
+
+          try {
+            const data = await res.json();
+
+            if (data.error) {
+              mensaje = data.error;
+            }
+          } catch {
+            // La respuesta no era JSON.
+          }
+
+          throw new Error(mensaje);
+        }
+
+        const blob = await res.blob();
+
+        const url = window.URL.createObjectURL(blob);
+        const enlace = document.createElement('a');
+
+        enlace.href = url;
+        enlace.download = archivo.nombre || 'archivo_ica.xlsx';
+
+        document.body.appendChild(enlace);
+        enlace.click();
+
+        enlace.remove();
+        window.URL.revokeObjectURL(url);
+
+        return;
+      }
+
+      // Carga manual: exportación todavía no implementada
+      if (Number(archivo.tipoCarga) === 1) {
+        setError(
+          'La descarga de registros manuales estará disponible próximamente.'
+        );
+        return;
+      }
+
+      setError('Tipo de carga no válido');
+    } catch (err) {
+      setError(
+        err.message || 'No se pudo descargar el archivo'
+      );
+    } finally {
+      setDescargando(false);
+    }
   }
 
   // Verificar archivo
@@ -562,10 +635,20 @@ export default function ICAFileDetail() {
 
                     {/* Descargar */}
                     <button
-                      className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#e1e5e5] bg-white px-3 py-2 text-xs font-semibold text-[#59615e] transition hover:bg-[#f7f8f8] hover:text-[#a00046]"
+                      onClick={descargarArchivo}
+                      disabled={descargando}
+                      className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#e1e5e5] bg-white px-3 py-2 text-xs font-semibold text-[#59615e] transition hover:bg-[#f7f8f8] hover:text-[#a00046] disabled:cursor-not-allowed disabled:opacity-60"
                       title="Descargar"
                     >
-                      <Download size={14} />
+                      {descargando ? (
+                        <Loader2
+                          size={14}
+                          className="animate-spin"
+                        />
+                      ) : (
+                        <Download size={14} />
+                      )}
+
                       <span className="sm:hidden">
                         Descargar
                       </span>

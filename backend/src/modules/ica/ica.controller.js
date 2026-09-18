@@ -125,6 +125,54 @@ async function postUploadIca(req, res) {
     return res.status(500).json({ error: 'Error interno del servidor' });
   }
 }
+//Descarga de excel (subida masiva)
+async function downloadArchivoIca(req, res) {
+  const campusId = req.user.campusId;
+
+  if (!campusId) {
+    return res.status(400).json({
+      error: 'Tu usuario no tiene una sede asignada',
+    });
+  }
+
+  const dataLoadId = Number(req.params.id);
+
+  if (!Number.isInteger(dataLoadId) || dataLoadId <= 0) {
+    return res.status(400).json({
+      error: 'Id inválido',
+    });
+  }
+
+  try {
+    const resultado = await icaService.obtenerArchivoParaDescarga({
+      campusId,
+      dataLoadId,
+    });
+
+    return res.download(
+      resultado.ruta,
+      resultado.nombreArchivo
+    );
+  } catch (err) {
+    if (err.message === 'ARCHIVO_NO_ENCONTRADO') {
+      return res.status(404).json({
+        error: 'No se encontró el archivo',
+      });
+    }
+
+    if (err.message === 'ARCHIVO_NO_DISPONIBLE') {
+      return res.status(404).json({
+        error: 'El archivo ya no está disponible en el servidor',
+      });
+    }
+
+    console.error('Error al descargar archivo ICA:', err);
+
+    return res.status(500).json({
+      error: 'No se pudo descargar el archivo',
+    });
+  }
+}
 
 async function getHistorialIca(req, res) {
   const campusId = req.user.campusId;
@@ -332,4 +380,4 @@ async function verifyArchivoIca(req, res) {
     });
   }
 }
-module.exports = { getDashboardIca, getComunidadesIca, postRegistroIca, postUploadIca, getHistorialIca, getDetalleArchivoIca, deleteRegistroIca, deleteArchivoIca, deleteRespuestaIca,verifyArchivoIca  };
+module.exports = { getDashboardIca, getComunidadesIca, postRegistroIca, postUploadIca, getHistorialIca, getDetalleArchivoIca, deleteRegistroIca, deleteArchivoIca, deleteRespuestaIca,verifyArchivoIca, downloadArchivoIca };
