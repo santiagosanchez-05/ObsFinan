@@ -1,4 +1,4 @@
-const { uploadIcaMetaSchema, registroIcaSchema } = require('./ica.validation');
+const { uploadIcaMetaSchema, registroIcaSchema, entrevistaIcaSchema } = require('./ica.validation');
 const icaService = require('./ica.service');
 
 async function getDashboardIca(req, res) {
@@ -11,6 +11,7 @@ async function getDashboardIca(req, res) {
       year: req.query.year ? Number(req.query.year) : null,
       quarter: req.query.quarter ? Number(req.query.quarter) : null,
       communityId: req.query.communityId ? Number(req.query.communityId) : null,
+      dimension: req.query.dimension ? String(req.query.dimension) : null,
     });
     return res.status(200).json(dashboard);
   } catch (err) {
@@ -29,6 +30,7 @@ async function getExploradorPreguntasIca(req, res) {
       year: req.query.year ? Number(req.query.year) : null,
       quarter: req.query.quarter ? Number(req.query.quarter) : null,
       communityId: req.query.communityId ? Number(req.query.communityId) : null,
+      dimension: req.query.dimension ? String(req.query.dimension) : null,
     });
     return res.status(200).json(resultado);
   } catch (err) {
@@ -56,6 +58,27 @@ async function postRegistroIca(req, res) {
     }
     console.error('Error al registrar ICA:', err);
     return res.status(500).json({ error: 'No se pudo guardar el registro ICA' });
+  }
+}
+
+async function postEntrevistaIca(req, res) {
+  const parsed = entrevistaIcaSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: 'Datos inválidos', detalles: parsed.error.flatten() });
+  if (!req.user.campusId) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
+
+  try {
+    const resultado = await icaService.registrarEntrevistaIndividual({
+      ...parsed.data,
+      userId: req.user.userId,
+      campusId: req.user.campusId,
+    });
+    return res.status(201).json({ message: 'Entrevista ICA guardada correctamente', ...resultado });
+  } catch (err) {
+    if (err.message === 'COMUNIDAD_NO_ENCONTRADA') {
+      return res.status(400).json({ error: 'La comuna no pertenece a tu sede o ya no está disponible' });
+    }
+    console.error('Error al guardar entrevista ICA:', err);
+    return res.status(500).json({ error: 'No se pudo guardar la entrevista ICA' });
   }
 }
 
@@ -398,4 +421,4 @@ async function verifyArchivoIca(req, res) {
     });
   }
 }
-module.exports = { getDashboardIca, getExploradorPreguntasIca, getComunidadesIca, postRegistroIca, postUploadIca, getHistorialIca, getDetalleArchivoIca, deleteRegistroIca, deleteArchivoIca, deleteRespuestaIca, verifyArchivoIca, downloadArchivoIca };
+module.exports = { getDashboardIca, getExploradorPreguntasIca, getComunidadesIca, postRegistroIca, postEntrevistaIca, postUploadIca, getHistorialIca, getDetalleArchivoIca, deleteRegistroIca, deleteArchivoIca, deleteRespuestaIca, verifyArchivoIca, downloadArchivoIca };

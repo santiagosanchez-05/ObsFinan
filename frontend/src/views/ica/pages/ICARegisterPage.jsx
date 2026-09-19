@@ -89,10 +89,23 @@ export default function ICARegisterPage() {
   async function onSubmit(datos) {
     setErrorServidor('');
     setEnviando(true);
-    await new Promise((resolve) => setTimeout(resolve, 250));
-    setEnviando(false);
-    setGuardado(true);
-    return datos;
+    try {
+      const respuesta = await fetch('/api/ica/entrevistas', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(datos),
+      });
+      const resultado = await respuesta.json();
+      if (!respuesta.ok) throw new Error(resultado.error || 'No se pudo guardar la entrevista');
+      setGuardado(true);
+    } catch (err) {
+      setErrorServidor(err.message);
+    } finally {
+      setEnviando(false);
+    }
   }
 
   if (guardado) {
@@ -101,7 +114,7 @@ export default function ICARegisterPage() {
         <div className="mx-auto max-w-lg rounded-xl border border-[#e2e6e8] bg-white p-8 text-center shadow-sm">
           <CheckCircle2 size={40} className="mx-auto text-[#3c8d66]" />
           <h1 className="mt-3 text-xl font-bold text-[#252927]">Formulario completado</h1>
-          <p className="mt-2 text-sm text-[#6d7673]">La vista previa del registro ICA está lista. La conexión con el guardado se habilitará en la siguiente etapa.</p>
+          <p className="mt-2 text-sm text-[#6d7673]">La entrevista se guardó correctamente y sus resultados ya están disponibles en el dashboard ICA.</p>
           <Link to="/ica" className="mt-6 inline-flex rounded-lg bg-[#a00046] px-5 py-2.5 text-xs font-semibold text-white hover:bg-[#820039]">
             Volver al dashboard
           </Link>
@@ -167,14 +180,14 @@ export default function ICARegisterPage() {
 
           <div className="mt-5 flex items-start gap-2 rounded-lg bg-[#f4f6f8] p-3 text-[11px] text-[#59615e]">
             <Info size={15} className="mt-0.5 shrink-0 text-[#a00046]" />
-            <p>Este formulario es una vista de diseño. Las respuestas aún no se envían ni se almacenan en el servidor.</p>
+            <p>Las respuestas se validan antes de guardarse y alimentan los indicadores del dashboard ICA.</p>
           </div>
 
           {errorServidor && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{errorServidor}</p>}
 
           <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
             <Link to="/ica" className="text-center text-xs font-semibold text-[#59615e] hover:text-[#a00046]">Cancelar</Link>
-            <button type="submit" disabled={enviando} className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#a00046] px-5 py-2.5 text-xs font-semibold text-white shadow-sm hover:bg-[#820039] disabled:opacity-60">{enviando ? 'Preparando...' : 'Revisar respuestas'} <ChevronRight size={14} /></button>
+            <button type="submit" disabled={enviando} className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#a00046] px-5 py-2.5 text-xs font-semibold text-white shadow-sm hover:bg-[#820039] disabled:opacity-60">{enviando ? 'Guardando...' : 'Guardar entrevista'} <ChevronRight size={14} /></button>
           </div>
         </form>
       </div>

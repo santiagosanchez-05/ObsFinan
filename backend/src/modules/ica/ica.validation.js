@@ -159,4 +159,17 @@ const registroIcaSchema = z.object({
   icaMujeres: z.coerce.number().min(0).max(100),
 });
 
-module.exports = { uploadIcaMetaSchema, ENCABEZADOS_ESPERADOS, filaEncuestaIcaSchema, registroIcaSchema };
+const entrevistaIcaSchema = z.object({
+  communityId: z.coerce.number().int().positive('Falta seleccionar la comuna'),
+  quarter: z.coerce.number().int().min(1).max(4, { message: 'Trimestre inválido (1-4)' }),
+  year: z.coerce.number().int().min(2019).max(new Date().getFullYear()),
+}).and(z.preprocess((data) => ({ ...data, filaExcel: 0 }), filaEncuestaIcaSchema));
+
+module.exports = {
+  uploadIcaMetaSchema,
+  ENCABEZADOS_ESPERADOS,
+  filaEncuestaIcaSchema,
+  registroIcaSchema,
+  entrevistaIcaSchema,
+  OPCIONES,
+};

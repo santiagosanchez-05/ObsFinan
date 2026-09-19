@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const xlsx = require('xlsx');
 const pool = require('../../config/db');
-const { filaEncuestaIcaSchema, ENCABEZADOS_ESPERADOS } = require('./ica.validation');
+const { filaEncuestaIcaSchema, ENCABEZADOS_ESPERADOS, OPCIONES } = require('./ica.validation');
 
 // module: 1=ICA, 2=SPE; source_type: 1=individual, 2=archivo
 const MODULE_ICA = 1;
@@ -152,7 +152,7 @@ function transformarMedicion(row) {
 // ---------------------------------------------------------------------
 // Usada por getDashboardIca,
 // ---------------------------------------------------------------------
-async function obtenerDashboard({ campusId, year, quarter, communityId }) {
+async function obtenerDashboard({ campusId, year, quarter, communityId, dimension }) {
   const condiciones = ['c.campus_id = ?', 'c.status = 1', 'm.status = 1'];
   const parametros = [campusId];
 
@@ -172,17 +172,18 @@ async function obtenerDashboard({ campusId, year, quarter, communityId }) {
   }
 
   const [filas] = await pool.query(
-    `SELECT m.ica_measurement_id, m.community_id, c.community_name,
+    `SELECT MIN(m.ica_measurement_id) AS ica_measurement_id, m.community_id, c.community_name,
             m.year, m.quarter,
-            m.knowledge_index AS conocimiento,
-            m.usage_index AS uso,
-            m.education_index AS educacion,
-            m.foresight_index AS prevision,
-            m.ica_male AS ica_hombres,
-            m.ica_female AS ica_mujeres
+            AVG(m.knowledge_index) AS conocimiento,
+            AVG(m.usage_index) AS uso,
+            AVG(m.education_index) AS educacion,
+            AVG(m.foresight_index) AS prevision,
+            AVG(m.ica_male) AS ica_hombres,
+            AVG(m.ica_female) AS ica_mujeres
        FROM ica_measurement m
        INNER JOIN community c ON c.community_id = m.community_id
       WHERE ${condiciones.join(' AND ')}
+      GROUP BY m.community_id, c.community_name, m.year, m.quarter
       ORDER BY m.year DESC, m.quarter DESC, c.community_name ASC`,
     parametros,
   );
@@ -277,7 +278,7 @@ async function obtenerDashboard({ campusId, year, quarter, communityId }) {
   // DIMENSIONES
   // ------------------------------------------------------------
 
-  const dimensiones = [
+  const dimensionesCalculadas = [
     {
       dimension: 'Conocimiento',
       valor: promedio(comunas.map((fila) => fila.conocimiento)),
@@ -298,6 +299,9 @@ async function obtenerDashboard({ campusId, year, quarter, communityId }) {
     ...fila,
     valor: Number(fila.valor.toFixed(1)),
   }));
+  const dimensiones = dimension
+    ? dimensionesCalculadas.filter((fila) => fila.dimension === dimension)
+    : dimensionesCalculadas;
 
   // ------------------------------------------------------------
   // BRECHA DE GÉNERO
@@ -378,7 +382,7 @@ const DIMENSIONES_PREGUNTAS = [
   'Previsión', 'Previsión', 'Previsión', 'Uso', 'Uso', 'Uso',
 ];
 
-async function obtenerExploradorPreguntas({ campusId, year, quarter, communityId }) {
+async function obtenerExploradorPreguntas({ campusId, year, quarter, communityId, dimension }) {
   const columnas = CAMPOS_ENCUESTA.map(([, columna]) => columna);
   const condiciones = ['c.campus_id = ?', 'c.status = 1', 'sr.status = 1'];
   const parametros = [campusId];
@@ -441,7 +445,11 @@ async function obtenerExploradorPreguntas({ campusId, year, quarter, communityId
     };
   });
 
-  return { periodo, total: filasPeriodo.length, preguntas };
+  const preguntasFiltradas = dimension
+    ? preguntas.filter((pregunta) => pregunta.dimension === dimension)
+    : preguntas;
+
+  return { periodo, total: filasPeriodo.length, preguntas: preguntasFiltradas };
 }
 
 
@@ -470,6 +478,89 @@ async function registrarRegistroIndividual({ communityId, year, quarter, conocim
     );
     await conexion.commit();
     return { dataLoadId: carga.insertId };
+  } catch (err) {
+    await conexion.rollback();
+    throw err;
+  } finally {
+    conexion.release();
+  }
+}
+
+function puntajeOrdinal(valor, opciones) {
+  if (valor === null || valor === undefined || !opciones?.length) return null;
+  const indice = opciones.indexOf(valor);
+  return indice < 0 ? null : (indice / Math.max(opciones.length - 1, 1)) * 100;
+}
+
+function puntajeDimension(respuestas, campos) {
+  const valores = campos.map(([campo, opciones]) => puntajeOrdinal(respuestas[campo], opciones));
+  return Number(promedio(valores).toFixed(2));
+}
+
+function medirEntrevista(respuestas) {
+  const opciones = (nombre) => OPCIONES[nombre];
+  return {
+    conocimiento: puntajeDimension(respuestas, [
+      ['q01ContributesFinancially', opciones('siNo')], ['q04EducationLevel', opciones('educacion')],
+      ['q05InsurancePurpose', opciones('q05')], ['q06MandatoryInsuranceActivity', opciones('q06')],
+      ['q07MeaningPolicyholder', opciones('q07')], ['q08MeaningClaim', opciones('q08')],
+      ['q09MeaningPremium', opciones('q09')], ['q10MeaningDeductible', opciones('q10')],
+      ['q11MeaningExclusions', opciones('q11')], ['q12WhoSellsInsurance', opciones('q12')],
+      ['q13WhoIsHarmedByFraud', opciones('q13')], ['q14WhereToFileClaim', opciones('q14')],
+    ]),
+    uso: puntajeDimension(respuestas, [
+      ['q18HowToProtectYourself', opciones('q18')], ['q19AnnualInsuranceSpend', opciones('q19')],
+      ['q22HasLifeInsurance', opciones('siNo')], ['q23LifeInsuranceDuration', opciones('q23')],
+      ['q28LikelihoodFuturePurchase', opciones('q28')],
+    ]),
+    educacion: puntajeDimension(respuestas, [
+      ['q15HowAcquiredKnowledge', opciones('q15')], ['q16BestMethodToImprove', opciones('q16')],
+      ['q17WhoImprovesEducation', opciones('q17')],
+    ]),
+    prevision: puntajeDimension(respuestas, [
+      ['q20RetirementPreparation', opciones('q20')], ['q21InsuranceCultureLevel', opciones('q21')],
+      ['q24ReasonAcquired', opciones('q24')], ['q25PolicyReviewFrequency', opciones('q25')],
+      ['q26WouldSwitchProvider', opciones('q26')], ['q27SatisfactionCurrentPolicy', opciones('q27')],
+      ['q29BarriersToPurchase', opciones('q29')], ['q30TrustInInsurers', opciones('q30')],
+      ['q31IncomePercentageWilling', opciones('q31')], ['q32MostImportantFactor', opciones('q32')],
+    ]),
+  };
+}
+
+async function registrarEntrevistaIndividual({ communityId, year, quarter, userId, campusId, ...respuestas }) {
+  const [comunidades] = await pool.query(
+    'SELECT community_id FROM community WHERE community_id = ? AND campus_id = ? AND status = 1',
+    [communityId, campusId],
+  );
+  if (!comunidades.length) throw new Error('COMUNIDAD_NO_ENCONTRADA');
+
+  const conexion = await pool.getConnection();
+  try {
+    await conexion.beginTransaction();
+    const [carga] = await conexion.query(
+      `INSERT INTO data_load (module, source_type, file_name, total_rows, status, created_modified_by)
+       VALUES (?, ?, ?, 1, 1, ?)`,
+      [MODULE_ICA, SOURCE_TYPE_INDIVIDUAL, 'Registro individual', userId],
+    );
+    const columnas = CAMPOS_ENCUESTA.map(([, columna]) => columna);
+    const valores = CAMPOS_ENCUESTA.map(([campo]) => respuestas[campo] ?? null);
+    const [respuesta] = await conexion.query(
+      `INSERT INTO ica_survey_response
+         (data_load_id, community_id, year, quarter, surveyor_user_id, ${columnas.join(', ')}, status)
+       VALUES (?, ?, ?, ?, ?, ${columnas.map(() => '?').join(', ')}, 1)`,
+      [carga.insertId, communityId, year, quarter, userId, ...valores],
+    );
+    const medicion = medirEntrevista(respuestas);
+    const hombres = respuestas.q03Sex === 'Hombre' ? 100 : 0;
+    const mujeres = respuestas.q03Sex === 'Mujer' ? 100 : 0;
+    await conexion.query(
+      `INSERT INTO ica_measurement
+       (community_id, data_load_id, year, quarter, knowledge_index, usage_index, education_index, foresight_index, ica_male, ica_female, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+      [communityId, carga.insertId, year, quarter, medicion.conocimiento, medicion.uso, medicion.educacion, medicion.prevision, hombres, mujeres],
+    );
+    await conexion.commit();
+    return { dataLoadId: carga.insertId, surveyResponseId: respuesta.insertId };
   } catch (err) {
     await conexion.rollback();
     throw err;
@@ -975,6 +1066,7 @@ module.exports = {
   obtenerDashboard,
   obtenerExploradorPreguntas,
   registrarRegistroIndividual,
+  registrarEntrevistaIndividual,
   obtenerHistorialIca,
   eliminarRegistroIndividual,
   eliminarArchivoIca,
