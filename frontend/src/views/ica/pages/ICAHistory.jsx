@@ -379,11 +379,7 @@ export default function ICAHistory() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-3 text-[#8a9290]">
-                          {r.tipo === 'masiva' ? (
-                            <Link to={`/ica/historial/${r.id}`} className="hover:text-[#a00046]"><Eye size={14} /></Link>
-                          ) : (
-                            <button className="hover:text-[#a00046]"><SquarePen size={14} /></button>
-                          )}
+                          <Link to={`/ica/historial/${r.id}`} className="hover:text-[#a00046]"><Eye size={14} /></Link>
                           <button onClick={() => setRegistroAEliminar(r)} className="hover:text-[#a00046]">
                             <Trash2 size={14} />
                           </button>

@@ -261,42 +261,22 @@ async function getDetalleArchivoIca(req, res) {
 }
 async function deleteRegistroIca(req, res) {
   const campusId = req.user.campusId;
+  if (!campusId) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
 
-  if (!campusId) {
-    return res.status(400).json({
-      error: 'Tu usuario no tiene una sede asignada',
-    });
-  }
-
-  const surveyResponseId = Number(req.params.id);
-
-  if (!Number.isInteger(surveyResponseId) || surveyResponseId <= 0) {
-    return res.status(400).json({
-      error: 'Id de registro inválido',
-    });
+  const dataLoadId = Number(req.params.id);
+  if (!Number.isInteger(dataLoadId) || dataLoadId <= 0) {
+    return res.status(400).json({ error: 'Id de registro inválido' });
   }
 
   try {
-    await icaService.eliminarRegistroIndividual({
-      campusId,
-      surveyResponseId,
-    });
-
-    return res.status(200).json({
-      message: 'Registro eliminado correctamente',
-    });
+    await icaService.eliminarRegistroIndividual({ campusId, dataLoadId });
+    return res.status(200).json({ message: 'Registro eliminado correctamente' });
   } catch (err) {
     if (err.message === 'REGISTRO_NO_ENCONTRADO') {
-      return res.status(404).json({
-        error: 'No se encontró el registro, o no pertenece a tu sede',
-      });
+      return res.status(404).json({ error: 'No se encontró el registro, o no pertenece a tu sede' });
     }
-
     console.error('Error al eliminar registro individual ICA:', err);
-
-    return res.status(500).json({
-      error: 'No se pudo eliminar el registro',
-    });
+    return res.status(500).json({ error: 'No se pudo eliminar el registro' });
   }
 }
 
@@ -380,8 +360,8 @@ async function deleteRespuestaIca(req, res) {
     });
   }
 }
-// Función para verificar un archivo ICA (cambio de estado a 2)
-async function verifyArchivoIca(req, res) {
+// Función para verificar una encuesta ICA (ya sea de carga masiva o manual) (cambio de estado a 2)
+async function verifyCargaIca(req, res) {
   const campusId = req.user.campusId;
 
   if (!campusId) {
@@ -399,26 +379,26 @@ async function verifyArchivoIca(req, res) {
   }
 
   try {
-    await icaService.verificarArchivoIca({
+    await icaService.verificarCargaIca({
       campusId,
       dataLoadId,
     });
 
     return res.status(200).json({
-      message: 'Archivo verificado correctamente',
+      message: 'Registro verificado correctamente',
     });
   } catch (err) {
     if (err.message === 'ARCHIVO_NO_ENCONTRADO') {
       return res.status(404).json({
-        error: 'No se encontró el archivo, o no pertenece a tu sede',
+        error: 'No se encontró el registro, o no pertenece a tu sede',
       });
     }
 
-    console.error('Error al verificar archivo ICA:', err);
+    console.error('Error al verificar registro ICA:', err);
 
     return res.status(500).json({
-      error: 'No se pudo verificar el archivo',
+      error: 'No se pudo verificar el registro',
     });
   }
 }
-module.exports = { getDashboardIca, getExploradorPreguntasIca, getComunidadesIca, postRegistroIca, postEntrevistaIca, postUploadIca, getHistorialIca, getDetalleArchivoIca, deleteRegistroIca, deleteArchivoIca, deleteRespuestaIca, verifyArchivoIca, downloadArchivoIca };
+module.exports = { getDashboardIca, getExploradorPreguntasIca, getComunidadesIca, postRegistroIca, postEntrevistaIca, postUploadIca, getHistorialIca, getDetalleArchivoIca, deleteRegistroIca, deleteArchivoIca, deleteRespuestaIca, verifyCargaIca, downloadArchivoIca };

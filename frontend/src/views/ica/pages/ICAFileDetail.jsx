@@ -412,15 +412,17 @@ export default function ICAFileDetail() {
     }
   }
 
-  // Eliminar archivo completo
+  // Elimina archivo completo o registro manual, según corresponda
   async function confirmarEliminacionArchivo() {
     if (!archivo) return;
 
     setEliminandoArchivo(true);
     setError('');
 
+    const ruta = Number(archivo.tipoCarga) === 2 ? `/api/ica/files/${id}` : `/api/ica/${id}`;
+
     try {
-      const res = await fetch(`/api/ica/files/${id}`, {
+      const res = await fetch(ruta, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -431,14 +433,14 @@ export default function ICAFileDetail() {
 
       if (!res.ok) {
         throw new Error(
-          data.error || 'No se pudo eliminar el archivo'
+          data.error || 'No se pudo eliminar el registro'
         );
       }
 
       window.location.href = '/ica/historial';
     } catch (err) {
       setError(
-        err.message || 'No se pudo eliminar el archivo'
+        err.message || 'No se pudo eliminar el registro'
       );
       setEliminandoArchivo(false);
     }
@@ -465,7 +467,7 @@ export default function ICAFileDetail() {
 
           <div className="flex items-center gap-2">
 
-            {/* Verificar archivo */}
+            {/* Verificar entrevista */}
             <RoleGate allow={[ROLES.SUPERADMIN]}>
               {archivo?.estado === 'No verificado' && (
                 <button
@@ -473,18 +475,8 @@ export default function ICAFileDetail() {
                   disabled={verificandoArchivo}
                   className="inline-flex items-center gap-2 rounded-lg border border-[#cfe2d6] bg-[#f5faf7] px-4 py-2 text-xs font-semibold text-[#2f7d4b] transition hover:bg-[#eaf6ef] disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {verificandoArchivo ? (
-                    <Loader2
-                      size={14}
-                      className="animate-spin"
-                    />
-                  ) : (
-                    <ShieldCheck size={14} />
-                  )}
-
-                  {verificandoArchivo
-                    ? 'Verificando...'
-                    : 'Verificar archivo'}
+                  {verificandoArchivo ? <Loader2 size={14} className="animate-spin" /> : <ShieldCheck size={14} />}
+                  {verificandoArchivo ? 'Verificando...' : 'Verificar registro'}
                 </button>
               )}
             </RoleGate>
@@ -495,7 +487,7 @@ export default function ICAFileDetail() {
               className="inline-flex items-center gap-2 self-start rounded-lg border border-[#f0b9c7] bg-[#fff5f7] px-4 py-2 text-xs font-semibold text-[#a00046] transition hover:bg-[#fde8ee] sm:self-auto"
             >
               <Trash2 size={14} />
-              Eliminar archivo
+              {Number(archivo?.tipoCarga) === 2 ? 'Eliminar archivo' : 'Eliminar registro'}
             </button>
 
           </div>
@@ -559,11 +551,10 @@ export default function ICAFileDetail() {
 
               <div className="mt-3 flex justify-end">
                 <span
-                  className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold ${
-                    archivo.estado === 'Verificado'
-                      ? 'bg-[#eaf6ef] text-[#2f9e58]'
-                      : 'bg-[#f1f3f3] text-[#78827f]'
-                  }`}
+                  className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold ${archivo.estado === 'Verificado'
+                    ? 'bg-[#eaf6ef] text-[#2f9e58]'
+                    : 'bg-[#f1f3f3] text-[#78827f]'
+                    }`}
                 >
                   <CheckCircle2 size={11} />
                   {archivo.estado}
@@ -617,11 +608,10 @@ export default function ICAFileDetail() {
                       onClick={() =>
                         setMostrarFiltros(!mostrarFiltros)
                       }
-                      className={`inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition ${
-                        mostrarFiltros || hayFiltrosActivos
-                          ? 'border-[#e8b6c6] bg-[#fff5f7] text-[#a00046]'
-                          : 'border-[#e1e5e5] bg-white text-[#59615e] hover:bg-[#f7f8f8]'
-                      }`}
+                      className={`inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition ${mostrarFiltros || hayFiltrosActivos
+                        ? 'border-[#e8b6c6] bg-[#fff5f7] text-[#a00046]'
+                        : 'border-[#e1e5e5] bg-white text-[#59615e] hover:bg-[#f7f8f8]'
+                        }`}
                     >
                       <Filter size={14} />
                       Filtros
@@ -758,9 +748,11 @@ export default function ICAFileDetail() {
                         )
                       )}
 
-                      <th className="sticky right-0 z-20 w-[80px] min-w-[80px] bg-[#fafbfb] px-4 py-3 text-center">
-                        Acciones
-                      </th>
+                      {registros.length > 1 && (
+                        <th className="sticky right-0 z-20 w-[80px] min-w-[80px] bg-[#fafbfb] px-4 py-3 text-center">
+                          Acciones
+                        </th>
+                      )}
 
                     </tr>
                   </thead>
@@ -769,7 +761,7 @@ export default function ICAFileDetail() {
                     {registrosFiltrados.length === 0 ? (
                       <tr>
                         <td
-                          colSpan={PREGUNTAS.length + 2}
+                          colSpan={registros.length > 1 ? PREGUNTAS.length + 2 : PREGUNTAS.length + 1}
                           className="px-4 py-8 text-center text-[#8a9290]"
                         >
                           No se encontraron entrevistas con los criterios seleccionados.
@@ -795,17 +787,17 @@ export default function ICAFileDetail() {
                             </td>
                           ))}
 
-                          <td className="sticky right-0 z-10 bg-white px-4 py-3 text-center">
-                            <button
-                              onClick={() =>
-                                setRegistroAEliminar(r)
-                              }
-                              className="rounded-lg p-1.5 text-[#a00046] transition hover:bg-[#fff0f4]"
-                              title="Eliminar entrevista"
-                            >
-                              <Trash2 size={15} />
-                            </button>
-                          </td>
+                          {registros.length > 1 && (
+                            <td className="sticky right-0 z-10 bg-white px-4 py-3 text-center">
+                              <button
+                                onClick={() => setRegistroAEliminar(r)}
+                                className="rounded-lg p-1.5 text-[#a00046] transition hover:bg-[#fff0f4]"
+                                title="Eliminar entrevista"
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            </td>
+                          )}
 
                         </tr>
                       ))
@@ -852,11 +844,10 @@ export default function ICAFileDetail() {
                         onClick={() =>
                           setPaginaActual(pagina)
                         }
-                        className={`rounded px-3 py-1.5 font-semibold ${
-                          paginaActual === pagina
-                            ? 'bg-[#a00046] text-white'
-                            : 'border border-[#e4e8e8] text-[#59615e] hover:bg-[#f5f6f6]'
-                        }`}
+                        className={`rounded px-3 py-1.5 font-semibold ${paginaActual === pagina
+                          ? 'bg-[#a00046] text-white'
+                          : 'border border-[#e4e8e8] text-[#59615e] hover:bg-[#f5f6f6]'
+                          }`}
                       >
                         {pagina}
                       </button>
@@ -984,11 +975,13 @@ export default function ICAFileDetail() {
 
               <div>
                 <h3 className="text-sm font-bold text-[#252927]">
-                  Eliminar archivo
+                  {Number(archivo?.tipoCarga) === 2 ? 'Eliminar archivo' : 'Eliminar registro'}
                 </h3>
 
                 <p className="mt-1 text-xs leading-relaxed text-[#747d79]">
-                  Se eliminará el archivo y todas las entrevistas asociadas. Esta acción hará que dejen de contar para los datos del ICA.
+                  {Number(archivo?.tipoCarga) === 2
+                    ? 'Se eliminará el archivo y todas las entrevistas asociadas. Esta acción hará que dejen de contar para los datos del ICA.'
+                    : 'Se eliminará este registro individual. Esta acción hará que deje de contar para los datos del ICA.'}
                 </p>
               </div>
             </div>
@@ -1010,15 +1003,11 @@ export default function ICAFileDetail() {
                 className="inline-flex items-center gap-2 rounded-lg bg-[#a00046] px-4 py-2 text-xs font-semibold text-white hover:bg-[#86003a] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {eliminandoArchivo ? (
-                  <Loader2
-                    size={13}
-                    className="animate-spin"
-                  />
+                  <Loader2 size={13} className="animate-spin" />
                 ) : (
                   <Trash2 size={13} />
                 )}
-
-                Eliminar archivo
+                {Number(archivo?.tipoCarga) === 2 ? 'Eliminar archivo' : 'Eliminar registro'}
               </button>
             </div>
 

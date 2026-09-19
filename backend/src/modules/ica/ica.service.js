@@ -778,56 +778,37 @@ const orderSql = columnasOrden.map((col) => `${col} ${direccion}`).join(', ');
   return { registros, total, page, pageSize };
 }
 //Eliminar registro individual(0) y cambio de estado de carga individual a eliminado (0) 
-async function eliminarRegistroIndividual({ campusId, surveyResponseId }) {
+async function eliminarRegistroIndividual({ campusId, dataLoadId }) {
   const conexion = await pool.getConnection();
 
   try {
     await conexion.beginTransaction();
 
-    const [respuestas] = await conexion.query(
-      `SELECT sr.survey_response_id,
-              sr.data_load_id
-         FROM ica_survey_response sr
-         INNER JOIN data_load dl
-           ON dl.data_load_id = sr.data_load_id
-         INNER JOIN community c
-           ON c.community_id = sr.community_id
-        WHERE sr.survey_response_id = ?
-          AND sr.status = 1
+    const [cargas] = await conexion.query(
+      `SELECT dl.data_load_id
+         FROM data_load dl
+        WHERE dl.data_load_id = ?
           AND dl.module = ?
           AND dl.source_type = ?
-          AND dl.status != 0
-          AND c.campus_id = ?
+          AND dl.status != 0`,
+      [dataLoadId, MODULE_ICA, SOURCE_TYPE_INDIVIDUAL],
+    );
+    if (!cargas.length) throw new Error('REGISTRO_NO_ENCONTRADO');
+
+    const [pertenencia] = await conexion.query(
+      `SELECT 1 FROM ica_survey_response sr
+         INNER JOIN community c ON c.community_id = sr.community_id
+        WHERE sr.data_load_id = ? AND sr.status = 1 AND c.campus_id = ?
         LIMIT 1`,
-      [
-        surveyResponseId,
-        MODULE_ICA,
-        SOURCE_TYPE_INDIVIDUAL,
-        campusId,
-      ],
+      [dataLoadId, campusId],
     );
+    if (!pertenencia.length) throw new Error('REGISTRO_NO_ENCONTRADO');
 
-    if (!respuestas.length) {
-      throw new Error('REGISTRO_NO_ENCONTRADO');
-    }
-
-    const dataLoadId = respuestas[0].data_load_id;
-
-    // Eliminar lógicamente la respuesta
     await conexion.query(
-      `UPDATE ica_survey_response
-          SET status = 0
-        WHERE survey_response_id = ?`,
-      [surveyResponseId],
-    );
-
-    // Eliminar lógicamente la carga individual
-    await conexion.query(
-      `UPDATE data_load
-          SET status = 0
-        WHERE data_load_id = ?`,
+      'UPDATE ica_survey_response SET status = 0 WHERE data_load_id = ? AND status = 1',
       [dataLoadId],
     );
+    await conexion.query('UPDATE data_load SET status = 0 WHERE data_load_id = ?', [dataLoadId]);
 
     await conexion.commit();
   } catch (err) {
@@ -968,8 +949,8 @@ async function eliminarRespuestaIca({ campusId, surveyResponseId }) {
     conexion.release();
   }
 }
-//Cambia el estado de un archivo a verificado (2) cuando un superadmin lo aprueba. Esto no recalcula el agregado, solo cambia el estado de la carga.
-async function verificarArchivoIca({ campusId, dataLoadId }) {
+//Cambia el estado de una entrevista a verificado (2) cuando un superadmin lo aprueba. Esto no recalcula el agregado, solo cambia el estado de la carga.
+async function verificarCargaIca({ campusId, dataLoadId }) {
   const [cargas] = await pool.query(
     `SELECT dl.data_load_id
        FROM data_load dl
@@ -980,16 +961,10 @@ async function verificarArchivoIca({ campusId, dataLoadId }) {
          ON c.community_id = sr.community_id
       WHERE dl.data_load_id = ?
         AND dl.module = ?
-        AND dl.source_type = ?
         AND dl.status = 1
         AND c.campus_id = ?
       LIMIT 1`,
-    [
-      dataLoadId,
-      MODULE_ICA,
-      SOURCE_TYPE_ARCHIVO,
-      campusId,
-    ],
+    [dataLoadId, MODULE_ICA, campusId],
   );
 
   if (!cargas.length) {
@@ -1072,6 +1047,6 @@ module.exports = {
   eliminarArchivoIca,
   eliminarRespuestaIca,
   obtenerDetalleArchivoIca,
-  verificarArchivoIca,
+  verificarCargaIca,
   obtenerArchivoParaDescarga,
 };
