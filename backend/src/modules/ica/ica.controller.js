@@ -401,4 +401,104 @@ async function verifyCargaIca(req, res) {
     });
   }
 }
-module.exports = { getDashboardIca, getExploradorPreguntasIca, getComunidadesIca, postRegistroIca, postEntrevistaIca, postUploadIca, getHistorialIca, getDetalleArchivoIca, deleteRegistroIca, deleteArchivoIca, deleteRespuestaIca, verifyCargaIca, downloadArchivoIca };
+
+async function downloadRegistroIca(req, res) {
+  const campusId = req.user.campusId;
+  if (!campusId) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
+
+  const dataLoadId = Number(req.params.id);
+  if (!Number.isInteger(dataLoadId) || dataLoadId <= 0) {
+    return res.status(400).json({ error: 'Id inválido' });
+  }
+
+  const formato = String(req.query.formato || 'xlsx').toLowerCase();
+  if (!['xlsx', 'json'].includes(formato)) {
+    return res.status(400).json({ error: 'Formato inválido. Usá "xlsx" o "json".' });
+  }
+
+  try {
+    const { contenido, nombreArchivo, mimeType } = await icaService.generarDescargaRegistroIndividual({
+      campusId,
+      dataLoadId,
+      formato,
+    });
+    res.setHeader('Content-Type', mimeType);
+    res.setHeader('Content-Disposition', `attachment; filename="${nombreArchivo}"`);
+    return res.send(contenido);
+  } catch (err) {
+    if (err.message === 'REGISTRO_NO_ENCONTRADO') {
+      return res.status(404).json({ error: 'No se encontró el registro, o no pertenece a tu sede' });
+    }
+    console.error('Error al generar descarga de registro individual ICA:', err);
+    return res.status(500).json({ error: 'No se pudo generar la descarga del registro' });
+  }
+}
+
+async function getExportRespuestasIca(req, res) {
+  const campusId = req.user.campusId;
+  if (!campusId) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
+
+  const formato = String(req.query.formato || 'xlsx').toLowerCase();
+  if (!['xlsx', 'csv', 'json'].includes(formato)) {
+    return res.status(400).json({ error: 'Formato inválido. Usá "xlsx", "csv" o "json".' });
+  }
+
+  try {
+    const { contenido, nombreArchivo, mimeType } = await icaService.generarExportacionRespuestasIca({
+      campusId,
+      year: req.query.year ? Number(req.query.year) : null,
+      quarter: req.query.quarter ? Number(req.query.quarter) : null,
+      communityId: req.query.communityId ? Number(req.query.communityId) : null,
+      formato,
+    });
+    res.setHeader('Content-Type', mimeType);
+    res.setHeader('Content-Disposition', `attachment; filename="${nombreArchivo}"`);
+    return res.send(contenido);
+  } catch (err) {
+    console.error('Error al exportar respuestas ICA:', err);
+    return res.status(500).json({ error: 'No se pudo generar la exportación' });
+  }
+}
+function escaparCsvExport(valor) {
+  const texto = String(valor ?? '');
+  return /[",\n]/.test(texto) ? `"${texto.replace(/"/g, '""')}"` : texto;
+}
+
+async function getExportIca(req, res) {
+  const campusId = req.user.campusId;
+  if (!campusId) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
+
+  const formato = String(req.query.formato || 'json').toLowerCase();
+  if (!['csv', 'json'].includes(formato)) {
+    return res.status(400).json({ error: 'Formato inválido. Usá "csv" o "json".' });
+  }
+
+  try {
+    const dataset = await icaService.obtenerDatasetIcaExport({
+      campusId,
+      year: req.query.year ? Number(req.query.year) : null,
+      quarter: req.query.quarter ? Number(req.query.quarter) : null,
+      communityId: req.query.communityId ? Number(req.query.communityId) : null,
+    });
+
+    if (formato === 'json') {
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', 'attachment; filename="dataset_ica.json"');
+      return res.send(JSON.stringify(dataset, null, 2));
+    }
+
+    const columnas = ['comuna', 'year', 'quarter', 'conocimiento', 'uso', 'educacion', 'prevision', 'icaHombres', 'icaMujeres', 'icaGeneral'];
+    const lineas = [columnas.join(',')];
+    for (const fila of dataset) {
+      lineas.push(columnas.map((col) => escaparCsvExport(fila[col])).join(','));
+    }
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="dataset_ica.csv"');
+    return res.send(lineas.join('\n'));
+  } catch (err) {
+    console.error('Error al exportar dataset ICA:', err);
+    return res.status(500).json({ error: 'No se pudo generar la exportación' });
+  }
+}
+module.exports = { getDashboardIca, getExploradorPreguntasIca, getComunidadesIca, postRegistroIca, postEntrevistaIca, postUploadIca, getHistorialIca, getDetalleArchivoIca, deleteRegistroIca, deleteArchivoIca, deleteRespuestaIca, verifyCargaIca, downloadArchivoIca, downloadRegistroIca, getExportIca, getExportRespuestasIca };

@@ -2,7 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const router = express.Router();
 const { requireAuth, requireRole } = require('../../middlewares/auth.middleware');
-const { getDashboardIca, getExploradorPreguntasIca, getComunidadesIca, postRegistroIca, postEntrevistaIca, postUploadIca, getHistorialIca, getDetalleArchivoIca, deleteRegistroIca, deleteArchivoIca, deleteRespuestaIca, verifyCargaIca, downloadArchivoIca } = require('./ica.controller');
+const { getDashboardIca, getExploradorPreguntasIca, getComunidadesIca, postRegistroIca, postEntrevistaIca, postUploadIca, getHistorialIca, getDetalleArchivoIca, deleteRegistroIca, deleteArchivoIca, deleteRespuestaIca, verifyCargaIca, downloadArchivoIca, downloadRegistroIca,getExportIca, getExportRespuestasIca } = require('./ica.controller');
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -16,9 +16,12 @@ const upload = multer({
 router.get('/', requireAuth, getDashboardIca);
 router.get('/questions', requireAuth, getExploradorPreguntasIca);
 router.get('/comunidades', requireAuth, getComunidadesIca);
+router.get('/export', requireAuth, getExportIca);
+router.get('/survey-export', requireAuth, requireRole('admin', 'superadmin'), getExportRespuestasIca);
 router.get('/historial', requireAuth, requireRole('admin', 'superadmin'), getHistorialIca);
 router.get('/files/:id', requireAuth, requireRole('admin', 'superadmin'), getDetalleArchivoIca);
 router.get('/files/:id/download', requireAuth, requireRole('admin', 'superadmin'), downloadArchivoIca);
+router.get('/:id/download', requireAuth, requireRole('admin', 'superadmin'), downloadRegistroIca);
 router.post('/', requireAuth, requireRole('admin', 'superadmin'), postRegistroIca);
 router.post('/entrevistas', requireAuth, requireRole('admin', 'superadmin'), postEntrevistaIca);
 router.post('/upload', requireAuth, requireRole('admin', 'superadmin'), upload.single('archivo'), postUploadIca);

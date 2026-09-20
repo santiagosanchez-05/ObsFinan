@@ -723,17 +723,17 @@ async function obtenerHistorialIca({ campusId, page = 1, pageSize = 10, tipo, co
     parametros.push(`%${busqueda}%`, `%${busqueda}%`);
   }
   if (estado === 'verificado') {
-  condiciones.push('dl.status = ?');
-  parametros.push(2);
-} else if (estado === 'no_verificado') {
-  condiciones.push('dl.status = ?');
-  parametros.push(1);
-}
+    condiciones.push('dl.status = ?');
+    parametros.push(2);
+  } else if (estado === 'no_verificado') {
+    condiciones.push('dl.status = ?');
+    parametros.push(1);
+  }
 
   const whereSql = condiciones.join(' AND ');
   const columnasOrden = COLUMNAS_ORDEN[sortBy] || COLUMNAS_ORDEN.fecha;
-const direccion = sortDir === 'asc' ? 'ASC' : 'DESC';
-const orderSql = columnasOrden.map((col) => `${col} ${direccion}`).join(', ');
+  const direccion = sortDir === 'asc' ? 'ASC' : 'DESC';
+  const orderSql = columnasOrden.map((col) => `${col} ${direccion}`).join(', ');
 
   const [[{ total }]] = await pool.query(
     `SELECT COUNT(*) AS total FROM (
@@ -1033,6 +1033,179 @@ async function obtenerDetalleArchivoIca({ campusId, dataLoadId }) {
     registros,
   };
 }
+
+// Quita acentos y caracteres raros para que el nombre de archivo sea seguro
+// en cualquier sistema operativo.
+function normalizarNombreArchivo(texto) {
+  return String(texto)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+}
+
+// Trae los datos crudos de una entrevista manual (comuna, período, 32 respuestas)
+// y arma el nombre base del archivo. Común a ambos formatos de descarga.
+async function obtenerDatosRegistroIndividual({ campusId, dataLoadId }) {
+  const [cargas] = await pool.query(
+    `SELECT dl.data_load_id, dl.file_name, dl.created_at
+       FROM data_load dl
+      WHERE dl.data_load_id = ? AND dl.module = ? AND dl.source_type = ? AND dl.status != 0`,
+    [dataLoadId, MODULE_ICA, SOURCE_TYPE_INDIVIDUAL],
+  );
+  if (!cargas.length) throw new Error('REGISTRO_NO_ENCONTRADO');
+  const carga = cargas[0];
+
+  const columnas = CAMPOS_ENCUESTA.map(([, col]) => col);
+  const [respuestas] = await pool.query(
+    `SELECT sr.survey_response_id, c.community_name, c.campus_id, sr.year, sr.quarter, ${columnas.join(', ')}
+       FROM ica_survey_response sr
+       INNER JOIN community c ON c.community_id = sr.community_id
+      WHERE sr.data_load_id = ? AND sr.status = 1
+      LIMIT 1`,
+    [dataLoadId],
+  );
+  if (!respuestas.length || respuestas[0].campus_id !== campusId) {
+    throw new Error('REGISTRO_NO_ENCONTRADO');
+  }
+  const fila = respuestas[0];
+
+  const fechaTexto = new Date(carga.created_at).toISOString().slice(0, 10); // YYYY-MM-DD
+  const nombreBase = `${normalizarNombreArchivo(carga.file_name)}_${normalizarNombreArchivo(fila.community_name)}_${fechaTexto}`;
+
+  return { carga, fila, nombreBase };
+}
+
+// Genera la descarga de UNA entrevista manual, en Excel o JSON. Acá no hay
+// archivo físico guardado en disco (se tipeó en la interfaz), así que en
+// ambos casos se construye al vuelo a partir de ica_survey_response.
+async function generarDescargaRegistroIndividual({ campusId, dataLoadId, formato = 'xlsx' }) {
+  const { fila, nombreBase } = await obtenerDatosRegistroIndividual({ campusId, dataLoadId });
+
+  if (formato === 'json') {
+    const respuestas = CAMPOS_ENCUESTA.map(([, col], index) => ({
+      pregunta: ENCABEZADOS_ESPERADOS[index],
+      respuesta: fila[col] ?? null,
+    }));
+    const contenido = JSON.stringify(
+      { comuna: fila.community_name, year: fila.year, quarter: fila.quarter, respuestas },
+      null,
+      2,
+    );
+    return { contenido, nombreArchivo: `${nombreBase}.json`, mimeType: 'application/json' };
+  }
+
+  // Fila 1: el texto exacto de cada pregunta (igual que el Excel de carga masiva).
+  // Fila 2: las 32 respuestas de esta entrevista.
+  const valores = CAMPOS_ENCUESTA.map(([, col]) => fila[col] ?? '');
+  const hoja = xlsx.utils.aoa_to_sheet([ENCABEZADOS_ESPERADOS, valores]);
+  const libro = xlsx.utils.book_new();
+  xlsx.utils.book_append_sheet(libro, hoja, 'Respuestas');
+  const contenido = xlsx.write(libro, { type: 'buffer', bookType: 'xlsx' });
+
+  return {
+    contenido,
+    nombreArchivo: `${nombreBase}.xlsx`,
+    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  };
+}
+// Exporta TODAS las encuestas verificadas (estado 2)
+async function obtenerRespuestasIcaExport({ campusId, year, quarter, communityId }) {
+  const condiciones = ['c.campus_id = ?', 'c.status = 1', 'sr.status = 1', 'dl.status = 2'];
+  const parametros = [campusId];
+
+  if (year) { condiciones.push('sr.year = ?'); parametros.push(year); }
+  if (quarter) { condiciones.push('sr.quarter = ?'); parametros.push(quarter); }
+  if (communityId) { condiciones.push('sr.community_id = ?'); parametros.push(communityId); }
+
+  const columnas = CAMPOS_ENCUESTA.map(([, col]) => col);
+  const [filas] = await pool.query(
+    `SELECT sr.survey_response_id, c.community_name AS comuna, sr.year, sr.quarter, ${columnas.join(', ')}
+       FROM ica_survey_response sr
+       INNER JOIN community c ON c.community_id = sr.community_id
+       INNER JOIN data_load dl ON dl.data_load_id = sr.data_load_id
+      WHERE ${condiciones.join(' AND ')}
+      ORDER BY sr.year DESC, sr.quarter DESC, c.community_name ASC`,
+    parametros,
+  );
+
+  return filas.map((fila) => {
+    const objeto = { comuna: fila.comuna, year: Number(fila.year), quarter: Number(fila.quarter) };
+    CAMPOS_ENCUESTA.forEach(([campoJs, col]) => { objeto[campoJs] = fila[col]; });
+    return objeto;
+  });
+}
+
+// Exporta TODAS las respuestas crudas (sin calcular nada) mientras el
+// motor de scoring sigue bloqueado.
+async function generarExportacionRespuestasIca({ campusId, year, quarter, communityId, formato = 'json' }) {
+  const filas = await obtenerRespuestasIcaExport({ campusId, year, quarter, communityId });
+  const fechaTexto = new Date().toISOString().slice(0, 10);
+  const nombreBase = `respuestas_ica_${fechaTexto}`;
+  const columnasClave = ['comuna', 'year', 'quarter', ...CAMPOS_ENCUESTA.map(([campoJs]) => campoJs)];
+  const encabezados = ['Comuna', 'Año', 'Trimestre', ...ENCABEZADOS_ESPERADOS];
+
+  if (formato === 'json') {
+    return { contenido: JSON.stringify(filas, null, 2), nombreArchivo: `${nombreBase}.json`, mimeType: 'application/json' };
+  }
+
+  if (formato === 'csv') {
+    const lineas = [encabezados.map(escaparCsv).join(',')];
+    for (const fila of filas) lineas.push(columnasClave.map((clave) => escaparCsv(fila[clave])).join(','));
+    return { contenido: lineas.join('\n'), nombreArchivo: `${nombreBase}.csv`, mimeType: 'text/csv; charset=utf-8' };
+  }
+
+  // xlsx por defecto
+  const filasHoja = filas.map((fila) => columnasClave.map((clave) => fila[clave] ?? ''));
+  const hoja = xlsx.utils.aoa_to_sheet([encabezados, ...filasHoja]);
+  const libro = xlsx.utils.book_new();
+  xlsx.utils.book_append_sheet(libro, hoja, 'Respuestas ICA');
+  const contenido = xlsx.write(libro, { type: 'buffer', bookType: 'xlsx' });
+  return { contenido, nombreArchivo: `${nombreBase}.xlsx`, mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' };
+}
+// US22: dataset completo del ICA (los índices ya calculados, agregados por
+// comuna y período) — lo que un Usuario descarga para analizar por su cuenta.
+async function obtenerDatasetIcaExport({ campusId, year, quarter, communityId }) {
+  const condiciones = ['c.campus_id = ?', 'c.status = 1', 'm.status = 1'];
+  const parametros = [campusId];
+
+  if (year) { condiciones.push('m.year = ?'); parametros.push(year); }
+  if (quarter) { condiciones.push('m.quarter = ?'); parametros.push(quarter); }
+  if (communityId) { condiciones.push('m.community_id = ?'); parametros.push(communityId); }
+
+  const [filas] = await pool.query(
+    `SELECT c.community_name AS comuna, m.year, m.quarter,
+            AVG(m.knowledge_index) AS conocimiento,
+            AVG(m.usage_index) AS uso,
+            AVG(m.education_index) AS educacion,
+            AVG(m.foresight_index) AS prevision,
+            AVG(m.ica_male) AS ica_hombres,
+            AVG(m.ica_female) AS ica_mujeres
+       FROM ica_measurement m
+       INNER JOIN community c ON c.community_id = m.community_id
+      WHERE ${condiciones.join(' AND ')}
+      GROUP BY c.community_name, m.year, m.quarter
+      ORDER BY m.year DESC, m.quarter DESC, c.community_name ASC`,
+    parametros,
+  );
+
+  return filas.map((fila) => {
+    const dimensiones = [fila.conocimiento, fila.uso, fila.educacion, fila.prevision].map(Number);
+    return {
+      comuna: fila.comuna,
+      year: Number(fila.year),
+      quarter: Number(fila.quarter),
+      conocimiento: Number(Number(fila.conocimiento).toFixed(1)),
+      uso: Number(Number(fila.uso).toFixed(1)),
+      educacion: Number(Number(fila.educacion).toFixed(1)),
+      prevision: Number(Number(fila.prevision).toFixed(1)),
+      icaHombres: Number(Number(fila.ica_hombres).toFixed(1)),
+      icaMujeres: Number(Number(fila.ica_mujeres).toFixed(1)),
+      icaGeneral: Number(promedio(dimensiones).toFixed(1)),
+    };
+  });
+}
+
 module.exports = {
   parsearArchivoIca,
   validarFilas,
@@ -1048,5 +1221,8 @@ module.exports = {
   eliminarRespuestaIca,
   obtenerDetalleArchivoIca,
   verificarCargaIca,
+  generarDescargaRegistroIndividual,
   obtenerArchivoParaDescarga,
+  generarExportacionRespuestasIca,
+  obtenerDatasetIcaExport,
 };

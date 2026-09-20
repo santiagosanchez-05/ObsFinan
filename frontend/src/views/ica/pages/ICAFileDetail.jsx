@@ -257,7 +257,7 @@ export default function ICAFileDetail() {
   }
 
   // Descargar archivo según el tipo de carga
-  async function descargarArchivo() {
+  async function descargarArchivo(formatoDescarga = 'xlsx') {
     if (!archivo) return;
 
     setDescargando(true);
@@ -266,66 +266,71 @@ export default function ICAFileDetail() {
     try {
       // Carga masiva: descargar el Excel original
       if (Number(archivo.tipoCarga) === 2) {
-        const res = await fetch(
-          `/api/ica/files/${id}/download`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+        const res = await fetch(`/api/ica/files/${id}/download`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
 
         if (!res.ok) {
           let mensaje = 'No se pudo descargar el archivo';
-
           try {
             const data = await res.json();
-
-            if (data.error) {
-              mensaje = data.error;
-            }
+            if (data.error) mensaje = data.error;
           } catch {
             // La respuesta no era JSON.
           }
-
           throw new Error(mensaje);
         }
 
         const blob = await res.blob();
-
         const url = window.URL.createObjectURL(blob);
         const enlace = document.createElement('a');
-
         enlace.href = url;
         enlace.download = archivo.nombre || 'archivo_ica.xlsx';
-
         document.body.appendChild(enlace);
         enlace.click();
-
         enlace.remove();
         window.URL.revokeObjectURL(url);
-
         return;
       }
 
-      // Carga manual: exportación todavía no implementada
+      // Carga manual: se genera al vuelo en el backend (no hay Excel original guardado)
       if (Number(archivo.tipoCarga) === 1) {
-        setError(
-          'La descarga de registros manuales estará disponible próximamente.'
-        );
+        const res = await fetch(`/api/ica/${id}/download?formato=${formatoDescarga}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (!res.ok) {
+          let mensaje = 'No se pudo descargar el registro';
+          try {
+            const data = await res.json();
+            if (data.error) mensaje = data.error;
+          } catch {
+            // La respuesta no era JSON.
+          }
+          throw new Error(mensaje);
+        }
+
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const enlace = document.createElement('a');
+        const disposicion = res.headers.get('Content-Disposition') || '';
+        const coincidencia = disposicion.match(/filename="(.+)"/);
+        enlace.download = coincidencia ? coincidencia[1] : `registro_individual.${formatoDescarga}`;
+        enlace.href = url;
+        document.body.appendChild(enlace);
+        enlace.click();
+        enlace.remove();
+        window.URL.revokeObjectURL(url);
         return;
       }
 
       setError('Tipo de carga no válido');
     } catch (err) {
-      setError(
-        err.message || 'No se pudo descargar el archivo'
-      );
+      setError(err.message || 'No se pudo descargar el registro');
     } finally {
       setDescargando(false);
     }
   }
-
   // Verificar archivo
   async function verificarArchivo() {
     if (!archivo) return;
@@ -623,26 +628,35 @@ export default function ICAFileDetail() {
                       )}
                     </button>
 
-                    {/* Descargar */}
-                    <button
-                      onClick={descargarArchivo}
-                      disabled={descargando}
-                      className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#e1e5e5] bg-white px-3 py-2 text-xs font-semibold text-[#59615e] transition hover:bg-[#f7f8f8] hover:text-[#a00046] disabled:cursor-not-allowed disabled:opacity-60"
-                      title="Descargar"
-                    >
-                      {descargando ? (
-                        <Loader2
-                          size={14}
-                          className="animate-spin"
-                        />
-                      ) : (
-                        <Download size={14} />
-                      )}
-
-                      <span className="sm:hidden">
-                        Descargar
-                      </span>
-                    </button>
+                   {/* Descargar */}
+{Number(archivo?.tipoCarga) === 2 ? (
+  <button
+    onClick={() => descargarArchivo()}
+    disabled={descargando}
+    className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#e1e5e5] bg-white px-3 py-2 text-xs font-semibold text-[#59615e] transition hover:bg-[#f7f8f8] hover:text-[#a00046] disabled:cursor-not-allowed disabled:opacity-60"
+    title="Descargar"
+  >
+    {descargando ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+    <span className="sm:hidden">Descargar</span>
+  </button>
+) : (
+  <div className="flex gap-2">
+    <button
+      onClick={() => descargarArchivo('xlsx')}
+      disabled={descargando}
+      className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#e1e5e5] bg-white px-3 py-2 text-xs font-semibold text-[#59615e] transition hover:bg-[#f7f8f8] hover:text-[#a00046] disabled:cursor-not-allowed disabled:opacity-60"
+    >
+      {descargando ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} Excel
+    </button>
+    <button
+      onClick={() => descargarArchivo('json')}
+      disabled={descargando}
+      className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#e1e5e5] bg-white px-3 py-2 text-xs font-semibold text-[#59615e] transition hover:bg-[#f7f8f8] hover:text-[#a00046] disabled:cursor-not-allowed disabled:opacity-60"
+    >
+      {descargando ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} JSON
+    </button>
+  </div>
+)}
 
                   </div>
                 </div>
