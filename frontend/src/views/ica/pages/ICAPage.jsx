@@ -224,6 +224,35 @@ export default function ICAPage() {
       setEstado({ cargando: false, resultado: null, error: 'Error de conexión con el servidor' });
     }
   }
+  async function handleDescargarPlantilla() {
+    try {
+      const res = await fetch('/api/ica/template', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'No se pudo descargar la plantilla');
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+
+      const enlace = document.createElement('a');
+      enlace.href = url;
+     enlace.download = 'plantilla_diccionario_ica.xlsx';
+
+      document.body.appendChild(enlace);
+      enlace.click();
+      enlace.remove();
+
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Error al descargar plantilla ICA:', err);
+    }
+  }
   async function handleExportarRespuestas(formato) {
     try {
       const params = new URLSearchParams({ formato });
@@ -361,13 +390,13 @@ export default function ICAPage() {
 
             <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               {modalUpload.tipo === 'formato' && (
-                <a
-                  // href="/plantillas/formato_ica.xlsx"
-                  // download
+                <button
+                  type="button"
+                  onClick={handleDescargarPlantilla}
                   className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#dce1e4] px-4 py-2 text-xs font-semibold text-[#a00046] hover:bg-[#fff3f7]"
                 >
                   <Download size={13} /> Descargar formato
-                </a>
+                </button>
               )}
               <button onClick={cerrarModalUpload} className="rounded-lg bg-[#a00046] px-4 py-2 text-xs font-semibold text-white hover:bg-[#820039]">
                 Cerrar

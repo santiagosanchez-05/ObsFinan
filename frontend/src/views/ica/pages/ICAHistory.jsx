@@ -48,7 +48,35 @@ function rutaEliminar(registro) {
 
 export default function ICAHistory() {
   const { token } = useAuth();
+  async function handleDescargarPlantilla() {
+    try {
+      const res = await fetch('/api/ica/template', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'No se pudo descargar la plantilla');
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+
+      const enlace = document.createElement('a');
+      enlace.href = url;
+     enlace.download = 'plantilla_diccionario_ica.xlsx';
+
+      document.body.appendChild(enlace);
+      enlace.click();
+      enlace.remove();
+
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Error al descargar plantilla ICA:', err);
+    }
+  }
   const [tab, setTab] = useState('todos');
   const [busquedaInput, setBusquedaInput] = useState('');
   const [busqueda, setBusqueda] = useState('');
@@ -233,8 +261,8 @@ export default function ICAHistory() {
                   key={t.id}
                   onClick={() => cambiarTab(t.id)}
                   className={`rounded-md px-3.5 py-1.5 text-xs font-semibold transition ${tab === t.id
-                      ? 'bg-white text-[#202522] shadow-sm'
-                      : 'text-[#8a9290] hover:text-[#59615e]'
+                    ? 'bg-white text-[#202522] shadow-sm'
+                    : 'text-[#8a9290] hover:text-[#59615e]'
                     }`}
                 >
                   {t.label}
@@ -433,9 +461,10 @@ export default function ICAHistory() {
           </div>
           <button
             type="button"
+            onClick={handleDescargarPlantilla}
             className="shrink-0 rounded-lg border border-[#a00046] px-4 py-2 text-xs font-semibold text-[#a00046] transition hover:bg-[#fff3f7]"
           >
-            Ver Guía
+            Descargar formato
           </button>
         </section>
       </div>

@@ -214,6 +214,28 @@ async function downloadArchivoIca(req, res) {
     });
   }
 }
+async function downloadPlantillaIca(req, res) {
+  try {
+    const resultado = icaService.obtenerPlantillaIca();
+
+    return res.download(
+      resultado.ruta,
+      resultado.nombreArchivo
+    );
+  } catch (err) {
+    if (err.message === 'PLANTILLA_NO_ENCONTRADA') {
+      return res.status(404).json({
+        error: 'No se encontró la plantilla ICA',
+      });
+    }
+
+    console.error('Error al descargar plantilla ICA:', err);
+
+    return res.status(500).json({
+      error: 'No se pudo descargar la plantilla ICA',
+    });
+  }
+}
 
 async function getHistorialIca(req, res) {
   const campusId = req.user.campusId;
@@ -501,4 +523,4 @@ async function getExportIca(req, res) {
     return res.status(500).json({ error: 'No se pudo generar la exportación' });
   }
 }
-module.exports = { getDashboardIca, getExploradorPreguntasIca, getComunidadesIca, postRegistroIca, postEntrevistaIca, postUploadIca, getHistorialIca, getDetalleArchivoIca, deleteRegistroIca, deleteArchivoIca, deleteRespuestaIca, verifyCargaIca, downloadArchivoIca, downloadRegistroIca, getExportIca, getExportRespuestasIca };
+module.exports = { getDashboardIca, getExploradorPreguntasIca, getComunidadesIca, postRegistroIca, postEntrevistaIca, postUploadIca, getHistorialIca, getDetalleArchivoIca, deleteRegistroIca, deleteArchivoIca, deleteRespuestaIca, verifyCargaIca, downloadArchivoIca, downloadRegistroIca, getExportIca, getExportRespuestasIca, downloadPlantillaIca };

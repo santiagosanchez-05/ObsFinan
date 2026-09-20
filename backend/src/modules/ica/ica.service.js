@@ -10,6 +10,10 @@ const SOURCE_TYPE_ARCHIVO = 2;
 const SOURCE_TYPE_INDIVIDUAL = 1;
 
 const UPLOAD_DIR = path.join(__dirname, '../../../uploads/ica');
+const TEMPLATE_ICA = path.join(
+  __dirname,
+  '../../../templates/ica/plantilla_diccionario_ICA.xlsx'
+);
 
 // Mapeo columna del Excel (en orden) -> campo del objeto en JS -> columna de ica_survey_response.
 // El orden DEBE coincidir exactamente con ENCABEZADOS_ESPERADOS.
@@ -53,7 +57,16 @@ function limpiar(valor) {
   const texto = String(valor).trim();
   return texto === '' ? null : texto;
 }
+function obtenerPlantillaIca() {
+  if (!fs.existsSync(TEMPLATE_ICA)) {
+    throw new Error('PLANTILLA_NO_ENCONTRADA');
+  }
 
+  return {
+    ruta: TEMPLATE_ICA,
+    nombreArchivo: 'plantilla_diccionario_ica.xlsx',
+  };
+}
 // Parsea un Excel de UNA sola comuna: cada fila es una entrevista completa
 // de 32 respuestas. Ya no lee "comuna" de ninguna columna — eso viene del
 // formulario de carga (communityId), no del archivo.
@@ -1271,6 +1284,7 @@ async function obtenerDatasetIcaExport({ campusId, year, quarter, communityId })
   });
 }
 
+
 module.exports = {
   parsearArchivoIca,
   validarFilas,
@@ -1290,4 +1304,5 @@ module.exports = {
   obtenerArchivoParaDescarga,
   generarExportacionRespuestasIca,
   obtenerDatasetIcaExport,
+  obtenerPlantillaIca,
 };
