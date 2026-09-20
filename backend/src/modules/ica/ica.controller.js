@@ -461,7 +461,7 @@ async function getExportRespuestasIca(req, res) {
 }
 function escaparCsvExport(valor) {
   const texto = String(valor ?? '');
-  return /[",\n]/.test(texto) ? `"${texto.replace(/"/g, '""')}"` : texto;
+  return /[";\n]/.test(texto) ? `"${texto.replace(/"/g, '""')}"` : texto;
 }
 
 async function getExportIca(req, res) {
@@ -488,9 +488,9 @@ async function getExportIca(req, res) {
     }
 
     const columnas = ['comuna', 'year', 'quarter', 'conocimiento', 'uso', 'educacion', 'prevision', 'icaHombres', 'icaMujeres', 'icaGeneral'];
-    const lineas = [columnas.join(',')];
+    const lineas = [columnas.join(';')];
     for (const fila of dataset) {
-      lineas.push(columnas.map((col) => escaparCsvExport(fila[col])).join(','));
+      lineas.push(columnas.map((col) => escaparCsvExport(fila[col])).join(';'));
     }
 
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');

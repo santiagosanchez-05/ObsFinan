@@ -526,7 +526,65 @@ function medirEntrevista(respuestas) {
     ]),
   };
 }
+function filaSqlARespuestas(filaSql) {
+  const objeto = {};
+  CAMPOS_ENCUESTA.forEach(([campoJs, col]) => {
+    objeto[campoJs] = filaSql[col];
+  });
+  return objeto;
+}
 
+// Promedio general (conocimiento+uso+educacion+prevision combinadas) de un
+// grupo de entrevistas — usado para separar el puntaje por sexo. Devuelve
+// null si el grupo está vacío (todavía no hay entrevistas de ese sexo en
+// este período).
+function promedioGeneralGrupo(filasGrupo) {
+  if (!filasGrupo.length) return null;
+  const mediciones = filasGrupo.map((fila) => medirEntrevista(filaSqlARespuestas(fila)));
+  const promediosPorEntrevista = mediciones.map((m) => promedio([m.conocimiento, m.uso, m.educacion, m.prevision]));
+  return Number(promedio(promediosPorEntrevista).toFixed(2));
+}
+
+// Recalcula el agregado de ica_measurement para una comuna+período, tomando
+// TODAS las entrevistas activas de ica_survey_response de esa combinación
+// (no solo la que se acaba de insertar). Esto es lo que evita el error de
+// uq_measurement_period: en vez de insertar una fila nueva por entrevista,
+// se actualiza siempre la misma fila con el promedio acumulado.
+async function recalcularAgregadoManual({ conexion, communityId, year, quarter, dataLoadId }) {
+  const [filas] = await conexion.query(
+    'SELECT * FROM ica_survey_response WHERE community_id = ? AND year = ? AND quarter = ? AND status = 1',
+    [communityId, year, quarter],
+  );
+
+  const mediciones = filas.map((fila) => medirEntrevista(filaSqlARespuestas(fila)));
+  const knowledgeIndex = Number(promedio(mediciones.map((m) => m.conocimiento)).toFixed(2));
+  const usageIndex = Number(promedio(mediciones.map((m) => m.uso)).toFixed(2));
+  const educationIndex = Number(promedio(mediciones.map((m) => m.educacion)).toFixed(2));
+  const foresightIndex = Number(promedio(mediciones.map((m) => m.prevision)).toFixed(2));
+
+  const filasHombres = filas.filter((f) => f.q03_sex === 'Hombre');
+  const filasMujeres = filas.filter((f) => f.q03_sex === 'Mujer');
+
+  // 0 explícito = "todavía no hay entrevistas de ese sexo en este período",
+  // no un puntaje real de cero. Provisional hasta que llegue el scoring oficial.
+  const icaMale = promedioGeneralGrupo(filasHombres) ?? 0;
+  const icaFemale = promedioGeneralGrupo(filasMujeres) ?? 0;
+
+  await conexion.query(
+    `INSERT INTO ica_measurement
+       (community_id, data_load_id, year, quarter, knowledge_index, usage_index, education_index, foresight_index, ica_male, ica_female, status)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+     ON DUPLICATE KEY UPDATE
+       data_load_id = VALUES(data_load_id),
+       knowledge_index = VALUES(knowledge_index),
+       usage_index = VALUES(usage_index),
+       education_index = VALUES(education_index),
+       foresight_index = VALUES(foresight_index),
+       ica_male = VALUES(ica_male),
+       ica_female = VALUES(ica_female)`,
+    [communityId, dataLoadId, year, quarter, knowledgeIndex, usageIndex, educationIndex, foresightIndex, icaMale, icaFemale],
+  );
+}
 async function registrarEntrevistaIndividual({ communityId, year, quarter, userId, campusId, ...respuestas }) {
   const [comunidades] = await pool.query(
     'SELECT community_id FROM community WHERE community_id = ? AND campus_id = ? AND status = 1',
@@ -550,15 +608,7 @@ async function registrarEntrevistaIndividual({ communityId, year, quarter, userI
        VALUES (?, ?, ?, ?, ?, ${columnas.map(() => '?').join(', ')}, 1)`,
       [carga.insertId, communityId, year, quarter, userId, ...valores],
     );
-    const medicion = medirEntrevista(respuestas);
-    const hombres = respuestas.q03Sex === 'Hombre' ? 100 : 0;
-    const mujeres = respuestas.q03Sex === 'Mujer' ? 100 : 0;
-    await conexion.query(
-      `INSERT INTO ica_measurement
-       (community_id, data_load_id, year, quarter, knowledge_index, usage_index, education_index, foresight_index, ica_male, ica_female, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
-      [communityId, carga.insertId, year, quarter, medicion.conocimiento, medicion.uso, medicion.educacion, medicion.prevision, hombres, mujeres],
-    );
+   
     await conexion.commit();
     return { dataLoadId: carga.insertId, surveyResponseId: respuesta.insertId };
   } catch (err) {
@@ -677,8 +727,9 @@ async function registrarCargaPorArchivo({ filasValidas, communityId, campusId, q
       );
     }
 
-    // 🔒 Acá iría el llamado a recalcularAgregado(...) cuando el motor de
-    // scoring esté listo. Por ahora ica_measurement no se toca.
+    // El cálculo de ica_measurement NO ocurre acá — se dispara cuando el
+// Superadmin verifica esta carga (ver verificarCargaIca), usando el mismo
+// scoring ordinal provisional que se aplica a los registros manuales.
 
     await conexion.commit();
     return { dataLoadId, totalInsertados: filasValidas.length };
@@ -952,7 +1003,7 @@ async function eliminarRespuestaIca({ campusId, surveyResponseId }) {
 //Cambia el estado de una entrevista a verificado (2) cuando un superadmin lo aprueba. Esto no recalcula el agregado, solo cambia el estado de la carga.
 async function verificarCargaIca({ campusId, dataLoadId }) {
   const [cargas] = await pool.query(
-    `SELECT dl.data_load_id
+    `SELECT dl.data_load_id, sr.community_id, sr.year, sr.quarter
        FROM data_load dl
        INNER JOIN ica_survey_response sr
          ON sr.data_load_id = dl.data_load_id
@@ -970,14 +1021,28 @@ async function verificarCargaIca({ campusId, dataLoadId }) {
   if (!cargas.length) {
     throw new Error('ARCHIVO_NO_ENCONTRADO');
   }
+  const { community_id: communityId, year, quarter } = cargas[0];
 
-  await pool.query(
-    `UPDATE data_load
-        SET status = 2
-      WHERE data_load_id = ?
-        AND status = 1`,
-    [dataLoadId],
-  );
+  const conexion = await pool.getConnection();
+  try {
+    await conexion.beginTransaction();
+
+    await conexion.query(
+      `UPDATE data_load SET status = 2 WHERE data_load_id = ? AND status = 1`,
+      [dataLoadId],
+    );
+
+    // El cálculo real (recibiendo la tabla de puntos oficial) reemplaza a
+    // recalcularAgregadoManual cuando el cliente confirme el scoring.
+    await recalcularAgregadoManual({ conexion, communityId, year, quarter, dataLoadId });
+
+    await conexion.commit();
+  } catch (err) {
+    await conexion.rollback();
+    throw err;
+  } finally {
+    conexion.release();
+  }
 }
 
 async function obtenerDetalleArchivoIca({ campusId, dataLoadId }) {

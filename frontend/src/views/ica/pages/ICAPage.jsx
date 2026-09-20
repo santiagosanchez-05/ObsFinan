@@ -48,7 +48,7 @@ export default function ICAPage() {
   const [comunidades, setComunidades] = useState([]);
   const [communityId, setCommunityId] = useState('');
   const [cargandoComunidades, setCargandoComunidades] = useState(false);
-
+  const [mostrarExportar, setMostrarExportar] = useState(false);
   const [quarter, setQuarter] = useState(trimestreActual);
   const [year, setYear] = useState(fechaActual.getFullYear());
   const [estado, setEstado] = useState({ cargando: false, resultado: null, error: null });
@@ -251,7 +251,60 @@ export default function ICAPage() {
       console.error('Error al exportar respuestas ICA:', err);
     }
   }
+  async function handleExportar(formato) {
+    try {
+      const params = new URLSearchParams();
 
+      params.set('formato', formato);
+
+      if (periodo?.year) {
+        params.set('year', periodo.year);
+      }
+
+      if (periodo?.quarter) {
+        params.set('quarter', periodo.quarter);
+      }
+
+      if (filtrosAplicados.communityId) {
+        params.set('communityId', filtrosAplicados.communityId);
+      }
+
+      const res = await fetch(`/api/ica/export?${params.toString()}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'No se pudo exportar el ICA');
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+
+      const enlace = document.createElement('a');
+
+      const disposicion = res.headers.get('Content-Disposition') || '';
+      const coincidencia = disposicion.match(/filename="(.+)"/);
+
+      const fechaActual = new Date().toISOString().split('T')[0];
+
+      enlace.download = coincidencia
+        ? coincidencia[1].replace(`.${formato}`, `_${fechaActual}.${formato}`)
+        : `dataset_ica_${fechaActual}.${formato}`;
+
+      enlace.href = url;
+
+      document.body.appendChild(enlace);
+      enlace.click();
+      enlace.remove();
+
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Error al exportar ICA:', err);
+    }
+  }
   function handleCancelar() {
     setMostrarUpload(false);
     setArchivo(null);
@@ -561,7 +614,39 @@ export default function ICAPage() {
             </section>
 
             <section className="overflow-hidden rounded-xl border border-[#e2e6e8] bg-white shadow-sm">
-              <div className="flex flex-col gap-2 border-b border-[#edf0f1] px-4 py-4 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="text-sm font-bold text-[#252927]">Desglose detallado por comuna</h2><p className="mt-1 text-xs text-[#8a9290]">Resultados del período seleccionado</p></div><button className="inline-flex items-center gap-1 self-start text-xs font-bold text-[#a00046] hover:underline"><Download size={13} /> Exportar CSV</button></div>
+              <div className="flex flex-col gap-2 border-b border-[#edf0f1] px-4 py-4 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="text-sm font-bold text-[#252927]">Desglose detallado por comuna</h2><p className="mt-1 text-xs text-[#8a9290]">Resultados del período seleccionado</p></div><div className="relative">
+                <button
+                  onClick={() => setMostrarExportar(!mostrarExportar)}
+                  className="inline-flex items-center gap-1 self-start text-xs font-bold text-[#a00046] hover:underline"
+                >
+                  <Download size={13} />
+                  Exportar
+                </button>
+
+                {mostrarExportar && (
+                  <div className="absolute right-0 z-20 mt-2 w-32 rounded-lg border bg-white shadow-lg">
+                    <button
+                      onClick={() => {
+                        handleExportar('csv');
+                        setMostrarExportar(false);
+                      }}
+                      className="block w-full px-3 py-2 text-left text-xs hover:bg-gray-100"
+                    >
+                      CSV
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        handleExportar('json');
+                        setMostrarExportar(false);
+                      }}
+                      className="block w-full px-3 py-2 text-left text-xs hover:bg-gray-100"
+                    >
+                      JSON
+                    </button>
+                  </div>
+                )}
+              </div></div>
               <div className="overflow-x-auto"><table className="w-full min-w-[760px] text-left text-xs"><thead className="bg-[#fafbfb] text-[9px] font-bold uppercase tracking-wider text-[#8a9290]"><tr>{['Comuna', 'Conocimiento', 'Uso', 'Educación', 'Previsión', 'ICA hombres', 'ICA mujeres', 'Índice general'].map((heading) => <th key={heading} className="px-4 py-3">{heading}</th>)}</tr></thead><tbody>{comunas.map((row, index) => <tr key={row.id} className="border-t border-[#f0f2f2] text-[#48504d] hover:bg-[#fff8fa]"><td className="px-4 py-3 font-semibold text-[#252927]">{row.nombre}</td>{[row.conocimiento, row.uso, row.educacion, row.prevision, row.hombres, row.mujeres].map((value, cellIndex) => <td key={`${row.id}-${cellIndex}`} className={`px-4 py-3 ${cellIndex === 2 ? 'font-semibold text-[#a00046]' : ''}`}>{value}</td>)}<td className="px-4 py-3 font-bold"><span className={`rounded-full px-2 py-1 text-[10px] ${index === 0 ? 'bg-[#f9e5ed] text-[#a00046]' : 'bg-[#f1f3f3] text-[#414845]'}`}>{row.valor}</span></td></tr>)}</tbody></table></div>
               <div className="flex items-center justify-between border-t border-[#edf0f1] px-4 py-3 text-[10px] text-[#8a9290]"><span>Mostrando {comunas.length} comunas registradas</span><div className="flex gap-2"><button disabled className="rounded border border-[#e4e8e8] px-2 py-1 disabled:opacity-50">Anterior</button><button className="rounded border border-[#e4e8e8] px-2 py-1 hover:border-[#a00046]">Siguiente</button></div></div>
             </section>
