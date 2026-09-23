@@ -2,16 +2,20 @@ const { uploadIcaMetaSchema, registroIcaSchema, entrevistaIcaSchema } = require(
 const icaService = require('./ica.service');
 
 async function getDashboardIca(req, res) {
-  const campusId = req.user.campusId;
-  if (!campusId) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
+  const campusId = req.user.role === 'superadmin' && req.query.campusId
+    ? Number(req.query.campusId)
+    : req.user.campusId;
+  if (req.user.role !== 'superadmin' && !campusId) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
 
   try {
     const dashboard = await icaService.obtenerDashboard({
       campusId,
+      mostrarTodasSedes: req.user.role === 'superadmin',
       year: req.query.year ? Number(req.query.year) : null,
       quarter: req.query.quarter ? Number(req.query.quarter) : null,
       communityId: req.query.communityId ? Number(req.query.communityId) : null,
       dimension: req.query.dimension ? String(req.query.dimension) : null,
+      genero: ['hombres', 'mujeres'].includes(req.query.gender) ? req.query.gender : null,
     });
     return res.status(200).json(dashboard);
   } catch (err) {
@@ -21,8 +25,10 @@ async function getDashboardIca(req, res) {
 }
 
 async function getExploradorPreguntasIca(req, res) {
-  const campusId = req.user.campusId;
-  if (!campusId) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
+  const campusId = req.user.role === 'superadmin' && req.query.campusId
+    ? Number(req.query.campusId)
+    : req.user.campusId;
+  if (req.user.role !== 'superadmin' && !campusId) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
 
   try {
     const resultado = await icaService.obtenerExploradorPreguntas({
@@ -31,6 +37,7 @@ async function getExploradorPreguntasIca(req, res) {
       quarter: req.query.quarter ? Number(req.query.quarter) : null,
       communityId: req.query.communityId ? Number(req.query.communityId) : null,
       dimension: req.query.dimension ? String(req.query.dimension) : null,
+      genero: ['hombres', 'mujeres'].includes(req.query.gender) ? req.query.gender : null,
     });
     return res.status(200).json(resultado);
   } catch (err) {

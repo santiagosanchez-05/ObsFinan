@@ -146,8 +146,10 @@ function promedio(valores) {
   return validos.length ? validos.reduce((total, valor) => total + Number(valor), 0) / validos.length : null;
 }
 
-function transformarMedicion(row) {
+function transformarMedicion(row, genero = null) {
   const dimensiones = [row.conocimiento, row.uso, row.educacion, row.prevision];
+  const valorPorGenero = genero === 'hombres' ? Number(row.ica_hombres) : Number(row.ica_mujeres);
+  const valor = genero ? (valorPorGenero > 0 ? valorPorGenero : null) : Number(promedio(dimensiones).toFixed(1));
   return {
     id: row.ica_measurement_id,
     communityId: row.community_id,
@@ -158,16 +160,21 @@ function transformarMedicion(row) {
     prevision: Number(row.prevision),
     hombres: Number(row.ica_hombres),
     mujeres: Number(row.ica_mujeres),
-    valor: Number(promedio(dimensiones).toFixed(1)),
+    valor,
   };
 }
 
 // ---------------------------------------------------------------------
 // Usada por getDashboardIca,
 // ---------------------------------------------------------------------
-async function obtenerDashboard({ campusId, year, quarter, communityId, dimension }) {
-  const condiciones = ['c.campus_id = ?', 'c.status = 1', 'm.status = 1'];
-  const parametros = [campusId];
+async function obtenerDashboard({ campusId, mostrarTodasSedes = false, year, quarter, communityId, dimension, genero }) {
+  const condiciones = ['c.status = 1', 'm.status = 1'];
+  const parametros = [];
+
+  if (campusId) {
+    condiciones.unshift('c.campus_id = ?');
+    parametros.unshift(campusId);
+  }
 
   if (year) {
     condiciones.push('m.year = ?');
@@ -213,11 +220,20 @@ async function obtenerDashboard({ campusId, year, quarter, communityId, dimensio
             c.community_name
        FROM ica_measurement m
        INNER JOIN community c ON c.community_id = m.community_id
-      WHERE c.campus_id = ?
-        AND c.status = 1
+      WHERE c.status = 1
         AND m.status = 1
+        ${campusId ? 'AND c.campus_id = ?' : ''}
       ORDER BY m.year DESC, m.quarter DESC, c.community_name ASC`,
-    [campusId],
+    campusId ? [campusId] : [],
+  );
+
+  const [sedes] = await pool.query(
+    `SELECT campus_id, campus_name
+       FROM campus
+      WHERE status = 1
+        ${!mostrarTodasSedes && campusId ? 'AND campus_id = ?' : ''}
+      ORDER BY campus_name ASC`,
+    !mostrarTodasSedes && campusId ? [campusId] : [],
   );
 
   const periodosDisponibles = [
@@ -266,6 +282,8 @@ async function obtenerDashboard({ campusId, year, quarter, communityId, dimensio
         periodos: periodosDisponibles,
         comunidades: comunidadesDisponibles,
         dimensiones: dimensionesDisponibles,
+        generos: ['hombres', 'mujeres'],
+        sedes: sedes.map((sede) => ({ campusId: Number(sede.campus_id), nombre: sede.campus_name })),
       },
     };
   }
@@ -285,7 +303,26 @@ async function obtenerDashboard({ campusId, year, quarter, communityId, dimensio
       Number(fila.quarter) === periodo.quarter,
   );
 
-  const comunas = filasPeriodo.map(transformarMedicion);
+  const comunas = filasPeriodo
+    .map((fila) => transformarMedicion(fila, genero))
+    .filter((fila) => fila.valor !== null);
+
+  if (!comunas.length) {
+    return {
+      periodo: null,
+      comunas: [],
+      dimensiones: [],
+      brechas: [],
+      metricas: null,
+      opcionesFiltros: {
+        periodos: periodosDisponibles,
+        comunidades: comunidadesDisponibles,
+        dimensiones: dimensionesDisponibles,
+        generos: ['hombres', 'mujeres'],
+        sedes: sedes.map((sede) => ({ campusId: Number(sede.campus_id), nombre: sede.campus_name })),
+      },
+    };
+  }
 
   // ------------------------------------------------------------
   // DIMENSIONES
@@ -381,6 +418,8 @@ async function obtenerDashboard({ campusId, year, quarter, communityId, dimensio
       periodos: periodosDisponibles,
       comunidades: comunidadesDisponibles,
       dimensiones: dimensionesDisponibles,
+      generos: ['hombres', 'mujeres'],
+      sedes: sedes.map((sede) => ({ campusId: Number(sede.campus_id), nombre: sede.campus_name })),
     },
   };
 }
@@ -397,8 +436,13 @@ const DIMENSIONES_PREGUNTAS = [
 
 async function obtenerExploradorPreguntas({ campusId, year, quarter, communityId, dimension }) {
   const columnas = CAMPOS_ENCUESTA.map(([, columna]) => columna);
-  const condiciones = ['c.campus_id = ?', 'c.status = 1', 'sr.status = 1'];
-  const parametros = [campusId];
+  const condiciones = ['c.status = 1', 'sr.status = 1'];
+  const parametros = [];
+
+  if (campusId) {
+    condiciones.unshift('c.campus_id = ?');
+    parametros.unshift(campusId);
+  }
 
   if (year) {
     condiciones.push('sr.year = ?');
