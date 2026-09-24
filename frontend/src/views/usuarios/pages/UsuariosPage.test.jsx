@@ -9,12 +9,12 @@ const DATOS_MOCK = {
   porSede: [{ sede: 'Cochabamba', total: 2 }],
   porRol: [
     { rol: 'admin', total: 1 },
-    { rol: 'cliente', total: 1 },
+    { rol: 'encuestador', total: 1 },
   ],
   usuarios: [
     { id: 1, nombre: 'Ana', apellidos: 'Admin', correo: 'ana@test.com', sede: 'Cochabamba', rol: 'admin', activo: true },
-    { id: 2, nombre: 'Carlos', apellidos: 'Cliente', correo: 'carlos@test.com', sede: 'La Paz', rol: 'cliente', activo: true },
-    { id: 3, nombre: 'Lucia', apellidos: 'Rojas', correo: 'lucia@test.com', sede: 'Cochabamba', rol: 'cliente', activo: false },
+    { id: 2, nombre: 'Carlos', apellidos: 'Cliente', correo: 'carlos@test.com', sede: 'La Paz', rol: 'encuestador', activo: true },
+    { id: 3, nombre: 'Lucia', apellidos: 'Rojas', correo: 'lucia@test.com', sede: 'Cochabamba', rol: 'encuestador', activo: false },
   ],
 };
 
@@ -170,5 +170,66 @@ describe('UsuariosPage', () => {
 
     // La carga inicial pide /api/users y /api/users/campuses; cancelar no agrega más.
     expect(global.fetch).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('UsuariosPage — paginación (US8)', () => {
+  const PAGINA_1 = {
+    ...DATOS_MOCK,
+    usuarios: DATOS_MOCK.usuarios.slice(0, 2),
+    paginacion: { pagina: 1, porPagina: 2, total: 3, totalPaginas: 2 },
+  };
+  const PAGINA_2 = {
+    ...DATOS_MOCK,
+    usuarios: DATOS_MOCK.usuarios.slice(2),
+    paginacion: { pagina: 2, porPagina: 2, total: 3, totalPaginas: 2 },
+  };
+
+  function paginado(url) {
+    return Promise.resolve({ ok: true, json: async () => (url.includes('page=2') ? PAGINA_2 : PAGINA_1) });
+  }
+
+  beforeEach(() => {
+    localStorage.clear();
+    vi.restoreAllMocks();
+  });
+
+  it('muestra en qué página está y deshabilita "Anterior" en la primera', async () => {
+    global.fetch = mockFetch(paginado);
+
+    renderPage();
+    await screen.findByText('Ana');
+
+    expect(screen.getByText('Página 1 de 2')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Página anterior' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Página siguiente' })).toBeEnabled();
+  });
+
+  it('"Siguiente" pide la página 2 al servidor', async () => {
+    global.fetch = mockFetch(paginado);
+
+    renderPage();
+    await screen.findByText('Ana');
+    fireEvent.click(screen.getByRole('button', { name: 'Página siguiente' }));
+
+    expect(await screen.findByText('Lucia')).toBeInTheDocument();
+    expect(screen.queryByText('Ana')).not.toBeInTheDocument();
+    expect(global.fetch).toHaveBeenCalledWith('/api/users?page=2', expect.anything());
+    expect(screen.getByRole('button', { name: 'Página siguiente' })).toBeDisabled();
+  });
+
+  it('cambiar un filtro vuelve a la página 1', async () => {
+    global.fetch = mockFetch(paginado);
+
+    renderPage();
+    await screen.findByText('Ana');
+    fireEvent.click(screen.getByRole('button', { name: 'Página siguiente' }));
+    await screen.findByText('Lucia');
+
+    fireEvent.change(screen.getByLabelText('Filtrar por rol'), { target: { value: 'admin' } });
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenLastCalledWith('/api/users?rol=admin', expect.anything());
+    });
   });
 });

@@ -6,16 +6,13 @@ import Layout from '../../shared/Layout';
 import ProtectedRoute from '../../shared/ProtectedRoute';
 import { ROLES } from '../../shared/AuthContext';
 
-// Sin `allow` = cualquier usuario logueado (los 3 roles ven el mismo
-// Dashboard ICA; los botones de carga se ocultan con RoleGate adentro).
+// El dashboard ICA es público (visitantes sin cuenta incluidos); los botones
+// de carga/historial se ocultan con RoleGate adentro según el rol.
 const icaRoutes = [
   {
     element: <Layout />,
     children: [
-      {
-        element: <ProtectedRoute />,
-        children: [{ path: '/ica', element: <ICAPage /> }],
-      },
+      { path: '/ica', element: <ICAPage /> },
       {
         // Historial ICA, protegido solo para Admin y SuperAdmin 
         element: <ProtectedRoute allow={[ROLES.ADMIN, ROLES.SUPERADMIN]} />,

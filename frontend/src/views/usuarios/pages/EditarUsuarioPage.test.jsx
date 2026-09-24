@@ -77,7 +77,7 @@ describe('EditarUsuarioPage', () => {
     renderPagina();
     await screen.findByText('Ana Admin Lopez');
 
-    fireEvent.change(screen.getByDisplayValue('Admin'), { target: { value: 'cliente' } });
+    fireEvent.change(screen.getByDisplayValue('Admin'), { target: { value: 'encuestador' } });
     fireEvent.click(screen.getByRole('switch'));
     fireEvent.click(screen.getByRole('button', { name: 'Guardar cambios' }));
 
@@ -86,7 +86,7 @@ describe('EditarUsuarioPage', () => {
         '/api/users/2',
         expect.objectContaining({
           method: 'PATCH',
-          body: JSON.stringify({ rol: 'cliente', campusId: 1, activo: false }),
+          body: JSON.stringify({ rol: 'encuestador', campusId: 1, activo: false }),
         }),
       );
     });

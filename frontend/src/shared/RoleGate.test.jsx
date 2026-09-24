@@ -49,8 +49,8 @@ describe('RoleGate — mismo Dashboard ICA, botón condicionado por rol', () => 
     expect(screen.getByText('+ Registrar registro')).toBeInTheDocument();
   });
 
-  it('Cliente NO ve el botón de registrar', () => {
-    renderComoRol(ROLES.CLIENTE);
+  it('Encuestador NO ve el botón de registrar', () => {
+    renderComoRol(ROLES.ENCUESTADOR);
     expect(screen.queryByText('+ Registrar registro')).not.toBeInTheDocument();
   });
 });

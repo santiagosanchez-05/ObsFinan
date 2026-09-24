@@ -6,6 +6,8 @@ const {
   getUsuarios,
   getUsuarioPorId,
   getFotoUsuario,
+  getMiFoto,
+  putMiFoto,
   getCampuses,
   postRegistrarUsuario,
   patchEditarUsuario,
@@ -39,6 +41,11 @@ function subirFoto(req, res, next) {
     return res.status(400).json({ error: 'No se pudo procesar la foto' });
   });
 }
+
+// Foto propia — cualquier usuario logueado. Van ANTES de /:id/photo para que
+// "me" no se interprete como un id.
+router.get('/me/photo', requireAuth, getMiFoto);
+router.put('/me/photo', requireAuth, subirFoto, putMiFoto);
 
 // Panel de Usuarios: solo Superadmin lo ve (mismo criterio que la ruta del frontend).
 router.get('/', requireAuth, requireRole('superadmin'), getUsuarios);

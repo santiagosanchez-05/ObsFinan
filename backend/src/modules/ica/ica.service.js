@@ -9,6 +9,17 @@ const MODULE_ICA = 1;
 const SOURCE_TYPE_ARCHIVO = 2;
 const SOURCE_TYPE_INDIVIDUAL = 1;
 
+// data_load.status: 0 = eliminado, 1 = pendiente de verificación, 2 = verificado.
+// Lo que carga un Admin/Superadmin entra ya verificado — no tiene sentido que
+// quede esperando revisión de alguien de su mismo nivel. El estado 1 queda para
+// las encuestas que en Sprint 2 manden los encuestadores (pendientes de aprobación).
+const ESTADO_CARGA_PENDIENTE = 1;
+const ESTADO_CARGA_VERIFICADA = 2;
+
+function estadoInicialCarga(rol) {
+  return rol === 'admin' || rol === 'superadmin' ? ESTADO_CARGA_VERIFICADA : ESTADO_CARGA_PENDIENTE;
+}
+
 const UPLOAD_DIR = path.join(__dirname, '../../../uploads/ica');
 const TEMPLATE_ICA = path.join(
   __dirname,
@@ -512,7 +523,7 @@ async function obtenerExploradorPreguntas({ campusId, year, quarter, communityId
 
 //postRegistroIca (US18).
 
-async function registrarRegistroIndividual({ communityId, year, quarter, conocimiento, uso, educacion, prevision, icaHombres, icaMujeres, userId, campusId }) {
+async function registrarRegistroIndividual({ communityId, year, quarter, conocimiento, uso, educacion, prevision, icaHombres, icaMujeres, userId, campusId, rol }) {
   const [comunidades] = await pool.query(
     'SELECT community_id FROM community WHERE community_id = ? AND campus_id = ? AND status = 1',
     [communityId, campusId],
@@ -524,8 +535,8 @@ async function registrarRegistroIndividual({ communityId, year, quarter, conocim
     await conexion.beginTransaction();
     const [carga] = await conexion.query(
       `INSERT INTO data_load (module, source_type, file_name, total_rows, status, created_modified_by)
-       VALUES (?, ?, ?, 1, 1, ?)`,
-      [MODULE_ICA, SOURCE_TYPE_INDIVIDUAL, 'Registro individual', userId],
+       VALUES (?, ?, ?, 1, ?, ?)`,
+      [MODULE_ICA, SOURCE_TYPE_INDIVIDUAL, 'Registro individual', estadoInicialCarga(rol), userId],
     );
     await conexion.query(
       `INSERT INTO ica_measurement
@@ -642,7 +653,7 @@ async function recalcularAgregadoManual({ conexion, communityId, year, quarter, 
     [communityId, dataLoadId, year, quarter, knowledgeIndex, usageIndex, educationIndex, foresightIndex, icaMale, icaFemale],
   );
 }
-async function registrarEntrevistaIndividual({ communityId, year, quarter, userId, campusId, ...respuestas }) {
+async function registrarEntrevistaIndividual({ communityId, year, quarter, userId, campusId, rol, ...respuestas }) {
   const [comunidades] = await pool.query(
     'SELECT community_id FROM community WHERE community_id = ? AND campus_id = ? AND status = 1',
     [communityId, campusId],
@@ -654,8 +665,8 @@ async function registrarEntrevistaIndividual({ communityId, year, quarter, userI
     await conexion.beginTransaction();
     const [carga] = await conexion.query(
       `INSERT INTO data_load (module, source_type, file_name, total_rows, status, created_modified_by)
-       VALUES (?, ?, ?, 1, 1, ?)`,
-      [MODULE_ICA, SOURCE_TYPE_INDIVIDUAL, 'Registro individual', userId],
+       VALUES (?, ?, ?, 1, ?, ?)`,
+      [MODULE_ICA, SOURCE_TYPE_INDIVIDUAL, 'Registro individual', estadoInicialCarga(rol), userId],
     );
     const columnas = CAMPOS_ENCUESTA.map(([, columna]) => columna);
     const valores = CAMPOS_ENCUESTA.map(([campo]) => respuestas[campo] ?? null);
@@ -744,7 +755,7 @@ function borrarArchivoSiExiste(dataLoadId, nombreOriginal) {
 // Inserta las entrevistas de UN archivo (todas de la misma comuna+trimestre)
 // en ica_survey_response. Ya NO toca ica_measurement — eso queda para
 // cuando el motor de scoring esté listo (recalcularAgregado, bloqueado).
-async function registrarCargaPorArchivo({ filasValidas, communityId, campusId, quarter, year, userId, nombreArchivo, buffer }) {
+async function registrarCargaPorArchivo({ filasValidas, communityId, campusId, quarter, year, userId, rol, nombreArchivo, buffer }) {
   const [comunidades] = await pool.query(
     'SELECT community_id FROM community WHERE community_id = ? AND campus_id = ? AND status = 1',
     [communityId, campusId],
@@ -761,8 +772,8 @@ async function registrarCargaPorArchivo({ filasValidas, communityId, campusId, q
 
     const [resultCarga] = await conexion.query(
       `INSERT INTO data_load (module, source_type, file_name, total_rows, status, created_modified_by)
-       VALUES (?, ?, ?, ?, 1, ?)`,
-      [MODULE_ICA, SOURCE_TYPE_ARCHIVO, nombreArchivo, filasValidas.length, userId],
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [MODULE_ICA, SOURCE_TYPE_ARCHIVO, nombreArchivo, filasValidas.length, estadoInicialCarga(rol), userId],
     );
     dataLoadId = resultCarga.insertId;
 
@@ -1288,8 +1299,10 @@ async function generarExportacionRespuestasIca({ campusId, year, quarter, commun
 // US22: dataset completo del ICA (los índices ya calculados, agregados por
 // comuna y período) — lo que un Usuario descarga para analizar por su cuenta.
 async function obtenerDatasetIcaExport({ campusId, year, quarter, communityId }) {
-  const condiciones = ['c.campus_id = ?', 'c.status = 1', 'm.status = 1'];
-  const parametros = [campusId];
+  // Sin campusId (visitante o superadmin con "Todas") exporta todas las sedes.
+  const condiciones = ['c.status = 1', 'm.status = 1'];
+  const parametros = [];
+  if (campusId) { condiciones.unshift('c.campus_id = ?'); parametros.unshift(campusId); }
 
   if (year) { condiciones.push('m.year = ?'); parametros.push(year); }
   if (quarter) { condiciones.push('m.quarter = ?'); parametros.push(quarter); }
@@ -1349,4 +1362,5 @@ module.exports = {
   generarExportacionRespuestasIca,
   obtenerDatasetIcaExport,
   obtenerPlantillaIca,
+  estadoInicialCarga,
 };

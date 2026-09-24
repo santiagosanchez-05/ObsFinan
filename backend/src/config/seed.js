@@ -7,7 +7,8 @@ require('dotenv').config();
 const bcrypt = require('bcrypt');
 const pool = require('./db');
 
-const ROLES = ['superadmin', 'admin', 'cliente'];
+// Sprint 2: "cliente" ya no es un rol (el visitante no tiene cuenta).
+const ROLES = ['superadmin', 'admin', 'encuestador'];
 const CAMPUS = { nombre: 'Cochabamba', codigo: 'CBBA' };
 const SEED_SUPERADMIN = {
   nombres: 'Santiago',

@@ -1,18 +1,12 @@
 import SPEPage from './pages/SPEPage';
 import Layout from '../../shared/Layout';
-import ProtectedRoute from '../../shared/ProtectedRoute';
 
-// Sin `allow` = cualquier usuario logueado (los 3 roles ven el mismo
-// dashboard; los botones de carga se ocultan con RoleGate adentro).
+// Dashboard público (visitantes sin cuenta incluidos); cuando existan botones
+// de carga, se ocultan con RoleGate adentro según el rol.
 const speRoutes = [
   {
     element: <Layout />,
-    children: [
-      {
-        element: <ProtectedRoute />,
-        children: [{ path: '/spe', element: <SPEPage /> }],
-      },
-    ],
+    children: [{ path: '/spe', element: <SPEPage /> }],
   },
 ];
 

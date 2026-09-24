@@ -43,11 +43,29 @@ async function obtenerDashboardUsuarios(filtros = {}) {
   const porSede = agruparYContar(usuarios, (u) => u.sede, 'sede');
   const porRol = agruparYContar(usuarios, (u) => u.rol, 'rol');
 
+  const { usuarios: pagina, paginacion } = paginar(filtrarUsuarios(usuarios, filtros), filtros);
+
   return {
     stats: { totalUsuarios, sedesActivas, adminsActivos, cuentasInactivas },
     porSede,
     porRol,
-    usuarios: filtrarUsuarios(usuarios, filtros),
+    usuarios: pagina,
+    paginacion,
+  };
+}
+
+const POR_PAGINA_DEFAULT = 10;
+
+// US8 — paginado del listado (después de filtrar). Si piden una página que ya
+// no existe (ej. filtraron y quedaron menos resultados) se devuelve la última.
+function paginar(lista, { page = 1, pageSize = POR_PAGINA_DEFAULT } = {}) {
+  const total = lista.length;
+  const totalPaginas = Math.max(1, Math.ceil(total / pageSize));
+  const pagina = Math.min(page, totalPaginas);
+  const inicio = (pagina - 1) * pageSize;
+  return {
+    usuarios: lista.slice(inicio, inicio + pageSize),
+    paginacion: { pagina, porPagina: pageSize, total, totalPaginas },
   };
 }
 
@@ -146,6 +164,27 @@ async function obtenerFotoUsuario(userId) {
   const blob = rows[0]?.image_blob;
   if (!blob) return null;
   return { buffer: blob, mimeType: detectarMimeType(blob) };
+}
+
+// US13 — el propio usuario cambia su foto desde "Mi perfil". Se reemplaza
+// (no se acumula historial de fotos en la tabla image).
+async function guardarFotoUsuario(userId, buffer) {
+  const conexion = await pool.getConnection();
+  try {
+    await conexion.beginTransaction();
+    await conexion.query('DELETE FROM image WHERE type = ? AND entity_id = ?', [IMAGE_TYPE_USER, userId]);
+    await conexion.query('INSERT INTO image (image_blob, type, entity_id, created_at) VALUES (?, ?, ?, NOW())', [
+      buffer,
+      IMAGE_TYPE_USER,
+      userId,
+    ]);
+    await conexion.commit();
+  } catch (err) {
+    await conexion.rollback();
+    throw err;
+  } finally {
+    conexion.release();
+  }
 }
 
 async function obtenerCampusActivos() {
@@ -321,6 +360,7 @@ module.exports = {
   obtenerCampusActivos,
   registrarUsuario,
   obtenerFotoUsuario,
+  guardarFotoUsuario,
   detectarMimeType,
   editarUsuario,
   cambiarEstadoUsuario,

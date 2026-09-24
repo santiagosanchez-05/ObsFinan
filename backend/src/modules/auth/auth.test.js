@@ -59,7 +59,7 @@ describe('POST /api/auth/login', () => {
     const passwordTemporal = 'UVL-a8K2p9';
     const hash = await bcrypt.hash(passwordTemporal, 10);
     pool.query.mockResolvedValueOnce([[
-      { user_id: 3, first_name: 'Guido', paternal_last_name: 'Perez', email: CORREO, password_hash: hash, status: 1, campus_id: 1, role_name: 'cliente' },
+      { user_id: 3, first_name: 'Guido', paternal_last_name: 'Perez', email: CORREO, password_hash: hash, status: 1, campus_id: 1, role_name: 'encuestador' },
     ]]);
     const res = await request(app).post('/api/auth/login').send({ email: CORREO, password: passwordTemporal });
     expect(res.status).toBe(200);
@@ -210,7 +210,7 @@ describe('POST /api/auth/change-password', () => {
   });
 
   function tokenSesion(userId = 1) {
-    return jwt.sign({ userId, role: 'cliente', campusId: 1 }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    return jwt.sign({ userId, role: 'encuestador', campusId: 1 }, process.env.JWT_SECRET, { expiresIn: '1h' });
   }
 
   it('sin token, responde 401', async () => {
@@ -270,7 +270,7 @@ describe('PUT /api/auth/update-profile', () => {
   });
 
   function tokenSesion(userId = 1) {
-    return jwt.sign({ userId, role: 'cliente', campusId: 1 }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    return jwt.sign({ userId, role: 'encuestador', campusId: 1 }, process.env.JWT_SECRET, { expiresIn: '1h' });
   }
 
   it('sin token, responde 401', async () => {
@@ -298,7 +298,7 @@ describe('PUT /api/auth/update-profile', () => {
       status: 1,
       campus_id: 1,
       campus_name: 'Cochabamba',
-      role_name: 'cliente',
+      role_name: 'encuestador',
     };
 
     pool.query

@@ -1,4 +1,4 @@
-// Crea un usuario Admin y un usuario Cliente de prueba.
+// Crea un usuario Admin y un usuario Encuestador de prueba.
 // Uso: node src/config/seed-extra-users.js
 require('dotenv').config();
 const bcrypt = require('bcrypt');
@@ -13,7 +13,9 @@ const NUEVOS_USUARIOS = [
     passwordTemporal: 'Temp-BienestarFinanciero2026',
   },
   {
-    rol: 'cliente',
+    // Mismo correo que el viejo usuario Cliente de prueba (ya migrado a
+    // encuestador) para que re-correr el script no lo duplique.
+    rol: 'encuestador',
     nombres: 'Carlos',
     apellidoPaterno: 'Cliente',
     correo: 'cliente@bienestarfinanciero.test',

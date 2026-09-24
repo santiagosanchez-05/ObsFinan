@@ -1,16 +1,25 @@
 const { uploadIcaMetaSchema, registroIcaSchema, entrevistaIcaSchema } = require('./ica.validation');
 const icaService = require('./ica.service');
 
+// Lectura de dashboards (endpoints públicos): el visitante y el Superadmin
+// eligen sede por query (sin campusId = todas); un usuario con rol de sede
+// (Admin) queda fijo en la suya.
+function resolverSedeLectura(req) {
+  const rol = req.user?.role;
+  if (!rol || rol === 'superadmin') {
+    return { campusId: req.query.campusId ? Number(req.query.campusId) : null, mostrarTodasSedes: true };
+  }
+  return { campusId: req.user.campusId, mostrarTodasSedes: false };
+}
+
 async function getDashboardIca(req, res) {
-  const campusId = req.user.role === 'superadmin' && req.query.campusId
-    ? Number(req.query.campusId)
-    : req.user.campusId;
-  if (req.user.role !== 'superadmin' && !campusId) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
+  const { campusId, mostrarTodasSedes } = resolverSedeLectura(req);
+  if (!mostrarTodasSedes && !campusId) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
 
   try {
     const dashboard = await icaService.obtenerDashboard({
       campusId,
-      mostrarTodasSedes: req.user.role === 'superadmin',
+      mostrarTodasSedes,
       year: req.query.year ? Number(req.query.year) : null,
       quarter: req.query.quarter ? Number(req.query.quarter) : null,
       communityId: req.query.communityId ? Number(req.query.communityId) : null,
@@ -25,10 +34,8 @@ async function getDashboardIca(req, res) {
 }
 
 async function getExploradorPreguntasIca(req, res) {
-  const campusId = req.user.role === 'superadmin' && req.query.campusId
-    ? Number(req.query.campusId)
-    : req.user.campusId;
-  if (req.user.role !== 'superadmin' && !campusId) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
+  const { campusId, mostrarTodasSedes } = resolverSedeLectura(req);
+  if (!mostrarTodasSedes && !campusId) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
 
   try {
     const resultado = await icaService.obtenerExploradorPreguntas({
@@ -57,6 +64,7 @@ async function postRegistroIca(req, res) {
       ...parsed.data,
       userId: req.user.userId,
       campusId: req.user.campusId,
+      rol: req.user.role,
     });
     return res.status(201).json({ message: 'Registro ICA guardado correctamente', ...resultado });
   } catch (err) {
@@ -78,6 +86,7 @@ async function postEntrevistaIca(req, res) {
       ...parsed.data,
       userId: req.user.userId,
       campusId: req.user.campusId,
+      rol: req.user.role,
     });
     return res.status(201).json({ message: 'Entrevista ICA guardada correctamente', ...resultado });
   } catch (err) {
@@ -152,6 +161,7 @@ async function postUploadIca(req, res) {
       quarter,
       year,
       userId: req.user.userId,
+      rol: req.user.role,
       nombreArchivo: req.file.originalname,
       buffer: req.file.buffer,
     });
@@ -494,8 +504,8 @@ function escaparCsvExport(valor) {
 }
 
 async function getExportIca(req, res) {
-  const campusId = req.user.campusId;
-  if (!campusId) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
+  const { campusId, mostrarTodasSedes } = resolverSedeLectura(req);
+  if (!mostrarTodasSedes && !campusId) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
 
   const formato = String(req.query.formato || 'json').toLowerCase();
   if (!['csv', 'json'].includes(formato)) {

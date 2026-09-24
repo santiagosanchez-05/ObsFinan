@@ -59,6 +59,36 @@ async function getFotoUsuario(req, res) {
   }
 }
 
+// Foto propia (cualquier rol): la usan el Navbar y "Mi perfil".
+async function getMiFoto(req, res) {
+  try {
+    const foto = await usersService.obtenerFotoUsuario(req.user.userId);
+    if (!foto) {
+      return res.status(404).json({ error: 'No tenés foto de perfil' });
+    }
+    res.set('Content-Type', foto.mimeType);
+    // no-cache: al cambiarla desde "Mi perfil" tiene que verse la nueva al toque.
+    res.set('Cache-Control', 'private, no-cache');
+    return res.send(foto.buffer);
+  } catch (err) {
+    console.error('Error al obtener la foto propia:', err);
+    return res.status(500).json({ error: 'Error interno del servidor' });
+  }
+}
+
+async function putMiFoto(req, res) {
+  if (!req.file) {
+    return res.status(400).json({ error: 'Falta la foto (campo "foto")' });
+  }
+  try {
+    await usersService.guardarFotoUsuario(req.user.userId, req.file.buffer);
+    return res.json({ message: 'Foto actualizada correctamente' });
+  } catch (err) {
+    console.error('Error al actualizar la foto propia:', err);
+    return res.status(500).json({ error: 'Error interno del servidor' });
+  }
+}
+
 async function getCampuses(req, res) {
   try {
     const campuses = await usersService.obtenerCampusActivos();
@@ -184,6 +214,8 @@ module.exports = {
   getUsuarios,
   getUsuarioPorId,
   getFotoUsuario,
+  getMiFoto,
+  putMiFoto,
   getCampuses,
   postRegistrarUsuario,
   patchEditarUsuario,

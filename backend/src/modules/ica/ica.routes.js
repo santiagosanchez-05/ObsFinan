@@ -1,7 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const router = express.Router();
-const { requireAuth, requireRole } = require('../../middlewares/auth.middleware');
+const { requireAuth, optionalAuth, requireRole } = require('../../middlewares/auth.middleware');
 const { getDashboardIca, getExploradorPreguntasIca, getComunidadesIca, postRegistroIca, postEntrevistaIca, postUploadIca, getHistorialIca, getDetalleArchivoIca, deleteRegistroIca, deleteArchivoIca, deleteRespuestaIca, verifyCargaIca, downloadArchivoIca,downloadPlantillaIca,
    downloadRegistroIca,getExportIca, getExportRespuestasIca } = require('./ica.controller');
 
@@ -14,10 +14,12 @@ const upload = multer({
   },
 });
 
-router.get('/', requireAuth, getDashboardIca);
-router.get('/questions', requireAuth, getExploradorPreguntasIca);
+// Lectura pública (el visitante sin cuenta ve los dashboards). Todo lo que
+// carga, borra, verifica o expone respuestas individuales sigue protegido.
+router.get('/', optionalAuth, getDashboardIca);
+router.get('/questions', optionalAuth, getExploradorPreguntasIca);
+router.get('/export', optionalAuth, getExportIca);
 router.get('/comunidades', requireAuth, getComunidadesIca);
-router.get('/export', requireAuth, getExportIca);
 router.get('/survey-export', requireAuth, requireRole('admin', 'superadmin'), getExportRespuestasIca);
 router.get('/historial', requireAuth, requireRole('admin', 'superadmin'), getHistorialIca);
 router.get('/files/:id', requireAuth, requireRole('admin', 'superadmin'), getDetalleArchivoIca);

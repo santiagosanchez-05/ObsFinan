@@ -13,7 +13,7 @@ const SESSION_CHECK_INTERVAL = 1000;
 export const ROLES = {
   SUPERADMIN: 'superadmin',
   ADMIN: 'admin',
-  CLIENTE: 'cliente',
+  ENCUESTADOR: 'encuestador',
 };
 
 function leerSesionGuardada() {

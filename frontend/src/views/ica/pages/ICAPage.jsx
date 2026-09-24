@@ -40,6 +40,12 @@ const chartTooltip = {
   contentStyle: { border: '0', borderRadius: '10px', boxShadow: '0 8px 24px rgba(31, 34, 32, .12)' },
 };
 
+// El dashboard es público: sin sesión no se manda el header (un "Bearer null"
+// lo rechazaría el backend como token inválido).
+function headersDe(token) {
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 export default function ICAPage() {
   const [mostrarUpload, setMostrarUpload] = useState(false);
   const [archivo, setArchivo] = useState(null);
@@ -71,7 +77,7 @@ export default function ICAPage() {
         const params = new URLSearchParams(
           Object.entries(filtrosAplicados).filter(([, value]) => value !== '' && value !== null),
         );
-        const res = await fetch(`/api/ica${params.toString() ? `?${params}` : ''}`, { headers: { Authorization: `Bearer ${token}` } });
+        const res = await fetch(`/api/ica${params.toString() ? `?${params}` : ''}`, { headers: headersDe(token) });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'No se pudo cargar el dashboard ICA');
         if (!cancelado) {
@@ -97,7 +103,7 @@ export default function ICAPage() {
         const params = new URLSearchParams(
           Object.entries(filtrosAplicados).filter(([, value]) => value !== '' && value !== null),
         );
-        const res = await fetch(`/api/ica/questions${params.toString() ? `?${params}` : ''}`, { headers: { Authorization: `Bearer ${token}` } });
+        const res = await fetch(`/api/ica/questions${params.toString() ? `?${params}` : ''}`, { headers: headersDe(token) });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'No se pudo cargar el explorador de preguntas');
         if (!cancelado) {
@@ -110,7 +116,7 @@ export default function ICAPage() {
       }
     }
 
-    if (token) cargarExplorador();
+    cargarExplorador();
     return () => { cancelado = true; };
   }, [token, filtrosAplicados]);
   useEffect(() => {
@@ -300,11 +306,7 @@ export default function ICAPage() {
         params.set('communityId', filtrosAplicados.communityId);
       }
 
-      const res = await fetch(`/api/ica/export?${params.toString()}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const res = await fetch(`/api/ica/export?${params.toString()}`, { headers: headersDe(token) });
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -412,7 +414,7 @@ export default function ICAPage() {
           <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.18em] text-[#a00046]">Módulo ICA</p>
-              <h1 className="text-2xl font-bold tracking-tight text-[#202522] sm:text-[28px]">Índice de Ahorro Comunitario</h1>
+              <h1 className="text-2xl font-bold tracking-tight text-[#202522] sm:text-[28px]">Índice de Calidad Aseguradora</h1>
               <p className="mt-1 text-sm text-[#6d7673]">Encuesta trimestral aplicada en comunas de las sedes de Univalle</p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -460,7 +462,7 @@ export default function ICAPage() {
             <section className="mb-5 rounded-xl border border-[#e2e6e8] bg-white p-4 shadow-sm">
               <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#777f7c]"><Filter size={14} className="text-[#a00046]" /> Filtros de consulta</div>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_1fr_auto]">
-                {user?.role === ROLES.SUPERADMIN && sedesDisponibles.length > 1 && <label className="block"><span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#8a9290]">Sede</span><select value={filtros.campusId} onChange={(event) => setFiltros((actual) => ({ ...actual, campusId: event.target.value, communityId: '' }))} className="w-full rounded-lg border border-[#dfe4e5] bg-white px-3 py-2 text-xs text-[#414845]"><option value="">Todas</option>{sedesDisponibles.map((sede) => <option key={sede.campusId} value={sede.campusId}>{sede.nombre}</option>)}</select></label>}
+                {(!user || user.role === ROLES.SUPERADMIN) && sedesDisponibles.length > 1 && <label className="block"><span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#8a9290]">Sede</span><select value={filtros.campusId} onChange={(event) => setFiltros((actual) => ({ ...actual, campusId: event.target.value, communityId: '' }))} className="w-full rounded-lg border border-[#dfe4e5] bg-white px-3 py-2 text-xs text-[#414845]"><option value="">Todas</option>{sedesDisponibles.map((sede) => <option key={sede.campusId} value={sede.campusId}>{sede.nombre}</option>)}</select></label>}
                 <label className="block"><span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#8a9290]">Género</span><select value={filtros.gender} onChange={(event) => setFiltros((actual) => ({ ...actual, gender: event.target.value, communityId: '' }))} className="w-full rounded-lg border border-[#dfe4e5] bg-white px-3 py-2 text-xs text-[#414845]"><option value="">Todos</option>{generosDisponibles.map((genero) => <option key={genero} value={genero}>{genero === 'hombres' ? 'Hombres' : 'Mujeres'}</option>)}</select></label>
                 <label className="block"><span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#8a9290]">Trimestre</span><select value={filtros.quarter} onChange={(event) => setFiltros((actual) => ({ ...actual, year: '', quarter: event.target.value }))} className="w-full rounded-lg border border-[#dfe4e5] bg-white px-3 py-2 text-xs text-[#414845]"><option value="">Todos</option>{[1, 2, 3, 4].map((trimestre) => <option key={trimestre} value={trimestre}>Q{trimestre}</option>)}</select></label>
                 <label className="block"><span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#8a9290]">Comuna</span><select value={filtros.communityId} onChange={(event) => setFiltros((actual) => ({ ...actual, communityId: event.target.value }))} className="w-full rounded-lg border border-[#dfe4e5] bg-white px-3 py-2 text-xs text-[#414845]"><option value="">Todas</option>{comunidadesDisponibles.map((comunidad) => (
@@ -726,10 +728,14 @@ function QuestionExplorerView({ preguntas, pregunta, onSelect, periodoLabel, tot
       <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#a00046]">Módulo ICA · Explorador</p><h2 className="text-xl font-bold text-[#252927]">Explorador de preguntas</h2><p className="mt-1 text-xs text-[#8a9290]">Seleccioná una pregunta para consultar cómo se distribuyen las respuestas.</p></div><span className="text-[11px] text-[#8a9290]">{periodoLabel}</span></div>
       <div className="grid gap-4 xl:grid-cols-[.72fr_1.28fr]">
         <section className="rounded-xl border border-[#e2e6e8] bg-white p-3 shadow-sm"><div className="mb-3 flex items-center justify-between"><div><h3 className="text-sm font-bold text-[#252927]">Listado de preguntas</h3><p className="mt-1 text-[10px] text-[#8a9290]">Seleccioná una para actualizar el gráfico</p></div><span className="text-[10px] text-[#8a9290]">{preguntas.length} visibles</span></div><div className="max-h-[620px] space-y-2 overflow-y-auto pr-1">{preguntas.map((item, index) => <button key={item.id} type="button" onClick={() => onSelect(item)} className={`w-full rounded-lg border p-3 text-left transition ${codigo === item.id ? 'border-[#a00046] bg-[#fff5f8] shadow-sm' : 'border-[#edf0f1] hover:border-[#d6a4b7]'}`}><span className="text-[9px] font-bold uppercase tracking-wider text-[#a00046]">{item.dimension}</span><span className="mt-1 block text-[11px] font-semibold leading-4 text-[#414845]"><span className="mr-1 text-[#a00046]">{String(index + 1).padStart(2, '0')}</span>{item.pregunta}</span><span className="mt-1 block text-[9px] text-[#8a9290]">{item.total.toLocaleString('es-BO')} respuestas</span></button>)}</div></section>
-        <section className="self-start rounded-xl border border-[#e2e6e8] bg-white p-4 shadow-sm xl:sticky xl:top-5"><div className="flex items-start justify-between gap-3 border-b border-[#edf0f1] pb-4"><div><span className="text-[9px] font-bold uppercase tracking-wider text-[#a00046]">Dimensión {dimension}</span><h3 className="mt-1 max-w-2xl text-base font-bold leading-6 text-[#252927]">{texto}</h3></div><div className="flex gap-3">
-          <button type="button" onClick={() => onExportar('xlsx')} className="text-[10px] font-bold text-[#a00046] hover:underline">Excel</button>
-          <button type="button" onClick={() => onExportar('json')} className="text-[10px] font-bold text-[#a00046] hover:underline">JSON</button>
-        </div>
+        <section className="self-start rounded-xl border border-[#e2e6e8] bg-white p-4 shadow-sm xl:sticky xl:top-5"><div className="flex items-start justify-between gap-3 border-b border-[#edf0f1] pb-4"><div><span className="text-[9px] font-bold uppercase tracking-wider text-[#a00046]">Dimensión {dimension}</span><h3 className="mt-1 max-w-2xl text-base font-bold leading-6 text-[#252927]">{texto}</h3></div>
+          {/* Exporta respuestas individuales (endpoint solo Admin/Superadmin) */}
+          <RoleGate allow={[ROLES.ADMIN, ROLES.SUPERADMIN]}>
+            <div className="flex gap-3">
+              <button type="button" onClick={() => onExportar('xlsx')} className="text-[10px] font-bold text-[#a00046] hover:underline">Excel</button>
+              <button type="button" onClick={() => onExportar('json')} className="text-[10px] font-bold text-[#a00046] hover:underline">JSON</button>
+            </div>
+          </RoleGate>
         </div><div className="mt-5"><div className="mb-3 flex items-center justify-between"><h4 className="text-xs font-bold text-[#252927]">Distribución de respuestas</h4><span className="text-[10px] text-[#8a9290]">{totalPregunta.toLocaleString('es-BO')} respuestas · {periodoLabel}</span></div><div className="space-y-4">{respuestas.map((item) => { const color = obtenerColorRespuesta(item.respuesta); return <div key={item.respuesta} className="grid grid-cols-[minmax(0,1fr)_2fr_42px] items-center gap-3"><span className="text-[10px] text-[#59615e]">{item.respuesta}</span><div className="h-6 overflow-hidden rounded-sm bg-[#f0f2f2]"><div className="h-full rounded-sm" style={{ width: `${item.porcentaje}%`, backgroundColor: color }} /></div><span className="text-right text-[10px] font-bold" style={{ color }}>{item.porcentaje}%</span></div>; })}</div></div></section>
       </div>
     </section>

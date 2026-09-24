@@ -21,6 +21,19 @@ function requireAuth(req, res, next) {
   }
 }
 
+// Para endpoints públicos que igual se comportan distinto si hay sesión
+// (ej. dashboard ICA: un visitante ve todas las sedes, un Admin la suya).
+// Sin header → sigue como visitante (req.user = null). Con header pero token
+// inválido/vencido → 401, así el frontend dispara el aviso de sesión expirada
+// en vez de mostrarle datos de visitante a alguien que creía estar logueado.
+function optionalAuth(req, res, next) {
+  if (!req.headers.authorization) {
+    req.user = null;
+    return next();
+  }
+  return requireAuth(req, res, next);
+}
+
 // requireRole('superadmin', 'admin') — se usa DESPUÉS de requireAuth en la
 // cadena de middlewares. Filtra por rol, igual que RoleGate/ProtectedRoute
 // en el frontend, pero acá sí hace cumplir el permiso de verdad.
@@ -36,4 +49,4 @@ function requireRole(...rolesPermitidos) {
   };
 }
 
-module.exports = { requireAuth, requireRole };
+module.exports = { requireAuth, optionalAuth, requireRole };

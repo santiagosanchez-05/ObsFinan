@@ -1,6 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Camera, Lock, Eye, EyeOff, CheckCircle2, Circle } from 'lucide-react';
 import { useAuth } from '../../../shared/AuthContext';
+import UserAvatar from '../../../shared/UserAvatar';
+
+// Mismos límites que valida el backend (PUT /api/users/me/photo).
+const TIPOS_FOTO = ['image/jpeg', 'image/png'];
+const MAX_FOTO_BYTES = 5 * 1024 * 1024;
 
 function obtenerUsuarioInicial(user) {
   try {
@@ -34,6 +39,8 @@ export default function MiPerfilPage() {
   });
   const [guardandoPerfil, setGuardandoPerfil] = useState(false);
   const [mensajePerfil, setMensajePerfil] = useState({ tipo: '', texto: '' });
+  const inputFotoRef = useRef(null);
+  const [subiendoFoto, setSubiendoFoto] = useState(false);
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -142,6 +149,48 @@ export default function MiPerfilPage() {
     }
   };
 
+  // US13 — cambiar la foto propia.
+  const handleCambiarFoto = async (e) => {
+    const archivo = e.target.files?.[0];
+    e.target.value = ''; // permite volver a elegir el mismo archivo si falla
+    if (!archivo) return;
+
+    setMensajePerfil({ tipo: '', texto: '' });
+    if (!TIPOS_FOTO.includes(archivo.type)) {
+      setMensajePerfil({ tipo: 'error', texto: 'La foto debe ser JPG o PNG' });
+      return;
+    }
+    if (archivo.size > MAX_FOTO_BYTES) {
+      setMensajePerfil({ tipo: 'error', texto: 'La foto no puede pesar más de 5MB' });
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('foto', archivo);
+
+    setSubiendoFoto(true);
+    try {
+      const res = await fetch('/api/users/me/photo', {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setMensajePerfil({ tipo: 'error', texto: data.error || 'No se pudo actualizar la foto' });
+        return;
+      }
+      // Fuerza a que el Navbar y el avatar de esta pantalla vuelvan a pedir la foto.
+      actualizarUsuario?.({ fotoVersion: Date.now() });
+      setMensajePerfil({ tipo: 'success', texto: '¡Foto actualizada con éxito!' });
+    } catch (err) {
+      console.error('Error al subir la foto:', err);
+      setMensajePerfil({ tipo: 'error', texto: 'Error de conexión con el servidor. Intentá de nuevo.' });
+    } finally {
+      setSubiendoFoto(false);
+    }
+  };
+
   // 2. Manejo del botón Actualizar Contraseña conectado con /api/auth/change-password
   const handleUpdatePassword = async (e) => {
     e.preventDefault();
@@ -214,17 +263,16 @@ export default function MiPerfilPage() {
             </div>
           )}
 
-          {/* Avatar con enlace de la imagen */}
+          {/* Foto de perfil: la real si existe, avatar vacío si no */}
           <div className="flex items-center gap-4">
             <div className="relative">
-              <img
-                src="https://png.pngtree.com/thumb_back/fh260/background/20250512/pngtree-a-happy-bald-man-in-suit-and-tie-smiling-at-the-image_17286431.jpg"
-                alt="Foto de perfil"
-                className="h-20 w-20 rounded-full object-cover"
-              />
+              <UserAvatar className="h-20 w-20" iconSize={32} />
               <button
                 type="button"
-                className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full bg-maroon text-white shadow hover:opacity-90"
+                onClick={() => inputFotoRef.current?.click()}
+                disabled={subiendoFoto}
+                aria-label="Cambiar foto de perfil"
+                className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full bg-maroon text-white shadow hover:opacity-90 disabled:opacity-60"
               >
                 <Camera size={14} />
               </button>
@@ -232,11 +280,21 @@ export default function MiPerfilPage() {
             <div>
               <button
                 type="button"
-                className="font-bold text-maroon hover:underline text-sm"
+                onClick={() => inputFotoRef.current?.click()}
+                disabled={subiendoFoto}
+                className="font-bold text-maroon hover:underline text-sm disabled:opacity-60"
               >
-                Cambiar foto
+                {subiendoFoto ? 'Subiendo...' : 'Cambiar foto'}
               </button>
-              <p className="text-xs text-slate-400 mt-0.5">JPG, PNG o GIF. Máximo 1MB.</p>
+              <p className="text-xs text-slate-400 mt-0.5">JPG o PNG. Máximo 5MB.</p>
+              <input
+                ref={inputFotoRef}
+                type="file"
+                accept="image/jpeg,image/png"
+                onChange={handleCambiarFoto}
+                className="hidden"
+                data-testid="input-foto-perfil"
+              />
             </div>
           </div>
 

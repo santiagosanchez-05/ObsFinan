@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Users, Building2, ShieldCheck, UserX, UserCheck, Search, Eye, Plus } from 'lucide-react';
+import { Users, Building2, ShieldCheck, UserX, UserCheck, Search, Eye, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { PieChart, Pie, Cell, BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAuth } from '../../../shared/AuthContext';
 import ConfirmDialog from '../../../shared/ConfirmDialog';
@@ -10,7 +10,7 @@ import ConfirmDialog from '../../../shared/ConfirmDialog';
 const MAROON = '#9E0044';
 const MAROON_LIGHT = '#BA254A';
 
-const ROL_LABEL = { superadmin: 'Superadmin', admin: 'Admin', cliente: 'Cliente' };
+const ROL_LABEL = { superadmin: 'Superadmin', admin: 'Admin', encuestador: 'Encuestador' };
 const COLORES_ROL = [MAROON, MAROON_LIGHT, '#E4A8BB'];
 
 export default function UsuariosPage() {
@@ -21,14 +21,31 @@ export default function UsuariosPage() {
   const [rolFiltro, setRolFiltro] = useState('');
   const [sedeFiltro, setSedeFiltro] = useState('');
   const [campuses, setCampuses] = useState([]);
+  const [pagina, setPagina] = useState(1); // US8
   const [usuarioAConfirmar, setUsuarioAConfirmar] = useState(null); // { id, nombre, activo } | null
   const [cambiandoEstado, setCambiandoEstado] = useState(false);
 
   // US9 — debounce del texto de búsqueda para no disparar un fetch por cada tecla.
+  // Cambiar un filtro vuelve a la primera página (en el mismo render, para no
+  // pedir primero la página vieja con el filtro nuevo).
+  const ultimaBusqueda = useRef('');
   useEffect(() => {
-    const id = setTimeout(() => setBusquedaDebounced(busqueda.trim()), 350);
+    const id = setTimeout(() => {
+      const termino = busqueda.trim();
+      if (termino === ultimaBusqueda.current) return;
+      ultimaBusqueda.current = termino;
+      setBusquedaDebounced(termino);
+      setPagina(1);
+    }, 350);
     return () => clearTimeout(id);
   }, [busqueda]);
+
+  function cambiarFiltro(setter) {
+    return (e) => {
+      setter(e.target.value);
+      setPagina(1);
+    };
+  }
 
   useEffect(() => {
     fetch('/api/users/campuses', { headers: { Authorization: `Bearer ${token}` } })
@@ -43,6 +60,7 @@ export default function UsuariosPage() {
       if (busquedaDebounced) params.set('q', busquedaDebounced);
       if (rolFiltro) params.set('rol', rolFiltro);
       if (sedeFiltro) params.set('campusId', sedeFiltro);
+      if (pagina > 1) params.set('page', String(pagina));
       const qs = params.toString();
       const res = await fetch(`/api/users${qs ? `?${qs}` : ''}`, { headers: { Authorization: `Bearer ${token}` } });
       const data = await res.json();
@@ -59,7 +77,7 @@ export default function UsuariosPage() {
   useEffect(() => {
     cargar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, busquedaDebounced, rolFiltro, sedeFiltro]);
+  }, [token, busquedaDebounced, rolFiltro, sedeFiltro, pagina]);
 
   async function confirmarCambioEstado() {
     if (!usuarioAConfirmar) return;
@@ -86,6 +104,8 @@ export default function UsuariosPage() {
   }
 
   const { stats, porSede, porRol, usuarios } = estado.datos;
+  // Respaldo por si el backend todavía no manda paginación (una sola página).
+  const paginacion = estado.datos.paginacion ?? { pagina: 1, totalPaginas: 1, total: usuarios.length };
 
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-surface px-4 py-6 sm:px-6 lg:px-8">
@@ -158,7 +178,7 @@ export default function UsuariosPage() {
               </label>
               <select
                 value={rolFiltro}
-                onChange={(e) => setRolFiltro(e.target.value)}
+                onChange={cambiarFiltro(setRolFiltro)}
                 aria-label="Filtrar por rol"
                 className="rounded-lg border border-black/10 py-2 px-3 text-xs focus:border-maroon focus:outline-none"
               >
@@ -169,7 +189,7 @@ export default function UsuariosPage() {
               </select>
               <select
                 value={sedeFiltro}
-                onChange={(e) => setSedeFiltro(e.target.value)}
+                onChange={cambiarFiltro(setSedeFiltro)}
                 aria-label="Filtrar por sede"
                 className="rounded-lg border border-black/10 py-2 px-3 text-xs focus:border-maroon focus:outline-none"
               >
@@ -254,8 +274,34 @@ export default function UsuariosPage() {
               </tbody>
             </table>
           </div>
-          <div className="border-t border-black/5 px-4 py-3 text-[10px] text-ink/40">
-            Mostrando {usuarios.length} de {stats.totalUsuarios} usuarios
+          <div className="flex flex-col gap-2 border-t border-black/5 px-4 py-3 text-[10px] text-ink/40 sm:flex-row sm:items-center sm:justify-between">
+            <span>
+              Mostrando {usuarios.length} de {paginacion.total} usuarios
+              {paginacion.total !== stats.totalUsuarios && ` (${stats.totalUsuarios} en total)`}
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setPagina((p) => Math.max(1, p - 1))}
+                disabled={paginacion.pagina <= 1}
+                aria-label="Página anterior"
+                className="inline-flex items-center gap-1 rounded border border-black/10 px-2 py-1 text-ink/60 hover:border-maroon hover:text-maroon disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-black/10 disabled:hover:text-ink/60"
+              >
+                <ChevronLeft size={12} /> Anterior
+              </button>
+              <span className="text-ink/60">
+                Página {paginacion.pagina} de {paginacion.totalPaginas}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPagina((p) => Math.min(paginacion.totalPaginas, p + 1))}
+                disabled={paginacion.pagina >= paginacion.totalPaginas}
+                aria-label="Página siguiente"
+                className="inline-flex items-center gap-1 rounded border border-black/10 px-2 py-1 text-ink/60 hover:border-maroon hover:text-maroon disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-black/10 disabled:hover:text-ink/60"
+              >
+                Siguiente <ChevronRight size={12} />
+              </button>
+            </div>
           </div>
         </section>
       </div>

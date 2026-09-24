@@ -22,7 +22,7 @@ function Rutas({ allow }) {
         <Route path="/cambiar-contrasena-obligatorio" element={<div>Cambiar contraseña obligatorio</div>} />
       </Route>
       <Route path="/login" element={<div>Pantalla Login</div>} />
-      <Route path="/eventos" element={<div>Home de Admin/Cliente</div>} />
+      <Route path="/eventos" element={<div>Home de Admin/Encuestador</div>} />
     </Routes>
   );
 }
@@ -46,9 +46,9 @@ describe('ProtectedRoute', () => {
   });
 
   it('usuario logueado pero con un rol que no está permitido, redirige a SU propio home', () => {
-    loguearComo(ROLES.CLIENTE);
+    loguearComo(ROLES.ENCUESTADOR);
     renderRutas({ allow: [ROLES.SUPERADMIN] });
-    expect(screen.getByText('Home de Admin/Cliente')).toBeInTheDocument();
+    expect(screen.getByText('Home de Admin/Encuestador')).toBeInTheDocument();
   });
 
   it('usuario logueado con el rol correcto, muestra el contenido', () => {
@@ -58,7 +58,7 @@ describe('ProtectedRoute', () => {
   });
 
   it('sin `allow` especificado, cualquier rol logueado puede entrar', () => {
-    loguearComo(ROLES.CLIENTE);
+    loguearComo(ROLES.ENCUESTADOR);
     renderRutas({});
     expect(screen.getByText('Contenido protegido')).toBeInTheDocument();
   });

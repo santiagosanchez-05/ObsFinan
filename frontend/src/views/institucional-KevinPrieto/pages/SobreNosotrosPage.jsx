@@ -78,9 +78,9 @@ export const SobreNosotrosPage = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V6m0 8v2m0-10e-1 0 2.08.402 2.599 1M12 18c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <h3 className="text-xl font-bold text-slate-900">ICA — Índice de Ahorro Comunitario</h3>
+              <h3 className="text-xl font-bold text-slate-900">ICA — Índice de Calidad Aseguradora</h3>
               <p className="mt-3 text-sm leading-relaxed text-slate-600">
-                Mide el conocimiento financiero, el uso de servicios financieros, la educación financiera y la previsión de ahorro de los hogares en distintas comunas.
+                Mide el conocimiento sobre seguros, el uso de seguros, la educación aseguradora y la previsión frente a riesgos de los hogares en distintas comunas.
               </p>
             </div>
 

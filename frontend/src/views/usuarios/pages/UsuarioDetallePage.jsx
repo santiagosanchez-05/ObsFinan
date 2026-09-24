@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Mail, Calendar, Clock } from 'lucide-react';
 import { useAuth } from '../../../shared/AuthContext';
 
-const ROL_LABEL = { superadmin: 'Superadmin', admin: 'Admin', cliente: 'Cliente' };
+const ROL_LABEL = { superadmin: 'Superadmin', admin: 'Admin', encuestador: 'Encuestador' };
 
 // DD/MM/AAAA — mismo formato que la maqueta.
 function formatearFecha(fechaISO) {

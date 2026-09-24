@@ -4,13 +4,14 @@ import { Menu, X } from 'lucide-react';
 import { useAuth } from './AuthContext';
 import { NAV_BY_ROLE } from './navConfig';
 import ConfirmDialog from './ConfirmDialog';
+import UserAvatar from './UserAvatar';
 import univalleLogo from '../assets/univalleLogo.png';
 
 // Nombres legibles por rol, para mostrar debajo del nombre del usuario.
 const ROLE_LABEL = {
   superadmin: 'Superadmin',
   admin: 'Administrador',
-  cliente: 'Cliente',
+  encuestador: 'Encuestador',
 };
 
 export default function Navbar() {
@@ -65,12 +66,13 @@ export default function Navbar() {
             <p className="text-sm font-medium text-ink">{user.nombre}</p>
             <p className="text-xs text-ink/50">{ROLE_LABEL[user.role]}</p>
           </div>
-          {/* TODO: reemplazar por user.fotoUrl cuando exista */}
           <Link
             to="/mi-perfil"
             aria-label="Mi perfil"
-            className="h-9 w-9 rounded-full bg-ink/10 transition hover:ring-2 hover:ring-maroon/30"
-          />
+            className="rounded-full transition hover:ring-2 hover:ring-maroon/30"
+          >
+            <UserAvatar />
+          </Link>
           <button
             onClick={() => setConfirmarLogout(true)}
             className="text-xs text-maroon hover:underline"
@@ -97,7 +99,7 @@ export default function Navbar() {
             onClick={() => setOpen(false)}
             className="mb-3 flex items-center gap-3 border-b border-black/5 pb-3"
           >
-            <div className="h-9 w-9 rounded-full bg-ink/10" />
+            <UserAvatar />
             <div className="leading-tight">
               <p className="text-sm font-medium text-ink">{user.nombre}</p>
               <p className="text-xs text-ink/50">{ROLE_LABEL[user.role]}</p>

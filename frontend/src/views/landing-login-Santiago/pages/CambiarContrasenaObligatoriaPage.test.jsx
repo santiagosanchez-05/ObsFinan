@@ -7,7 +7,7 @@ import CambiarContrasenaObligatoriaPage from './CambiarContrasenaObligatoriaPage
 function loguearComo() {
   localStorage.setItem(
     'bfu_auth',
-    JSON.stringify({ token: 'fake-token', user: { id: 1, nombre: 'Test', role: 'cliente', debeCambiarPassword: true } }),
+    JSON.stringify({ token: 'fake-token', user: { id: 1, nombre: 'Test', role: 'encuestador', debeCambiarPassword: true } }),
   );
 }
 

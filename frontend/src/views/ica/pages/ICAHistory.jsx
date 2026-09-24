@@ -248,7 +248,7 @@ export default function ICAHistory() {
             Historial de registros — ICA
           </h1>
           <p className="mt-1 text-sm text-[#6d7673]">
-            Todos los registros ingresados manualmente o cargados por archivo para el Índice de Ahorro Comunitario.
+            Todos los registros ingresados manualmente o cargados por archivo para el Índice de Calidad Aseguradora.
           </p>
         </div>
 

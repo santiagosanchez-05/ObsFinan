@@ -1,5 +1,9 @@
 const pool = require("../../config/db");
 
+// data_load.status: 0 = eliminado, 1 = pendiente de verificación, 2 = verificado.
+// Toda carga no eliminada cuenta como actividad de la sede (si se filtrara por
+// "= 1", las cargas verificadas —y todo lo que sube un Admin/Superadmin, que
+// ahora entra verificado— desaparecerían del dashboard).
 function obtenerInicioMeses(cantidad) {
   const ahora = new Date();
 
@@ -27,10 +31,10 @@ async function obtenerUsuariosPorSede() {
       COUNT(*) AS usuarios,
       SUM(
         CASE
-          WHEN r.role_name = 'cliente' THEN 1
+          WHEN r.role_name = 'encuestador' THEN 1
           ELSE 0
         END
-      ) AS clientes,
+      ) AS encuestadores,
       SUM(
         CASE
           WHEN r.role_name = 'admin' THEN 1
@@ -42,7 +46,7 @@ async function obtenerUsuariosPorSede() {
       ON r.role_id = u.role_id
     WHERE u.status = 1
       AND r.status = 1
-      AND r.role_name IN ('admin', 'cliente')
+      AND r.role_name IN ('admin', 'encuestador')
     GROUP BY u.campus_id
   `);
 
@@ -61,7 +65,7 @@ async function obtenerRegistrosPorSede() {
       ON u.user_id = dl.created_modified_by
     INNER JOIN campus c
       ON c.campus_id = u.campus_id
-    WHERE dl.status = 1
+    WHERE dl.status != 0
       AND u.status = 1
       AND c.status = 1
     GROUP BY u.campus_id
@@ -85,7 +89,7 @@ async function obtenerRegistrosPorMes() {
         ON u.user_id = dl.created_modified_by
       INNER JOIN campus c
         ON c.campus_id = u.campus_id
-      WHERE dl.status = 1
+      WHERE dl.status != 0
         AND u.status = 1
         AND c.status = 1
         AND dl.created_at >= ?
@@ -122,7 +126,7 @@ async function obtenerAdministradores() {
       ON c.campus_id = u.campus_id
     LEFT JOIN data_load dl
       ON dl.created_modified_by = u.user_id
-      AND dl.status = 1
+      AND dl.status != 0
     WHERE u.status = 1
       AND r.status = 1
       AND r.role_name = 'admin'
@@ -214,7 +218,7 @@ async function obtenerEstadisticas() {
   for (const row of usuariosPorSede) {
     usuariosMap.set(Number(row.campus_id), {
       usuarios: Number(row.usuarios),
-      clientes: Number(row.clientes),
+      encuestadores: Number(row.encuestadores),
       admins: Number(row.admins),
     });
   }
@@ -264,7 +268,7 @@ async function obtenerEstadisticas() {
 
     const usuarios = usuariosMap.get(campusId) || {
       usuarios: 0,
-      clientes: 0,
+      encuestadores: 0,
       admins: 0,
     };
 
@@ -284,8 +288,8 @@ async function obtenerEstadisticas() {
           value: usuarios.usuarios,
         },
 
-        clientes: {
-          value: usuarios.clientes,
+        encuestadores: {
+          value: usuarios.encuestadores,
         },
 
         admins: {
@@ -313,7 +317,7 @@ async function obtenerEstadisticas() {
       sede: sede.campus_name,
       codigo: sede.campus_code,
       usuarios: usuarios.usuarios,
-      clientes: usuarios.clientes,
+      encuestadores: usuarios.encuestadores,
       admins: usuarios.admins,
       registros: registros.registros,
       datasets: registros.datasets,
@@ -327,9 +331,9 @@ async function obtenerEstadisticas() {
     0,
   );
 
-  const totalClientes = sedes.reduce(
+  const totalEncuestadores = sedes.reduce(
     (total, sede) =>
-      total + (usuariosMap.get(Number(sede.campus_id))?.clientes || 0),
+      total + (usuariosMap.get(Number(sede.campus_id))?.encuestadores || 0),
     0,
   );
 
@@ -381,8 +385,8 @@ async function obtenerEstadisticas() {
         value: totalUsuarios,
       },
 
-      clientes: {
-        value: totalClientes,
+      encuestadores: {
+        value: totalEncuestadores,
       },
 
       admins: {

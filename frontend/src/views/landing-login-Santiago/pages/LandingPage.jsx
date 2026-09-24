@@ -41,8 +41,8 @@ const QUE_ES = [
 const INDICADORES = [
   {
     icon: HeartPulse,
-    titulo: 'Índice de Ahorro Comunitario (ICA)',
-    texto: 'Conocimiento, uso, educación y previsión financiera en comunas de Bolivia.',
+    titulo: 'Índice de Calidad Aseguradora (ICA)',
+    texto: 'Conocimiento, uso, educación y previsión frente a los seguros en comunas de Bolivia.',
   },
   {
     icon: Scale,
@@ -64,8 +64,8 @@ const INDICADORES = [
 const ROLES = [
   {
     icon: User,
-    titulo: 'Cliente',
-    texto: 'Visualización de los dashboards de ICA y Sector Privado Exportador.',
+    titulo: 'Visitante',
+    texto: 'Consulta libre de los dashboards de ICA y Sector Privado Exportador, sin necesidad de cuenta.',
   },
   {
     icon: UserCog,
@@ -208,6 +208,12 @@ export default function LandingPage() {
             <ul className="mt-3 space-y-2 text-sm">
               <li>
                 <Link to="/" className="hover:text-white">Inicio</Link>
+              </li>
+              <li>
+                <Link to="/ica" className="hover:text-white">Dashboard ICA</Link>
+              </li>
+              <li>
+                <Link to="/spe" className="hover:text-white">Dashboard Sector Privado Exportador</Link>
               </li>
               <li>
                 <Link to="/sobre-nosotros" className="hover:text-white">Sobre nosotros</Link>

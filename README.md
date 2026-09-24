@@ -1,6 +1,6 @@
 # PR3B-observatorio-de-bienestar-financiero-GSILVAS
 
-Bienestar Financiero Univalle — observatorio ICA (Índice de Ahorro Comunitario) y SPE (Sector Privado Exportador).
+Bienestar Financiero Univalle — observatorio ICA (Índice de Calidad Aseguradora) y SPE (Sector Privado Exportador).
 
 Frontend: React + Vite + Tailwind v4. Backend: Express + MySQL (MariaDB remota compartida).
 

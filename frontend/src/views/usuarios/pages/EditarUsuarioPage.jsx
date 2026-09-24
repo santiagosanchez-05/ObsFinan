@@ -157,7 +157,7 @@ export default function EditarUsuarioPage() {
               >
                 <option value="superadmin">Superadmin</option>
                 <option value="admin">Admin</option>
-                <option value="cliente">Cliente</option>
+                <option value="encuestador">Encuestador</option>
               </select>
             </label>
 

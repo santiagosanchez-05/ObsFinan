@@ -28,9 +28,15 @@ import { useAuth } from "../../../shared/AuthContext";
 /*  Configuración API                                                  */
 /* ------------------------------------------------------------------ */
 
-const API_URL = (
-  import.meta.env.VITE_API_URL || "http://localhost:3000"
-).replace(/\/$/, "");
+// Sin VITE_API_URL se usa ruta relativa (/api/...): en dev pasa por el proxy
+// de Vite y en producción va al mismo dominio. Un "http://localhost:3000" fijo
+// se rompe apenas se publica.
+const API_URL = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
+
+// Paddings/tamaños fluidos: con estilos inline no hay media queries, así que
+// clamp() hace que se achiquen solos en pantallas de celular.
+const PAD_CARD = "clamp(16px, 4vw, 24px)";
+const PAD_CARD_GRANDE = "clamp(16px, 4vw, 32px)";
 
 /* ------------------------------------------------------------------ */
 /*  Design tokens (mantener diseño original)                          */
@@ -62,6 +68,9 @@ const FONT = "'Sora', system-ui, -apple-system, sans-serif";
 /* ------------------------------------------------------------------ */
 
 const formatNumber = (n) => Number(n || 0).toLocaleString("es-BO");
+
+// Eje Y de los gráficos: "k" solo desde mil (con pocos registros mostraba ".016k").
+const formatearEje = (v) => (Number(v) >= 1000 ? `${Number(v) / 1000}k` : formatNumber(v));
 
 /* ------------------------------------------------------------------ */
 /*  Filtro de sedes                                                    */
@@ -167,8 +176,9 @@ function KpiCard({
         background: COLORS.white,
         border: `1px solid ${COLORS.borderSoft}`,
         borderRadius: 12,
-        padding: 24,
-        flex: "1 0 0",
+        padding: PAD_CARD,
+        // Base de 220px: en desktop entran 4 por fila; en celular bajan de a una.
+        flex: "1 1 220px",
         minWidth: 0,
         boxShadow: "0px 1px 1px rgba(0,0,0,0.05)",
         display: "flex",
@@ -247,8 +257,8 @@ function ChartCard({ title, subtitle, children }) {
         background: COLORS.white,
         border: `1px solid ${COLORS.borderSoft}`,
         borderRadius: 12,
-        padding: 32,
-        flex: "1 0 0",
+        padding: PAD_CARD_GRANDE,
+        flex: "1 1 320px",
         minWidth: 0,
         boxShadow: "0px 1px 1px rgba(0,0,0,0.05)",
         display: "flex",
@@ -313,9 +323,11 @@ function TableShell({ title, subtitle, action, children, footer }) {
         style={{
           borderBottom: `1px solid ${COLORS.borderSoft}`,
           display: "flex",
+          flexWrap: "wrap",
+          gap: 12,
           alignItems: "center",
           justifyContent: "space-between",
-          padding: 24,
+          padding: PAD_CARD,
         }}
       >
         <div>
@@ -346,7 +358,8 @@ function TableShell({ title, subtitle, action, children, footer }) {
         {action}
       </div>
 
-      {children}
+      {/* En celular la tabla se desplaza de costado en vez de aplastarse */}
+      <div style={{ overflowX: "auto" }}>{children}</div>
 
       {footer}
     </div>
@@ -528,6 +541,7 @@ function SedeDetailView({ data, sedeLabel }) {
           display: "flex",
           gap: 24,
           width: "100%",
+          flexWrap: "wrap",
         }}
       >
         <KpiCard
@@ -540,9 +554,9 @@ function SedeDetailView({ data, sedeLabel }) {
 
         <KpiCard
           icon={Briefcase}
-          label="Clientes"
-          value={formatNumber(kpis.clientes?.value || 0)}
-          delta={kpis.clientes?.delta}
+          label="Encuestadores"
+          value={formatNumber(kpis.encuestadores?.value || 0)}
+          delta={kpis.encuestadores?.delta}
           badgeTone="success"
         />
 
@@ -607,7 +621,7 @@ function SedeDetailView({ data, sedeLabel }) {
             />
 
             <YAxis
-              tickFormatter={(v) => `${Number(v) / 1000}k`}
+              tickFormatter={formatearEje}
               tick={{
                 fontFamily: FONT,
                 fontSize: 12,
@@ -701,6 +715,7 @@ function SedeDetailView({ data, sedeLabel }) {
         <table
           style={{
             width: "100%",
+            minWidth: 560,
             borderCollapse: "collapse",
           }}
         >
@@ -833,6 +848,7 @@ function TodasView({ summary, globalKpis, onSelectSede }) {
           display: "flex",
           gap: 24,
           width: "100%",
+          flexWrap: "wrap",
         }}
       >
         <KpiCard
@@ -845,9 +861,9 @@ function TodasView({ summary, globalKpis, onSelectSede }) {
 
         <KpiCard
           icon={Briefcase}
-          label="Total de clientes"
-          value={formatNumber(globalKpis?.clientes?.value || 0)}
-          delta={globalKpis?.clientes?.delta}
+          label="Total de encuestadores"
+          value={formatNumber(globalKpis?.encuestadores?.value || 0)}
+          delta={globalKpis?.encuestadores?.delta}
           badgeTone="success"
         />
 
@@ -873,6 +889,7 @@ function TodasView({ summary, globalKpis, onSelectSede }) {
           display: "flex",
           gap: 32,
           width: "100%",
+          flexWrap: "wrap",
         }}
       >
         <ChartCard
@@ -964,7 +981,7 @@ function TodasView({ summary, globalKpis, onSelectSede }) {
               />
 
               <YAxis
-                tickFormatter={(v) => `${Number(v) / 1000}k`}
+                tickFormatter={formatearEje}
                 tick={{
                   fontFamily: FONT,
                   fontSize: 12,
@@ -1064,6 +1081,7 @@ function TodasView({ summary, globalKpis, onSelectSede }) {
         <table
           style={{
             width: "100%",
+            minWidth: 560,
             borderCollapse: "collapse",
           }}
         >
@@ -1075,7 +1093,7 @@ function TodasView({ summary, globalKpis, onSelectSede }) {
             <tr>
               <th style={thStyle}>Sede</th>
               <th style={thStyle}>Usuarios</th>
-              <th style={thStyle}>Clientes</th>
+              <th style={thStyle}>Encuestadores</th>
               <th style={thStyle}>Admins</th>
               <th style={thStyle}>Registros Cargados</th>
               <th style={thStyle}>Última Actividad</th>
@@ -1145,7 +1163,7 @@ function TodasView({ summary, globalKpis, onSelectSede }) {
 
                   <td style={tdStyle}>{formatNumber(row.usuarios)}</td>
 
-                  <td style={tdStyle}>{formatNumber(row.clientes)}</td>
+                  <td style={tdStyle}>{formatNumber(row.encuestadores)}</td>
 
                   <td style={tdStyle}>{formatNumber(row.admins)}</td>
 
@@ -1352,7 +1370,7 @@ export default function SedesPage() {
           maxWidth: 1440,
           width: "100%",
           margin: "0 auto",
-          padding: 32,
+          padding: PAD_CARD_GRANDE,
           display: "flex",
           flexDirection: "column",
           gap: 32,
@@ -1363,7 +1381,7 @@ export default function SedesPage() {
             style={{
               fontFamily: FONT,
               fontWeight: 700,
-              fontSize: 30,
+              fontSize: "clamp(24px, 6vw, 30px)",
               color: COLORS.text,
               margin: 0,
             }}

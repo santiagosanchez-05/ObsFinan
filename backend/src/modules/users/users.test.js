@@ -53,7 +53,7 @@ describe('GET /api/users', () => {
       .mockResolvedValueOnce([[
         { user_id: 1, first_name: 'Santiago', paternal_last_name: 'Sanchez', maternal_last_name: null, email: 'santi@test.com', status: 1, campus_name: 'Cochabamba', role_name: 'superadmin' },
         { user_id: 2, first_name: 'Ana', paternal_last_name: 'Admin', maternal_last_name: 'Lopez', email: 'ana@test.com', status: 1, campus_name: 'Cochabamba', role_name: 'admin' },
-        { user_id: 3, first_name: 'Carlos', paternal_last_name: 'Cliente', maternal_last_name: null, email: 'carlos@test.com', status: 0, campus_name: 'La Paz', role_name: 'cliente' },
+        { user_id: 3, first_name: 'Carlos', paternal_last_name: 'Cliente', maternal_last_name: null, email: 'carlos@test.com', status: 0, campus_name: 'La Paz', role_name: 'encuestador' },
       ]])
       .mockResolvedValueOnce([[{ sedesActivas: 2 }]])
       .mockResolvedValueOnce([[{ entity_id: 2 }]]); // solo Ana (user_id 2) tiene foto
@@ -69,7 +69,7 @@ describe('GET /api/users', () => {
       expect.arrayContaining([
         { rol: 'superadmin', total: 1 },
         { rol: 'admin', total: 1 },
-        { rol: 'cliente', total: 1 },
+        { rol: 'encuestador', total: 1 },
       ]),
     );
     expect(res.body.usuarios).toHaveLength(3);
@@ -96,13 +96,20 @@ describe('GET /api/users', () => {
     return [[
       { user_id: 1, first_name: 'Santiago', paternal_last_name: 'Sanchez', maternal_last_name: null, email: 'santi@test.com', status: 1, campus_id: 1, campus_name: 'Cochabamba', role_name: 'superadmin' },
       { user_id: 2, first_name: 'Ana', paternal_last_name: 'Admin', maternal_last_name: 'Lopez', email: 'ana@test.com', status: 1, campus_id: 1, campus_name: 'Cochabamba', role_name: 'admin' },
-      { user_id: 3, first_name: 'Carlos', paternal_last_name: 'Cliente', maternal_last_name: null, email: 'carlos@test.com', status: 0, campus_id: 2, campus_name: 'La Paz', role_name: 'cliente' },
+      { user_id: 3, first_name: 'Carlos', paternal_last_name: 'Cliente', maternal_last_name: null, email: 'carlos@test.com', status: 0, campus_id: 2, campus_name: 'La Paz', role_name: 'encuestador' },
     ]];
   }
 
   it('con un rol inválido en el query, responde 400', async () => {
     const res = await request(app)
       .get('/api/users?rol=inventado')
+      .set('Authorization', `Bearer ${token('superadmin')}`);
+    expect(res.status).toBe(400);
+  });
+
+  it('"cliente" ya no es un rol válido (Sprint 2: pasó a ser encuestador)', async () => {
+    const res = await request(app)
+      .get('/api/users?rol=cliente')
       .set('Authorization', `Bearer ${token('superadmin')}`);
     expect(res.status).toBe(400);
   });
@@ -123,7 +130,7 @@ describe('GET /api/users', () => {
     pool.query.mockResolvedValueOnce(filasParaFiltros()).mockResolvedValueOnce([[{ sedesActivas: 2 }]]).mockResolvedValueOnce([[]]);
 
     const res = await request(app)
-      .get('/api/users?rol=cliente')
+      .get('/api/users?rol=encuestador')
       .set('Authorization', `Bearer ${token('superadmin')}`);
 
     expect(res.status).toBe(200);
@@ -158,7 +165,7 @@ describe('GET /api/users', () => {
     pool.query.mockResolvedValueOnce(filasParaFiltros()).mockResolvedValueOnce([[{ sedesActivas: 2 }]]).mockResolvedValueOnce([[]]);
 
     const res = await request(app)
-      .get('/api/users?rol=cliente')
+      .get('/api/users?rol=encuestador')
       .set('Authorization', `Bearer ${token('superadmin')}`);
 
     expect(res.status).toBe(200);
@@ -167,7 +174,7 @@ describe('GET /api/users', () => {
       expect.arrayContaining([
         { rol: 'superadmin', total: 1 },
         { rol: 'admin', total: 1 },
-        { rol: 'cliente', total: 1 },
+        { rol: 'encuestador', total: 1 },
       ]),
     );
   });
@@ -179,6 +186,134 @@ describe('GET /api/users', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.usuarios).toHaveLength(3);
+  });
+
+  // US8 — paginado
+  it('pagina el listado (pageSize) y devuelve los datos de paginación', async () => {
+    pool.query.mockResolvedValueOnce(filasParaFiltros()).mockResolvedValueOnce([[{ sedesActivas: 2 }]]).mockResolvedValueOnce([[]]);
+
+    const res = await request(app)
+      .get('/api/users?page=2&pageSize=2')
+      .set('Authorization', `Bearer ${token('superadmin')}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.usuarios).toHaveLength(1); // 3 usuarios, 2 por página → la página 2 tiene 1
+    expect(res.body.usuarios[0].nombre).toBe('Carlos');
+    expect(res.body.paginacion).toEqual({ pagina: 2, porPagina: 2, total: 3, totalPaginas: 2 });
+  });
+
+  it('pagina sobre el resultado filtrado, no sobre el total', async () => {
+    pool.query.mockResolvedValueOnce(filasParaFiltros()).mockResolvedValueOnce([[{ sedesActivas: 2 }]]).mockResolvedValueOnce([[]]);
+
+    const res = await request(app)
+      .get('/api/users?campusId=1&pageSize=1')
+      .set('Authorization', `Bearer ${token('superadmin')}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.usuarios).toHaveLength(1);
+    expect(res.body.paginacion.total).toBe(2); // solo los 2 de Cochabamba
+    expect(res.body.paginacion.totalPaginas).toBe(2);
+  });
+
+  it('si piden una página que no existe, devuelve la última', async () => {
+    pool.query.mockResolvedValueOnce(filasParaFiltros()).mockResolvedValueOnce([[{ sedesActivas: 2 }]]).mockResolvedValueOnce([[]]);
+
+    const res = await request(app)
+      .get('/api/users?page=99&pageSize=2')
+      .set('Authorization', `Bearer ${token('superadmin')}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.paginacion.pagina).toBe(2);
+  });
+
+  it('con una página inválida, responde 400', async () => {
+    const res = await request(app)
+      .get('/api/users?page=0')
+      .set('Authorization', `Bearer ${token('superadmin')}`);
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('GET /api/users/me/photo', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('sin token, responde 401', async () => {
+    const res = await request(app).get('/api/users/me/photo');
+    expect(res.status).toBe(401);
+  });
+
+  it('cualquier rol (no solo superadmin) puede ver su propia foto', async () => {
+    const pngBuffer = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    pool.query.mockResolvedValueOnce([[{ image_blob: pngBuffer }]]);
+
+    const res = await request(app).get('/api/users/me/photo').set('Authorization', `Bearer ${token('admin')}`);
+
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toBe('image/png');
+    // Busca la foto del usuario del token, no de un id de la URL.
+    expect(pool.query).toHaveBeenCalledWith(expect.stringContaining('FROM image'), ['user', 1]);
+  });
+
+  it('si no tiene foto, responde 404', async () => {
+    pool.query.mockResolvedValueOnce([[]]);
+    const res = await request(app).get('/api/users/me/photo').set('Authorization', `Bearer ${token('admin')}`);
+    expect(res.status).toBe(404);
+  });
+});
+
+describe('PUT /api/users/me/photo', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('sin token, responde 401', async () => {
+    const res = await request(app).put('/api/users/me/photo');
+    expect(res.status).toBe(401);
+  });
+
+  it('sin archivo, responde 400', async () => {
+    const res = await request(app).put('/api/users/me/photo').set('Authorization', `Bearer ${token('admin')}`);
+    expect(res.status).toBe(400);
+  });
+
+  it('con un formato que no es JPG/PNG, responde 400', async () => {
+    const res = await request(app)
+      .put('/api/users/me/photo')
+      .set('Authorization', `Bearer ${token('admin')}`)
+      .attach('foto', Buffer.from('GIF89a'), { filename: 'foto.gif', contentType: 'image/gif' });
+    expect(res.status).toBe(400);
+  });
+
+  it('reemplaza la foto del usuario logueado en una transacción', async () => {
+    const conexion = mockConexion();
+    const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]);
+
+    const res = await request(app)
+      .put('/api/users/me/photo')
+      .set('Authorization', `Bearer ${token('admin')}`)
+      .attach('foto', jpeg, { filename: 'yo.jpg', contentType: 'image/jpeg' });
+
+    expect(res.status).toBe(200);
+    expect(conexion.query).toHaveBeenCalledWith(expect.stringContaining('DELETE FROM image'), ['user', 1]);
+    expect(conexion.query).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO image'), [expect.any(Buffer), 'user', 1]);
+    expect(conexion.commit).toHaveBeenCalled();
+  });
+
+  it('si falla la BD, hace rollback y responde 500', async () => {
+    const conexion = mockConexion();
+    conexion.query.mockRejectedValueOnce(new Error('se cayó la BD'));
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    const res = await request(app)
+      .put('/api/users/me/photo')
+      .set('Authorization', `Bearer ${token('admin')}`)
+      .attach('foto', Buffer.from([0x89, 0x50, 0x4e, 0x47]), { filename: 'yo.png', contentType: 'image/png' });
+
+    expect(res.status).toBe(500);
+    expect(conexion.rollback).toHaveBeenCalled();
+    spy.mockRestore();
   });
 });
 
@@ -412,7 +547,7 @@ describe('POST /api/users', () => {
 
     const res = await enviar(
       request(app).post('/api/users').set('Authorization', `Bearer ${token('superadmin')}`),
-      campos({ rol: 'cliente' }),
+      campos({ rol: 'encuestador' }),
     );
 
     expect(res.status).toBe(201);
@@ -469,14 +604,14 @@ describe('POST /api/users', () => {
     expect(pool.getConnection).not.toHaveBeenCalled(); // ni siquiera abre transacción
   });
 
-  it('si el rol es cliente, no revisa si la sede ya tiene admin', async () => {
+  it('si el rol es encuestador, no revisa si la sede ya tiene admin', async () => {
     const conexion = mockConexion();
     pool.query.mockResolvedValueOnce([[{ role_id: 3 }]]); // solo el lookup del rol
     conexion.query.mockResolvedValueOnce([{ insertId: 8 }]);
 
     const res = await enviar(
       request(app).post('/api/users').set('Authorization', `Bearer ${token('superadmin')}`),
-      campos({ rol: 'cliente' }),
+      campos({ rol: 'encuestador' }),
     );
 
     expect(res.status).toBe(201);

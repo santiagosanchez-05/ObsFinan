@@ -106,7 +106,7 @@ export default function RegistrarUsuarioPage() {
           <ArrowLeft size={14} /> Volver a Usuarios
         </Link>
         <h1 className="mt-2 text-2xl font-bold tracking-tight text-ink">Registrar nuevo usuario</h1>
-        <p className="mt-1 text-sm text-ink/60">Completa los datos para crear una cuenta de Superadmin, Admin o Cliente</p>
+        <p className="mt-1 text-sm text-ink/60">Completa los datos para crear una cuenta de Superadmin, Admin o Encuestador</p>
 
         <form
           onSubmit={handleSubmit(onSubmit)}
@@ -157,7 +157,7 @@ export default function RegistrarUsuarioPage() {
                   </option>
                   <option value="superadmin">Superadmin</option>
                   <option value="admin">Admin</option>
-                  <option value="cliente">Cliente</option>
+                  <option value="encuestador">Encuestador</option>
                 </select>
               </Campo>
               <Campo label="Sede" error={errors.campusId?.message}>

@@ -15,14 +15,14 @@ export default function PublicHeader() {
           <span className="font-semibold text-maroon">Bienestar Financiero Univalle</span>
         </div>
 
-        <nav className="hidden items-center gap-1 sm:flex">
+        <nav className="hidden items-center gap-1 lg:flex">
           {PUBLIC_NAV.map((link) => (
             <NavLink
               key={link.to}
               to={link.to}
               end
               className={({ isActive }) =>
-                `rounded-lg px-4 py-2 text-sm font-medium transition ${
+                `whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition ${
                   isActive ? 'text-maroon' : 'text-ink/60 hover:text-ink'
                 }`
               }
@@ -35,15 +35,15 @@ export default function PublicHeader() {
         <div className="flex items-center gap-2">
           <Link
             to="/login"
-            className="hidden rounded-lg bg-maroon px-4 py-2 text-sm font-medium text-white hover:bg-maroon-light sm:inline-block"
+            className="hidden whitespace-nowrap rounded-lg bg-maroon px-4 py-2 text-sm font-medium text-white hover:bg-maroon-light lg:inline-block"
           >
             Iniciar sesión
           </Link>
 
-          {/* Botón hamburguesa — solo visible por debajo de 640px */}
+          {/* Botón hamburguesa — por debajo de 1024px (con 5 links el nav no entra antes) */}
           <button
             onClick={() => setOpen((v) => !v)}
-            className="rounded-lg p-2 text-ink sm:hidden"
+            className="rounded-lg p-2 text-ink lg:hidden"
             aria-label="Abrir menú"
           >
             {open ? <X size={22} /> : <Menu size={22} />}
@@ -53,7 +53,7 @@ export default function PublicHeader() {
 
       {/* Menú desplegable mobile */}
       {open && (
-        <nav className="border-t border-black/5 bg-white px-6 py-3 sm:hidden">
+        <nav className="border-t border-black/5 bg-white px-6 py-3 lg:hidden">
           <div className="flex flex-col gap-1">
             {PUBLIC_NAV.map((link) => (
               <NavLink
