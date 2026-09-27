@@ -4,6 +4,8 @@ const router = express.Router();
 const { requireAuth, optionalAuth, requireRole } = require('../../middlewares/auth.middleware');
 const { getDashboardIca, getExploradorPreguntasIca, getComunidadesIca, postRegistroIca, postEntrevistaIca, postUploadIca, getHistorialIca, getDetalleArchivoIca, deleteRegistroIca, deleteArchivoIca, deleteRespuestaIca, verifyCargaIca, downloadArchivoIca,downloadPlantillaIca,
    downloadRegistroIca,getExportIca, getExportRespuestasIca } = require('./ica.controller');
+// Sprint 2 — Monserrat (US58/US59). Rutas ya conectadas abajo.
+const aprobacion = require('./ica.aprobacion.controller');
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -27,11 +29,17 @@ router.get('/template', requireAuth, requireRole('admin', 'superadmin'), downloa
 router.get('/files/:id/download', requireAuth, requireRole('admin', 'superadmin'), downloadArchivoIca);
 router.get('/:id/download', requireAuth, requireRole('admin', 'superadmin'), downloadRegistroIca);
 router.post('/', requireAuth, requireRole('admin', 'superadmin'), postRegistroIca);
+// US57 (Liz): sumar el rol 'encuestador'. Si lo manda un encuestador, el body trae eventId y
+// se valida que el evento esté asignado a él (event_surveyor) y tenga has_ica = 1; si no, 400.
 router.post('/entrevistas', requireAuth, requireRole('admin', 'superadmin'), postEntrevistaIca);
 router.post('/upload', requireAuth, requireRole('admin', 'superadmin'), upload.single('archivo'), postUploadIca);
 router.delete('/:id', requireAuth, requireRole('admin', 'superadmin'), deleteRegistroIca);
 router.delete('/files/:id', requireAuth, requireRole('admin', 'superadmin'), deleteArchivoIca);
 router.delete('/responses/:id', requireAuth, requireRole('admin', 'superadmin'), deleteRespuestaIca);
 router.put('/files/:id/verify', requireAuth, requireRole('superadmin'), verifyCargaIca);
+
+// Sprint 2 — bandeja de aprobación de encuestas de los encuestadores.
+router.get('/pendientes', requireAuth, requireRole('admin', 'superadmin'), aprobacion.getPendientesIca);
+router.patch('/cargas/:id/estado', requireAuth, requireRole('admin', 'superadmin'), aprobacion.patchEstadoCargaIca);
 
 module.exports = router;

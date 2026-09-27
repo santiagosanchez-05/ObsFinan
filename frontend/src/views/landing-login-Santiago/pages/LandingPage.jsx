@@ -216,6 +216,15 @@ export default function LandingPage() {
                 <Link to="/spe" className="hover:text-white">Dashboard Sector Privado Exportador</Link>
               </li>
               <li>
+                <Link to="/eventos" className="hover:text-white">Eventos</Link>
+              </li>
+              <li>
+                <Link to="/postular" className="hover:text-white">Convocatorias para encuestadores</Link>
+              </li>
+              <li>
+                <Link to="/diccionario" className="hover:text-white">Diccionario de variables</Link>
+              </li>
+              <li>
                 <Link to="/sobre-nosotros" className="hover:text-white">Sobre nosotros</Link>
               </li>
             </ul>

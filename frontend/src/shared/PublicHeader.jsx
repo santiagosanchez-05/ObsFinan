@@ -12,10 +12,10 @@ export default function PublicHeader() {
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
         <div className="flex items-center gap-2">
           <img src={univalleLogo} alt="Univalle" className="h-9 w-9" />
-          <span className="font-semibold text-maroon">Bienestar Financiero Univalle</span>
+          <span className="whitespace-nowrap font-semibold text-maroon">Bienestar Financiero Univalle</span>
         </div>
 
-        <nav className="hidden items-center gap-1 lg:flex">
+        <nav className="hidden items-center gap-1 xl:flex">
           {PUBLIC_NAV.map((link) => (
             <NavLink
               key={link.to}
@@ -35,15 +35,15 @@ export default function PublicHeader() {
         <div className="flex items-center gap-2">
           <Link
             to="/login"
-            className="hidden whitespace-nowrap rounded-lg bg-maroon px-4 py-2 text-sm font-medium text-white hover:bg-maroon-light lg:inline-block"
+            className="hidden whitespace-nowrap rounded-lg bg-maroon px-4 py-2 text-sm font-medium text-white hover:bg-maroon-light xl:inline-block"
           >
             Iniciar sesión
           </Link>
 
-          {/* Botón hamburguesa — por debajo de 1024px (con 5 links el nav no entra antes) */}
+          {/* Botón hamburguesa — por debajo de 1280px (con 7 links el nav no entra antes) */}
           <button
             onClick={() => setOpen((v) => !v)}
-            className="rounded-lg p-2 text-ink lg:hidden"
+            className="rounded-lg p-2 text-ink xl:hidden"
             aria-label="Abrir menú"
           >
             {open ? <X size={22} /> : <Menu size={22} />}
@@ -53,7 +53,7 @@ export default function PublicHeader() {
 
       {/* Menú desplegable mobile */}
       {open && (
-        <nav className="border-t border-black/5 bg-white px-6 py-3 lg:hidden">
+        <nav className="border-t border-black/5 bg-white px-6 py-3 xl:hidden">
           <div className="flex flex-col gap-1">
             {PUBLIC_NAV.map((link) => (
               <NavLink

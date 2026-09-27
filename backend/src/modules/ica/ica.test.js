@@ -285,3 +285,25 @@ describe('estadoInicialCarga (estado con el que entra una carga nueva)', () => {
     expect(estadoInicialCarga(undefined)).toBe(1);
   });
 });
+
+describe('Sprint 2 — rutas de aprobación ICA (US58/US59)', () => {
+  it.each([
+    ['get', '/api/ica/pendientes'],
+    ['patch', '/api/ica/cargas/1/estado'],
+  ])('%s %s sin sesión responde 401', async (metodo, ruta) => {
+    const res = await request(app)[metodo](ruta);
+    expect(res.status).toBe(401);
+  });
+
+  it('un encuestador no puede aprobar encuestas', async () => {
+    const res = await request(app).patch('/api/ica/cargas/1/estado').set('Authorization', `Bearer ${token('encuestador')}`);
+    expect(res.status).toBe(403);
+  });
+
+  it('Admin y Superadmin pueden entrar a la bandeja', async () => {
+    for (const rol of ['admin', 'superadmin']) {
+      const res = await request(app).get('/api/ica/pendientes').set('Authorization', `Bearer ${token(rol)}`);
+      expect([401, 403]).not.toContain(res.status);
+    }
+  });
+});

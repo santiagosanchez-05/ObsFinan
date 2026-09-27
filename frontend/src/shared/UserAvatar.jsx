@@ -34,13 +34,13 @@ export default function UserAvatar({ className = 'h-9 w-9', iconSize = 18 }) {
   }, [token, version]);
 
   if (url) {
-    return <img src={url} alt="Foto de perfil" className={`${className} rounded-full object-cover`} />;
+    return <img src={url} alt="Foto de perfil" className={`${className} shrink-0 rounded-full object-cover`} />;
   }
 
   return (
     <span
       aria-label="Sin foto de perfil"
-      className={`${className} inline-flex items-center justify-center rounded-full bg-ink/10 text-ink/40`}
+      className={`${className} inline-flex shrink-0 items-center justify-center rounded-full bg-ink/10 text-ink/40`}
     >
       <User size={iconSize} />
     </span>

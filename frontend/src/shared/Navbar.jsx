@@ -34,10 +34,10 @@ export default function Navbar() {
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
         <div className="flex items-center gap-2">
           <img src={univalleLogo} alt="Univalle" className="h-9 w-9" />
-          <span className="font-semibold text-maroon">Bienestar Financiero Univalle</span>
+          <span className="whitespace-nowrap font-semibold text-maroon">Bienestar Financiero Univalle</span>
         </div>
 
-        <nav className="hidden items-center gap-1 sm:flex">
+        <nav className="hidden items-center gap-1 xl:flex">
           {links.map((link) => (
             <NavLink
               key={link.to}
@@ -60,16 +60,16 @@ export default function Navbar() {
           ))}
         </nav>
 
-        {/* Nombre + rol + foto + cerrar sesión — solo en pantallas sm+ */}
-        <div className="hidden items-center gap-3 sm:flex">
+        {/* Nombre + rol + foto + cerrar sesión — solo desde xl (con 7 links no entra antes) */}
+        <div className="hidden shrink-0 items-center gap-3 xl:flex">
           <div className="text-right leading-tight">
-            <p className="text-sm font-medium text-ink">{user.nombre}</p>
+            <p className="whitespace-nowrap text-sm font-medium text-ink">{user.nombre}</p>
             <p className="text-xs text-ink/50">{ROLE_LABEL[user.role]}</p>
           </div>
           <Link
             to="/mi-perfil"
             aria-label="Mi perfil"
-            className="rounded-full transition hover:ring-2 hover:ring-maroon/30"
+            className="shrink-0 rounded-full transition hover:ring-2 hover:ring-maroon/30"
           >
             <UserAvatar />
           </Link>
@@ -81,10 +81,10 @@ export default function Navbar() {
           </button>
         </div>
 
-        {/* Botón hamburguesa — solo visible por debajo de 640px */}
+        {/* Botón hamburguesa — por debajo de 1280px */}
         <button
           onClick={() => setOpen((v) => !v)}
-          className="rounded-lg p-2 text-ink sm:hidden"
+          className="rounded-lg p-2 text-ink xl:hidden"
           aria-label="Abrir menú"
         >
           {open ? <X size={22} /> : <Menu size={22} />}
@@ -93,7 +93,7 @@ export default function Navbar() {
 
       {/* Menú desplegable mobile */}
       {open && (
-        <nav className="border-t border-black/5 bg-white px-6 py-3 sm:hidden">
+        <nav className="border-t border-black/5 bg-white px-6 py-3 xl:hidden">
           <Link
             to="/mi-perfil"
             onClick={() => setOpen(false)}

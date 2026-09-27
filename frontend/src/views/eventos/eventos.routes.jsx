@@ -1,17 +1,28 @@
 import EventosPage from './pages/EventosPage';
+import EventoDetallePage from './pages/EventoDetallePage';
+import NuevoEventoPage from './pages/NuevoEventoPage';
+import EditarEventoPage from './pages/EditarEventoPage';
+import AsignarEncuestadoresPage from './pages/AsignarEncuestadoresPage';
 import Layout from '../../shared/Layout';
 import ProtectedRoute from '../../shared/ProtectedRoute';
+import { ROLES } from '../../shared/AuthContext';
 
-// Sin `allow` = cualquier usuario logueado puede entrar (Superadmin, Admin
-// y Encuestador ven la misma pantalla; lo que cambia adentro son los botones,
-// con RoleGate — no una pantalla distinta por rol).
+// Sprint 2 — todas de Santiago (US43–US47, US55). "Mis eventos" del
+// encuestador vive en views/encuestador.
 const eventosRoutes = [
   {
     element: <Layout />,
     children: [
+      // Públicas: la agenda la ve cualquiera, con o sin cuenta.
+      { path: '/eventos', element: <EventosPage /> },
+      { path: '/eventos/:id', element: <EventoDetallePage /> },
       {
-        element: <ProtectedRoute />,
-        children: [{ path: '/eventos', element: <EventosPage /> }],
+        element: <ProtectedRoute allow={[ROLES.ADMIN, ROLES.SUPERADMIN]} />,
+        children: [
+          { path: '/eventos/nuevo', element: <NuevoEventoPage /> },
+          { path: '/eventos/:id/editar', element: <EditarEventoPage /> },
+          { path: '/eventos/:id/encuestadores', element: <AsignarEncuestadoresPage /> },
+        ],
       },
     ],
   },

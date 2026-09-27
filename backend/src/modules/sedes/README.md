@@ -2,7 +2,7 @@
 
 Encargado: **Kevin Alanes** (ver `GUIA_EQUIPO.docx` / backlog Sprint 1, US15).
 
-Cuando empieces, creá acá adentro:
+Cuando empieces, crea aquí dentro:
 
 - `sedes.routes.js` — se monta solo en `/api/sedes` (ver `src/config/loadRoutes.js`, no hay que tocarlo).
 - `sedes.controller.js`, `sedes.service.js` — mismo patrón que `src/modules/auth/`.

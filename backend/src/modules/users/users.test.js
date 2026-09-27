@@ -263,6 +263,25 @@ describe('GET /api/users/me/photo', () => {
   });
 });
 
+describe('POST /api/users/encuestadores (Sprint 2 — US54, andamiaje)', () => {
+  it('sin sesión responde 401', async () => {
+    const res = await request(app).post('/api/users/encuestadores');
+    expect(res.status).toBe(401);
+  });
+
+  it('un encuestador no puede registrar encuestadores', async () => {
+    const res = await request(app).post('/api/users/encuestadores').set('Authorization', `Bearer ${token('encuestador')}`);
+    expect(res.status).toBe(403);
+  });
+
+  it('Admin y Superadmin sí (el Admin solo en su sede, lo valida el controlador)', async () => {
+    for (const rol of ['admin', 'superadmin']) {
+      const res = await request(app).post('/api/users/encuestadores').set('Authorization', `Bearer ${token(rol)}`);
+      expect([401, 403]).not.toContain(res.status);
+    }
+  });
+});
+
 describe('PUT /api/users/me/photo', () => {
   beforeEach(() => {
     jest.clearAllMocks();

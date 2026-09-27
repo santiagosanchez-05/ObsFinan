@@ -8,6 +8,12 @@ import sedesRoutes from '../views/sedes/sedes.routes';
 import eventosRoutes from '../views/eventos/eventos.routes';
 import icaRoutes from '../views/ica/ica.routes';
 import speRoutes from '../views/spe/spe.routes';
+// Sprint 2 — ya conectados: para agregar pantallas dentro de estos módulos
+// se edita su *.routes.jsx, no este archivo.
+import encuestadorRoutes from '../views/encuestador/encuestador.routes';
+import aprobacionesRoutes from '../views/aprobaciones-Monserrat/aprobaciones.routes';
+import convocatoriasRoutes from '../views/convocatorias/convocatorias.routes';
+import diccionarioRoutes from '../views/diccionario-KevinAlanes/diccionario.routes';
 import notFoundRoutes from '../views/not-found-KevinAlanes/not-found.routes';
 
 // Esto es lo único "compartido" que se toca, y solo una vez por módulo
@@ -25,6 +31,10 @@ const router = createBrowserRouter([
   ...eventosRoutes,
   ...icaRoutes,
   ...speRoutes,
+  ...encuestadorRoutes,
+  ...aprobacionesRoutes,
+  ...convocatoriasRoutes,
+  ...diccionarioRoutes,
   ...notFoundRoutes,
 ]);
 

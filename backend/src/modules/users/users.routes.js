@@ -14,6 +14,8 @@ const {
   patchEstadoUsuario,
   postResetPasswordUsuario,
 } = require('./users.controller');
+// Sprint 2 — Kevin Alanes (US54). Archivo aparte para no tocar users.controller.
+const { postRegistrarEncuestador } = require('./users.encuestadores.controller');
 
 // En memoria: se procesa y se guarda como BLOB en la tabla `image`, nunca en disco.
 const upload = multer({
@@ -46,6 +48,9 @@ function subirFoto(req, res, next) {
 // "me" no se interprete como un id.
 router.get('/me/photo', requireAuth, getMiFoto);
 router.put('/me/photo', requireAuth, subirFoto, putMiFoto);
+
+// Registro directo de encuestadores: Admin (solo su sede) y Superadmin.
+router.post('/encuestadores', requireAuth, requireRole('admin', 'superadmin'), subirFoto, postRegistrarEncuestador);
 
 // Panel de Usuarios: solo Superadmin lo ve (mismo criterio que la ruta del frontend).
 router.get('/', requireAuth, requireRole('superadmin'), getUsuarios);

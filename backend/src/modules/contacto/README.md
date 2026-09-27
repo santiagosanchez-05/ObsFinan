@@ -2,7 +2,7 @@
 
 Encargado: **Kevin Prieto** (ver `GUIA_EQUIPO.docx` / backlog Sprint 1, US32).
 
-Cuando empieces, creá acá adentro:
+Cuando empieces, crea aquí dentro:
 
 - `contacto.routes.js` — se monta solo en `/api/contacto` (ver `src/config/loadRoutes.js`, no hay que tocarlo).
 - `contacto.controller.js`, `contacto.service.js`, `contacto.validation.js` — mismo patrón que `src/modules/auth/`.

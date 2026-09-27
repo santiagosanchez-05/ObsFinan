@@ -2,7 +2,7 @@
 
 Encargadas: **Liz** y **Monserrat** (ver `GUIA_EQUIPO.docx` / el backlog Sprint 1, US16–US24 y US28–US30).
 
-Cuando empieces, creá acá adentro:
+Cuando empieces, crea aquí dentro:
 
 - `ica.routes.js` — se monta solo en `/api/ica` (ver `src/config/loadRoutes.js`, no hay que tocarlo).
 - `ica.controller.js`, `ica.service.js`, `ica.validation.js` — mismo patrón que `src/modules/auth/`.
@@ -18,3 +18,12 @@ Endpoints esperados (repartidos entre Liz y Monserrat según el backlog):
 - `DELETE /api/ica/:id` y `DELETE /api/ica/files/:id` — baja de registros
 
 Recordá usar `requireAuth`/`requireRole` de `src/middlewares/auth.middleware.js` en las rutas que correspondan (Superadmin/Admin para escritura, cualquier rol logueado para lectura).
+
+## Sprint 2
+
+Rutas nuevas ya conectadas en `ica.routes.js`:
+
+- **Monserrat** — US58/US59: `GET /api/ica/pendientes` y `PATCH /api/ica/cargas/:id/estado` → `ica.aprobacion.controller.js`.
+- **Liz** — US60: `recalcularAgregadoIca(...)` en `ica.scoring.service.js` (la llama la aprobación). US57: habilitar `POST /api/ica/entrevistas` para el rol encuestador y guardar `event_id`.
+
+Estados de `data_load` y reglas de sede: **`docs/SPRINT2.md`**.
