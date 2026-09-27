@@ -33,7 +33,7 @@ La base de Sprint 2 ya está armada: **todas las rutas (backend y frontend) exis
 | `data_load.module` | 1 ICA · 2 SPE |
 | `data_load.source_type` | 1 individual · 2 archivo |
 | `image.type` | `'user'` · `'event'` |
-| `spe_measurement.semester` | 1 · 2 |
+| `spe_survey_response.semester` | 1 · 2 |
 | `event.has_ica` / `event.has_spe` (pendientes de crear) | 0 no · 1 sí (pueden ser las dos) |
 
 Lo que carga un **Admin/Superadmin** entra **aprobado** (2). Lo que manda un **Encuestador** entra **pendiente** (1) y recién cuenta en los dashboards cuando se aprueba.
@@ -43,7 +43,7 @@ Lo que carga un **Admin/Superadmin** entra **aprobado** (2). Lo que manda un **E
 | Historia | Encargado | Endpoint | Archivo |
 |---|---|---|---|
 | US33 Filtros SPE | Monserrat | (dentro de `GET /api/spe`) | `modules/spe/spe.filtros.js` |
-| US34, US35 Dashboard SPE | Liz | `GET /api/spe` (público) | `spe.dashboard.controller.js` + `spe.dashboard.service.js` |
+| US34, US35 Dashboard SPE (US34 = filtro por sector exportador) | Liz | `GET /api/spe` (público) | `spe.dashboard.controller.js` + `spe.dashboard.service.js` |
 | US36 Insights SPE | Kevin Alanes | (dentro de `GET /api/spe`) | `spe.insights.service.js` |
 | US37 Registro individual SPE | Liz | `POST /api/spe` | `spe.registro.controller.js` |
 | US38, US39 Carga y historial SPE | Monserrat | `POST /api/spe/upload`, `GET /api/spe/historial` | `spe.carga.controller.js` |
@@ -109,15 +109,17 @@ Las funciones de Liz ya existen vacías, así que Monserrat puede llamarlas desd
 
 ## Lo que le falta a la BD (para Monserrat, DB master)
 
-El diagrama ya está aplicado en la BD real (tablas y FKs verificadas). Para las historias de Sprint 2 faltan estas columnas:
+El diagrama ya está aplicado en la BD real. Santiago le pasa a Monserrat el script con estos cambios:
 
-1. **Revisión de encuestas** (US59, US61, US62): `data_load` no guarda quién aprobó/rechazó, cuándo, ni el motivo del rechazo. Sugerido: `reviewed_by INT NULL` (FK a `user`), `reviewed_at TIMESTAMP NULL`, `review_note VARCHAR(255) NULL`.
-2. **Encuesta SPE por encuestador** (US66): `spe_measurement` no tiene `event_id` ni `surveyor_user_id`, como sí tiene `ica_survey_response`.
-3. **Filtro de rubro** (US34): `spe_measurement` no tiene columna de rubro (soya, quinua, textiles…).
-4. **Sede del SPE**: `spe_measurement` no tiene `campus_id`. Está bien si el SPE es solo nacional; confirmarlo.
-5. **Qué encuesta se toma en cada evento** (US44, US56, US57, US66): `event` no dice si es de ICA o de SPE. Un mismo evento puede tener las dos. Agregar `has_ica TINYINT(1) NOT NULL DEFAULT 0` y `has_spe TINYINT(1) NOT NULL DEFAULT 0`. Con las dos en 0 es un evento sin encuesta (charla, taller) y no se le asignan encuestadores.
+1. **`event`**: `has_ica` y `has_spe` (`TINYINT(1) NOT NULL DEFAULT 0`). Un mismo evento puede tener las dos; con las dos en 0 es un evento sin encuesta (charla, taller) y no se le asignan encuestadores.
+2. **`data_load`**: `reviewed_by` (FK a `user`), `reviewed_at` y `review_note` (motivo del rechazo) para US59, US61 y US62.
+3. **SPE con la encuesta del Word (SOCOMEX–SOCIFIN)**: se elimina `spe_measurement` (era la encuesta vieja del Excel 2025 y estaba vacía) y se crean:
+   - `spe_survey_response`: una fila por empresa, con `data_load_id`, `year`, `semester`, `surveyor_user_id`, `event_id`, `status` y las preguntas por sección (`s1_…` a `s8_…`). Sí/No = `ENUM('Sí','No')`; escalas = `TINYINT` 1–5 (lo valida el backend); preguntas de varias opciones = una columna 0/1 por opción.
+   - `spe_index_score`: `iee`, `ice`, `iie`, `icie` de cada empresa (los guarda US63 al aprobar).
+   - El filtro de US34 ya no es "rubro": es `s1_export_sector`. La ubicación es `s1_department` (no hace falta `campus_id`).
 
 ## Pendiente con el cliente (bloquea)
 
 - Tabla de puntajes por pregunta del ICA (US60 y marcar la opción correcta en el explorador).
-- Fórmulas de IEE, ICE, IIE e ICIE (US63). Ojo: US33 habla de las dimensiones "Propensión a invertir / Expectativas / Barreras", que no coinciden con esos 4 índices.
+- Fórmulas de IEE, ICE, IIE e ICIE (US63).
+- Encuesta SPE: opciones de inflación y tipo de cambio (el Word no las trae; por ahora usan las del PIB), si "Departamento" lleva solo Santa Cruz, La Paz y Cochabamba, si "Principal barrera" es una sola respuesta y las opciones de "Razón para invertir / no invertir".

@@ -1,4 +1,4 @@
-// Liz — US35 (dashboard) y US34 (filtro de rubro).
+// Liz — US35 (dashboard) y US34 (filtro por sector exportador).
 //
 // GET /api/spe arma la respuesta con piezas de tres personas, cada una en su
 // archivo (así nadie pisa a nadie):

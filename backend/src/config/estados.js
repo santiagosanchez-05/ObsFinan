@@ -4,7 +4,7 @@
 // entenderse entre sí (ver docs/SPRINT2.md).
 
 // user, role, campus, community, event, convocation, event_surveyor,
-// ica_measurement, ica_survey_response, spe_measurement
+// ica_measurement, ica_survey_response, spe_survey_response
 const ESTADO = {
   INACTIVO: 0, // dado de baja / eliminado lógicamente
   ACTIVO: 1,
@@ -52,7 +52,7 @@ const TIPO_IMAGEN = {
   EVENTO: 'event',
 };
 
-// spe_measurement.semester
+// spe_survey_response.semester
 const SEMESTRE = {
   PRIMERO: 1,
   SEGUNDO: 2,

@@ -92,7 +92,7 @@ export const SobreNosotrosPage = () => {
               </div>
               <h3 className="text-xl font-bold text-slate-900">SPE — Sector Privado Exportador</h3>
               <p className="mt-3 text-sm leading-relaxed text-slate-600">
-                Mide la confianza y las expectativas económicas de las empresas bolivianas exportadoras.
+                Mide, con la encuesta SOCOMEX–SOCIFIN, las expectativas empresariales (IEE), la competitividad (ICE), la internacionalización (IIE) y el clima para la inversión (ICIE) de las empresas bolivianas exportadoras.
               </p>
             </div>
           </div>

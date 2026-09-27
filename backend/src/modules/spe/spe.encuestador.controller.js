@@ -2,7 +2,7 @@
 // asignado; entra PENDIENTE hasta que un Superadmin la apruebe).
 // Crea tu spe.encuestador.service.js y spe.encuestador.validation.js al implementar.
 // Validar que el evento esté asignado al encuestador (event_surveyor) y que tenga has_spe = 1; si no, 400.
-// Ojo: spe_measurement todavía no tiene event_id ni surveyor_user_id (ver docs/SPRINT2.md).
+// Tabla: spe_survey_response (guardar event_id y surveyor_user_id = req.user.userId).
 const pendiente = require('../../utils/pendiente');
 
 module.exports = {

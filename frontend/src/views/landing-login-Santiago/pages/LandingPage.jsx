@@ -5,7 +5,9 @@ import {
   Users,
   HeartPulse,
   Scale,
-  Building2,
+  Award,
+  Globe,
+  Landmark,
   User,
   UserCog,
   ShieldCheck,
@@ -50,14 +52,24 @@ const INDICADORES = [
     texto: 'Comparación del ICA entre hombres y mujeres por comuna.',
   },
   {
-    icon: Building2,
-    titulo: 'Confianza del Sector Exportador',
-    texto: 'Expectativas macroeconómicas y barreras al comercio exterior de empresas bolivianas.',
+    icon: TrendingUp,
+    titulo: 'Expectativas Empresariales Exportadoras (IEE)',
+    texto: 'Cómo ven las empresas exportadoras la economía, la inflación, el tipo de cambio y sus exportaciones.',
   },
   {
-    icon: TrendingUp,
-    titulo: 'Propensión a Invertir',
-    texto: 'Porcentaje de empresas exportadoras que planea invertir en los próximos 12 meses.',
+    icon: Award,
+    titulo: 'Competitividad Exportadora (ICE)',
+    texto: 'Precio, calidad, innovación, valor agregado y certificaciones frente a competidores internacionales.',
+  },
+  {
+    icon: Globe,
+    titulo: 'Internacionalización Empresarial (IIE)',
+    texto: 'Expansión a nuevos mercados, promoción comercial y acceso a mercados internacionales.',
+  },
+  {
+    icon: Landmark,
+    titulo: 'Clima para la Inversión Exportadora (ICIE)',
+    texto: 'Financiamiento, divisas, entorno institucional y planes de inversión de las empresas.',
   },
 ];
 
@@ -134,7 +146,7 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {INDICADORES.map(({ icon: Icon, titulo, texto }) => (
               <div key={titulo} className="rounded-2xl border border-black/5 bg-white p-5">
                 <div className="mb-4 inline-flex h-9 w-9 items-center justify-center rounded-lg bg-maroon/10">
