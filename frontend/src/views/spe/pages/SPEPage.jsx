@@ -3,7 +3,6 @@ import BloquePendiente from '../../../shared/BloquePendiente';
 import FiltrosSpe from '../components/FiltrosSpe';
 import InsightsSpe from '../components/InsightsSpe';
 import ExportarSpe from '../components/ExportarSpe';
-import DashboardSpe from '../components/DashboardSpe';
 
 // Liz — US35 (dashboard) y US34 (sector exportador). Página pública.
 //
@@ -32,7 +31,8 @@ export default function SPEPage() {
 
         <FiltrosSpe filtros={filtros} onAplicar={setFiltros} opciones={datos?.opcionesFiltros} />
 
-         <DashboardSpe />
+        <BloquePendiente texto="Dashboard SPE: índices IEE, ICE, IIE, ICIE y gráficos por sección" historia="US35" encargado="Liz" />
+
         <InsightsSpe insights={datos?.insights ?? []} />
       </div>
     </main>
