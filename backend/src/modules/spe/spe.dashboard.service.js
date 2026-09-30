@@ -52,7 +52,56 @@ function construirCondiciones(filtros) {
   }
   return { sql: condiciones.join(' AND '), parametros };
 }
+function obtenerPeriodoAnterior(year, semester) {
+  if (semester === 1) {
+    return {
+      year: year - 1,
+      semester: 2,
+    };
+  }
 
+  return {
+    year,
+    semester: 1,
+  };
+}
+function construirCondicionesAnterior(filtros, periodoAnterior) {
+  const condiciones = [
+    'dl.module = ?',
+    'dl.status = ?',
+    'sr.status = ?',
+    'sr.year = ?',
+    'sr.semester = ?',
+  ];
+
+  const parametros = [
+    MODULO.SPE,
+    ESTADO_CARGA.APROBADA,
+    ESTADO.ACTIVO,
+    periodoAnterior.year,
+    periodoAnterior.semester,
+  ];
+
+  if (filtros.department) {
+    condiciones.push('sr.s1_department = ?');
+    parametros.push(filtros.department);
+  }
+
+  if (filtros.sector) {
+    condiciones.push('sr.s1_export_sector = ?');
+    parametros.push(filtros.sector);
+  }
+
+  if (filtros.size) {
+    condiciones.push('sr.s1_company_size = ?');
+    parametros.push(filtros.size);
+  }
+
+  return {
+    sql: condiciones.join(' AND '),
+    parametros,
+  };
+}
 const EXPECTATIVAS = [
   'Disminuirá significativamente',
   'Disminuirá moderadamente',
@@ -225,17 +274,46 @@ async function obtenerDashboardSpe(filtros = {}) {
   );
 
   const indice = indicesRows[0] || {};
-  const numero = (valor) => (valor === null || valor === undefined ? null : Number(Number(valor).toFixed(2)));
-  const periodo = resumen?.year ? { year: Number(resumen.year), semester: Number(resumen.semester) } : null;
+const numero = (valor) => (valor === null || valor === undefined ? null : Number(Number(valor).toFixed(2)));
+const periodo = resumen?.year ? { year: Number(resumen.year), semester: Number(resumen.semester) } : null;
 
-  return {
-    periodo,
-    totalEmpresas: Number(resumen?.totalEmpresas || 0),
-    indices: { iee: numero(indice.iee), ice: numero(indice.ice), iie: numero(indice.iie), icie: numero(indice.icie) },
-    indicesAnterior: null,
-    secciones: construirSecciones(respuestas),
-    opcionesFiltros,
+let indicesAnterior = null;
+
+if (filtros.year && filtros.semester) {
+  const periodoAnterior = obtenerPeriodoAnterior(filtros.year, filtros.semester);
+  const condicionesAnterior = construirCondicionesAnterior(filtros, periodoAnterior);
+
+  const [indicesAnteriorRows] = await pool.query(
+    `SELECT AVG(iscore.iee) AS iee,
+            AVG(iscore.ice) AS ice,
+            AVG(iscore.iie) AS iie,
+            AVG(iscore.icie) AS icie
+       FROM spe_survey_response sr
+       INNER JOIN data_load dl ON dl.data_load_id = sr.data_load_id
+       LEFT JOIN spe_index_score iscore
+         ON iscore.spe_survey_response_id = sr.spe_survey_response_id
+      WHERE ${condicionesAnterior.sql}`,
+    condicionesAnterior.parametros,
+  );
+
+  const indiceAnterior = indicesAnteriorRows[0] || {};
+
+  indicesAnterior = {
+    iee: numero(indiceAnterior.iee),
+    ice: numero(indiceAnterior.ice),
+    iie: numero(indiceAnterior.iie),
+    icie: numero(indiceAnterior.icie),
   };
+}
+
+return {
+  periodo,
+  totalEmpresas: Number(resumen?.totalEmpresas || 0),
+  indices: { iee: numero(indice.iee), ice: numero(indice.ice), iie: numero(indice.iie), icie: numero(indice.icie) },
+  indicesAnterior,
+  secciones: construirSecciones(respuestas),
+  opcionesFiltros,
+};
 }
 
 module.exports = { obtenerDashboardSpe };
