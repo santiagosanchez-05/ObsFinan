@@ -49,6 +49,12 @@ const ESTILO_ESTADO = {
 
 const PAGE_SIZE = 10;
 
+// El semestre es siempre 1 o 2, no depende de lo que haya en la base.
+const SEMESTRES = [1, 2];
+
+const CLASE_SELECT =
+  'appearance-none rounded-lg border border-[#dfe4e5] bg-white py-2 pl-3 pr-8 text-xs font-semibold text-[#59615e] outline-none focus:border-[#a00046]';
+
 function formatearFecha(valor) {
   if (!valor) return '-';
   const fecha = new Date(valor);
@@ -68,7 +74,8 @@ export default function HistorialSpePage() {
   const [tab, setTab] = useState('todos');
   const [busquedaInput, setBusquedaInput] = useState('');
   const [busqueda, setBusqueda] = useState('');
-  const [periodo, setPeriodo] = useState('');
+  const [year, setYear] = useState('');
+  const [semester, setSemester] = useState('');
   const [estado, setEstado] = useState('');
   const [page, setPage] = useState(1);
   const [sortBy, setSortBy] = useState('fecha');
@@ -77,7 +84,7 @@ export default function HistorialSpePage() {
   const [registros, setRegistros] = useState([]);
   const [total, setTotal] = useState(0);
   const [resumen, setResumen] = useState(null);
-  const [periodos, setPeriodos] = useState([]);
+  const [anios, setAnios] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
   const [recargarClave, setRecargarClave] = useState(0);
@@ -111,7 +118,8 @@ export default function HistorialSpePage() {
         sortDir,
       });
       if (tipoActual) params.set('tipo', tipoActual);
-      if (periodo) params.set('periodo', periodo);
+      if (year) params.set('year', year);
+      if (semester) params.set('semester', semester);
       if (estado) params.set('estado', estado);
       if (busqueda) params.set('busqueda', busqueda);
 
@@ -128,7 +136,7 @@ export default function HistorialSpePage() {
           setRegistros(data.registros ?? []);
           setTotal(data.total ?? 0);
           setResumen(data.resumen ?? null);
-          setPeriodos(data.periodos ?? []);
+          setAnios(data.anios ?? []);
         }
       } catch (err) {
         if (!cancelado) setError(err.message || 'Error de conexión con el servidor');
@@ -141,7 +149,7 @@ export default function HistorialSpePage() {
     return () => {
       cancelado = true;
     };
-  }, [token, tab, periodo, estado, busqueda, page, sortBy, sortDir, recargarClave]);
+  }, [token, tab, year, semester, estado, busqueda, page, sortBy, sortDir, recargarClave]);
 
   const totalPaginas = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -160,8 +168,13 @@ export default function HistorialSpePage() {
     setPage(1);
   }
 
-  function cambiarPeriodo(valor) {
-    setPeriodo(valor);
+  function cambiarYear(valor) {
+    setYear(valor);
+    setPage(1);
+  }
+
+  function cambiarSemester(valor) {
+    setSemester(valor);
     setPage(1);
   }
 
@@ -240,8 +253,9 @@ export default function HistorialSpePage() {
         </div>
 
         {/* Barra de tabs, filtros, búsqueda y acción */}
-        <section className="mb-5 flex flex-col gap-3 rounded-xl border border-[#e2e6e8] bg-white p-3 shadow-sm lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-wrap items-center gap-3">
+        <section className="mb-5 space-y-3 rounded-xl border border-[#e2e6e8] bg-white p-3 shadow-sm">
+          {/* Fila 1: pestañas y acción principal */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="inline-flex rounded-lg bg-[#f4f6f8] p-1">
               {TABS.map((t) => (
                 <button
@@ -257,27 +271,39 @@ export default function HistorialSpePage() {
               ))}
             </div>
 
+            <Link
+              to="/spe/registrar"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#a00046] px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#820039]"
+            >
+              <Plus size={14} /> Nuevo Registro
+            </Link>
+          </div>
+
+          {/* Fila 2: filtros y buscador */}
+          <div className="flex flex-wrap items-center gap-3 border-t border-[#f0f2f2] pt-3">
             <div className="relative">
-              <select
-                value={periodo}
-                onChange={(e) => cambiarPeriodo(e.target.value)}
-                className="appearance-none rounded-lg border border-[#dfe4e5] bg-white py-2 pl-3 pr-8 text-xs font-semibold text-[#59615e] outline-none focus:border-[#a00046]"
-              >
-                <option value="">Todo el periodo</option>
-                {periodos.map((p) => (
-                  <option key={p.valor} value={p.valor}>{p.etiqueta}</option>
+              <select value={year} onChange={(e) => cambiarYear(e.target.value)} className={CLASE_SELECT}>
+                <option value="">Todos los años</option>
+                {anios.map((a) => (
+                  <option key={a} value={a}>{a}</option>
                 ))}
               </select>
               <ChevronDown size={13} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8a9290]" />
             </div>
 
             <div className="relative">
-              <select
-                value={estado}
-                onChange={(e) => cambiarEstado(e.target.value)}
-                className="appearance-none rounded-lg border border-[#dfe4e5] bg-white py-2 pl-3 pr-8 text-xs font-semibold text-[#59615e] outline-none focus:border-[#a00046]"
-              >
-                <option value="">Filtrar por Estado</option>
+              <select value={semester} onChange={(e) => cambiarSemester(e.target.value)} className={CLASE_SELECT}>
+                <option value="">Todos los semestres</option>
+                {SEMESTRES.map((s) => (
+                  <option key={s} value={s}>Semestre {s}</option>
+                ))}
+              </select>
+              <ChevronDown size={13} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8a9290]" />
+            </div>
+
+            <div className="relative">
+              <select value={estado} onChange={(e) => cambiarEstado(e.target.value)} className={CLASE_SELECT}>
+                <option value="">Todos los estados</option>
                 {ESTADOS.map((e) => (
                   <option key={e.valor} value={e.valor}>{e.etiqueta}</option>
                 ))}
@@ -285,24 +311,17 @@ export default function HistorialSpePage() {
               <ChevronDown size={13} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8a9290]" />
             </div>
 
-            <label className="relative">
+            <label className="relative min-w-[220px] flex-1">
               <Search size={13} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8a9290]" />
               <input
                 type="text"
                 value={busquedaInput}
                 onChange={(e) => setBusquedaInput(e.target.value)}
                 placeholder="Buscar por archivo o sector..."
-                className="w-64 rounded-lg border border-[#dfe4e5] bg-white py-2 pl-8 pr-3 text-xs text-[#414845] outline-none focus:border-[#a00046]"
+                className="w-full rounded-lg border border-[#dfe4e5] bg-white py-2 pl-8 pr-3 text-xs text-[#414845] outline-none focus:border-[#a00046]"
               />
             </label>
           </div>
-
-          <Link
-            to="/spe/registrar"
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#a00046] px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#820039]"
-          >
-            <Plus size={14} /> Nuevo Registro
-          </Link>
         </section>
 
         {error && (

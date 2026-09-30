@@ -24,7 +24,7 @@ const ESTADO_FILTRO = {
   rechazada: ESTADO_CARGA.RECHAZADA,
 };
 
-async function obtenerHistorialSpe({ page = 1, pageSize = 10, tipo, estado, periodo, busqueda, sortBy, sortDir }) {
+async function obtenerHistorialSpe({ page = 1, pageSize = 10, tipo, estado, year, semester, busqueda, sortBy, sortDir }) {
   const offset = (page - 1) * pageSize;
 
   // Eliminadas (status 0) nunca se muestran.
@@ -44,10 +44,14 @@ async function obtenerHistorialSpe({ page = 1, pageSize = 10, tipo, estado, peri
     parametros.push(ESTADO_FILTRO[estado]);
   }
 
-  if (periodo) {
-    const [year, semester] = periodo.split('-').map(Number);
-    condiciones.push('sr.year = ? AND sr.semester = ?');
-    parametros.push(year, semester);
+  // Año y semestre son independientes: se puede filtrar por uno, por otro o por ambos.
+  if (year) {
+    condiciones.push('sr.year = ?');
+    parametros.push(year);
+  }
+  if (semester) {
+    condiciones.push('sr.semester = ?');
+    parametros.push(semester);
   }
 
   if (busqueda) {
@@ -107,7 +111,8 @@ async function obtenerHistorialSpe({ page = 1, pageSize = 10, tipo, estado, peri
   return { registros, total, page, pageSize };
 }
 
-// Tarjetas de resumen + opciones del filtro de periodo (independientes de los filtros aplicados).
+// Tarjetas de resumen + opciones del filtro de año (independientes de los filtros aplicados).
+// El semestre no necesita lista: siempre es 1 o 2.
 async function obtenerResumenHistorialSpe() {
   const [[resumen]] = await pool.query(
     `SELECT COUNT(sr.spe_survey_response_id) AS total_registros,
@@ -121,12 +126,12 @@ async function obtenerResumenHistorialSpe() {
     [SOURCE_TYPE_ARCHIVO, SOURCE_TYPE_INDIVIDUAL, ESTADO_CARGA.PENDIENTE, MODULO.SPE],
   );
 
-  const [periodos] = await pool.query(
-    `SELECT DISTINCT sr.year, sr.semester
+  const [anios] = await pool.query(
+    `SELECT DISTINCT sr.year
        FROM spe_survey_response sr
        INNER JOIN data_load dl ON dl.data_load_id = sr.data_load_id
       WHERE sr.status = 1 AND dl.module = ? AND dl.status != 0
-      ORDER BY sr.year DESC, sr.semester DESC`,
+      ORDER BY sr.year DESC`,
     [MODULO.SPE],
   );
 
@@ -137,10 +142,7 @@ async function obtenerResumenHistorialSpe() {
       cargaManual: Number(resumen.carga_manual),
       pendientes: Number(resumen.pendientes),
     },
-    periodos: periodos.map((p) => ({
-      valor: `${p.year}-${p.semester}`,
-      etiqueta: `Semestre ${p.semester} - ${p.year}`,
-    })),
+    anios: anios.map((a) => Number(a.year)),
   };
 }
 
