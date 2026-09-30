@@ -1,5 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../../../shared/AuthContext';
+import ConfirmDialog from '../../../shared/ConfirmDialog';
 import {
   ArrowLeft,
   ChevronDown,
@@ -15,58 +17,56 @@ import {
   Database,
   FileText,
   PenLine,
+  Loader2,
 } from 'lucide-react';
 
-// Monserrat — US38 · US39. Historial y carga de datasets SPE.
-// ⚠️ SOLO VISUAL: datos de ejemplo, sin llamadas al backend.
+// Monserrat — US38 · US39. Historial de registros SPE.
 
 const TABS = [
   { id: 'todos', label: 'Todos', tipo: undefined },
-  { id: 'individuales', label: 'Registros individuales', tipo: 'manual' },
-  { id: 'archivos', label: 'Archivos', tipo: 'masiva' },
+  { id: 'individuales', label: 'Registros individuales', tipo: 'individuales' },
+  { id: 'archivos', label: 'Archivos', tipo: 'archivos' },
 ];
 
+// Columnas sobre las que se puede ordenar, clickeando su encabezado.
 const COLUMNAS_ORDENABLES = {
   sector: 'Sector exportador',
   periodo: 'Periodo',
   fecha: 'Fecha de carga',
 };
 
+const ESTADOS = [
+  { valor: 'pendiente', etiqueta: 'Pendiente' },
+  { valor: 'aprobada', etiqueta: 'Aprobada' },
+  { valor: 'rechazada', etiqueta: 'Rechazada' },
+];
+
+const ESTILO_ESTADO = {
+  Aprobada: 'bg-[#eaf6ef] text-[#2f9e58]',
+  Pendiente: 'bg-[#fbf1de] text-[#b7891e]',
+  Rechazada: 'bg-[#fdeaea] text-[#c0392b]',
+};
+
 const PAGE_SIZE = 10;
-
-const PERIODOS = ['Semestre 2 - 2026', 'Semestre 1 - 2026', 'Semestre 2 - 2025'];
-
-const REGISTROS_INICIALES = [
-  { id: 1, tipo: 'masiva', origen: 'base_datos_santacruz.xlsx', sector: 'Agroindustria', periodo: 'Semestre 2 - 2026', registros: 42, fecha: '2026-10-24', estado: 'Verificado' },
-  { id: 2, tipo: 'manual', origen: 'Registro individual', sector: 'Alimentos', periodo: 'Semestre 2 - 2026', registros: 1, fecha: '2026-10-22', estado: 'Verificado' },
-  { id: 3, tipo: 'manual', origen: 'Registro individual', sector: 'Manufactura', periodo: 'Semestre 2 - 2026', registros: 1, fecha: '2026-10-18', estado: 'No verificado' },
-  { id: 4, tipo: 'masiva', origen: 'export_manufactura_lapaz.csv', sector: 'Manufactura', periodo: 'Semestre 1 - 2026', registros: 12, fecha: '2026-10-06', estado: 'Verificado' },
-  { id: 5, tipo: 'manual', origen: 'Registro individual', sector: 'Software y Servicios', periodo: 'Semestre 1 - 2026', registros: 1, fecha: '2026-09-02', estado: 'Verificado' },
-  { id: 6, tipo: 'manual', origen: 'Registro individual', sector: 'Construcción', periodo: 'Semestre 1 - 2026', registros: 1, fecha: '2026-08-15', estado: 'No verificado' },
-  { id: 7, tipo: 'masiva', origen: 'exportadores_cochabamba.xlsx', sector: 'Alimentos', periodo: 'Semestre 1 - 2026', registros: 27, fecha: '2026-08-03', estado: 'Verificado' },
-  { id: 8, tipo: 'manual', origen: 'Registro individual', sector: 'Químico', periodo: 'Semestre 1 - 2026', registros: 1, fecha: '2026-07-19', estado: 'Verificado' },
-  { id: 9, tipo: 'manual', origen: 'Registro individual', sector: 'Textiles', periodo: 'Semestre 2 - 2025', registros: 1, fecha: '2026-06-11', estado: 'No verificado' },
-  { id: 10, tipo: 'masiva', origen: 'castanas_agroindustria_2025.csv', sector: 'Agroindustria', periodo: 'Semestre 2 - 2025', registros: 18, fecha: '2026-05-28', estado: 'Verificado' },
-  { id: 11, tipo: 'manual', origen: 'Registro individual', sector: 'Otro', periodo: 'Semestre 2 - 2025', registros: 1, fecha: '2026-05-09', estado: 'Verificado' },
-  { id: 12, tipo: 'manual', origen: 'Registro individual', sector: 'Software y Servicios', periodo: 'Semestre 2 - 2025', registros: 1, fecha: '2026-04-21', estado: 'No verificado' },
-];
-
-const TARJETAS = [
-  { label: 'Total empresas', valor: '156', Icono: Landmark, estilo: 'bg-[#fbe9f0] text-[#a00046]' },
-  { label: 'Registros totales', valor: '1,248', Icono: Database, estilo: 'bg-[#eaf6ef] text-[#2f9e58]' },
-  { label: 'Archivos cargados', valor: '32', Icono: FileText, estilo: 'bg-[#e8f1fb] text-[#2f6fb0]' },
-  { label: 'Carga manual', valor: '422', Icono: PenLine, estilo: 'bg-[#f3ecfb] text-[#7c4dbd]' },
-];
 
 function formatearFecha(valor) {
   if (!valor) return '-';
-  const fecha = new Date(`${valor}T00:00:00`);
+  const fecha = new Date(valor);
   if (Number.isNaN(fecha.getTime())) return '-';
   return fecha.toLocaleDateString('es-BO', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
+// US42 (Kevin Prieto): la ruta de borrado depende del tipo de registro.
+// DELETE /api/spe/:id para individuales, DELETE /api/spe/files/:id para archivos.
+function rutaEliminar(registro) {
+  return registro.tipo === 'masiva' ? `/api/spe/files/${registro.id}` : `/api/spe/${registro.id}`;
+}
+
 export default function HistorialSpePage() {
+  const { token } = useAuth();
+
   const [tab, setTab] = useState('todos');
+  const [busquedaInput, setBusquedaInput] = useState('');
   const [busqueda, setBusqueda] = useState('');
   const [periodo, setPeriodo] = useState('');
   const [estado, setEstado] = useState('');
@@ -74,35 +74,99 @@ export default function HistorialSpePage() {
   const [sortBy, setSortBy] = useState('fecha');
   const [sortDir, setSortDir] = useState('desc');
 
-  const registros = REGISTROS_INICIALES;
+  const [registros, setRegistros] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [resumen, setResumen] = useState(null);
+  const [periodos, setPeriodos] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState('');
+  const [recargarClave, setRecargarClave] = useState(0);
 
-  // Filtrado, orden y paginación locales (solo visual).
-  const filtrados = useMemo(() => {
-    const tipoActual = TABS.find((t) => t.id === tab)?.tipo;
-    const texto = busqueda.trim().toLowerCase();
-    const lista = registros.filter((r) => {
-      if (tipoActual && r.tipo !== tipoActual) return false;
-      if (periodo && r.periodo !== periodo) return false;
-      if (estado === 'verificado' && r.estado !== 'Verificado') return false;
-      if (estado === 'no_verificado' && r.estado !== 'No verificado') return false;
-      if (texto && !`${r.sector} ${r.origen}`.toLowerCase().includes(texto)) return false;
-      return true;
-    });
-    return [...lista].sort((a, b) => {
-      const va = a[sortBy];
-      const vb = b[sortBy];
-      const cmp = String(va).localeCompare(String(vb), 'es');
-      return sortDir === 'asc' ? cmp : -cmp;
-    });
-  }, [registros, tab, periodo, estado, busqueda, sortBy, sortDir]);
+  // Registro pendiente de confirmar borrado (o null si el diálogo está cerrado).
+  const [registroAEliminar, setRegistroAEliminar] = useState(null);
+  const [eliminando, setEliminando] = useState(false);
 
-  const total = filtrados.length;
+  // Debounce del buscador: esperamos 400ms sin tipeo antes de disparar la consulta.
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setBusqueda(busquedaInput.trim());
+      setPage(1);
+    }, 400);
+    return () => clearTimeout(timeoutId);
+  }, [busquedaInput]);
+
+  // Historial de registros (el servidor filtra, ordena y pagina)
+  useEffect(() => {
+    let cancelado = false;
+
+    async function cargarHistorial() {
+      setCargando(true);
+      setError('');
+
+      const tipoActual = TABS.find((t) => t.id === tab)?.tipo;
+      const params = new URLSearchParams({
+        page: String(page),
+        pageSize: String(PAGE_SIZE),
+        sortBy,
+        sortDir,
+      });
+      if (tipoActual) params.set('tipo', tipoActual);
+      if (periodo) params.set('periodo', periodo);
+      if (estado) params.set('estado', estado);
+      if (busqueda) params.set('busqueda', busqueda);
+
+      try {
+        const res = await fetch(`/api/spe/historial?${params.toString()}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || json.message || 'No se pudo cargar el historial');
+
+        // Acepta tanto { registros, total, ... } como { ok, data: { registros, total, ... } }
+        const data = json.data ?? json;
+        if (!cancelado) {
+          setRegistros(data.registros ?? []);
+          setTotal(data.total ?? 0);
+          setResumen(data.resumen ?? null);
+          setPeriodos(data.periodos ?? []);
+        }
+      } catch (err) {
+        if (!cancelado) setError(err.message || 'Error de conexión con el servidor');
+      } finally {
+        if (!cancelado) setCargando(false);
+      }
+    }
+
+    cargarHistorial();
+    return () => {
+      cancelado = true;
+    };
+  }, [token, tab, periodo, estado, busqueda, page, sortBy, sortDir, recargarClave]);
+
   const totalPaginas = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const paginaActual = Math.min(page, totalPaginas);
-  const visibles = filtrados.slice((paginaActual - 1) * PAGE_SIZE, paginaActual * PAGE_SIZE);
+
+  const tarjetas = useMemo(
+    () => [
+      { label: 'Total registros', valor: resumen?.totalRegistros ?? '-', Icono: Landmark, estilo: 'bg-[#fbe9f0] text-[#a00046]' },
+      { label: 'Archivos cargados', valor: resumen?.totalArchivos ?? '-', Icono: FileText, estilo: 'bg-[#e8f1fb] text-[#2f6fb0]' },
+      { label: 'Carga manual', valor: resumen?.cargaManual ?? '-', Icono: PenLine, estilo: 'bg-[#f3ecfb] text-[#7c4dbd]' },
+      { label: 'Pendientes', valor: resumen?.pendientes ?? '-', Icono: Database, estilo: 'bg-[#fbf1de] text-[#b7891e]' },
+    ],
+    [resumen],
+  );
 
   function cambiarTab(idTab) {
     setTab(idTab);
+    setPage(1);
+  }
+
+  function cambiarPeriodo(valor) {
+    setPeriodo(valor);
+    setPage(1);
+  }
+
+  function cambiarEstado(valor) {
+    setEstado(valor);
     setPage(1);
   }
 
@@ -121,8 +185,41 @@ export default function HistorialSpePage() {
     return sortDir === 'asc' ? <ChevronUp size={11} /> : <ChevronDown size={11} />;
   }
 
+  async function confirmarEliminacion() {
+    if (!registroAEliminar) return;
+    setEliminando(true);
+    try {
+      const res = await fetch(rutaEliminar(registroAEliminar), {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error || json.message || 'No se pudo eliminar el registro');
+      setRegistroAEliminar(null);
+      setRecargarClave((c) => c + 1);
+    } catch (err) {
+      setError(err.message || 'No se pudo eliminar el registro');
+      setRegistroAEliminar(null);
+    } finally {
+      setEliminando(false);
+    }
+  }
+
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-[#f4f6f8] px-4 py-5 sm:px-6 lg:px-8">
+      <ConfirmDialog
+        open={Boolean(registroAEliminar)}
+        titulo={registroAEliminar?.tipo === 'masiva' ? '¿Eliminar este archivo?' : '¿Eliminar este registro?'}
+        mensaje={
+          registroAEliminar?.tipo === 'masiva'
+            ? `Se eliminará "${registroAEliminar?.origen}" y todas sus encuestas asociadas. Esta acción no se puede deshacer.`
+            : 'Este registro individual dejará de contar para los dashboards. Esta acción no se puede deshacer.'
+        }
+        textoConfirmar={eliminando ? 'Eliminando...' : 'Eliminar'}
+        onConfirm={confirmarEliminacion}
+        onCancel={() => setRegistroAEliminar(null)}
+      />
+
       <div className="mx-auto max-w-[1120px]">
         {/* Breadcrumb */}
         <Link
@@ -163,15 +260,12 @@ export default function HistorialSpePage() {
             <div className="relative">
               <select
                 value={periodo}
-                onChange={(e) => {
-                  setPeriodo(e.target.value);
-                  setPage(1);
-                }}
+                onChange={(e) => cambiarPeriodo(e.target.value)}
                 className="appearance-none rounded-lg border border-[#dfe4e5] bg-white py-2 pl-3 pr-8 text-xs font-semibold text-[#59615e] outline-none focus:border-[#a00046]"
               >
                 <option value="">Todo el periodo</option>
-                {PERIODOS.map((p) => (
-                  <option key={p} value={p}>{p}</option>
+                {periodos.map((p) => (
+                  <option key={p.valor} value={p.valor}>{p.etiqueta}</option>
                 ))}
               </select>
               <ChevronDown size={13} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8a9290]" />
@@ -180,15 +274,13 @@ export default function HistorialSpePage() {
             <div className="relative">
               <select
                 value={estado}
-                onChange={(e) => {
-                  setEstado(e.target.value);
-                  setPage(1);
-                }}
+                onChange={(e) => cambiarEstado(e.target.value)}
                 className="appearance-none rounded-lg border border-[#dfe4e5] bg-white py-2 pl-3 pr-8 text-xs font-semibold text-[#59615e] outline-none focus:border-[#a00046]"
               >
                 <option value="">Filtrar por Estado</option>
-                <option value="verificado">Verificado</option>
-                <option value="no_verificado">No verificado</option>
+                {ESTADOS.map((e) => (
+                  <option key={e.valor} value={e.valor}>{e.etiqueta}</option>
+                ))}
               </select>
               <ChevronDown size={13} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8a9290]" />
             </div>
@@ -197,11 +289,8 @@ export default function HistorialSpePage() {
               <Search size={13} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8a9290]" />
               <input
                 type="text"
-                value={busqueda}
-                onChange={(e) => {
-                  setBusqueda(e.target.value);
-                  setPage(1);
-                }}
+                value={busquedaInput}
+                onChange={(e) => setBusquedaInput(e.target.value)}
                 placeholder="Buscar por archivo o sector..."
                 className="w-64 rounded-lg border border-[#dfe4e5] bg-white py-2 pl-8 pr-3 text-xs text-[#414845] outline-none focus:border-[#a00046]"
               />
@@ -215,6 +304,10 @@ export default function HistorialSpePage() {
             <Plus size={14} /> Nuevo Registro
           </Link>
         </section>
+
+        {error && (
+          <p className="mb-5 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+        )}
 
         {/* Tabla */}
         <section className="overflow-hidden rounded-xl border border-[#e2e6e8] bg-white shadow-sm">
@@ -244,14 +337,21 @@ export default function HistorialSpePage() {
                 </tr>
               </thead>
               <tbody>
-                {visibles.length === 0 ? (
+                {cargando ? (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-8 text-center text-[#8a9290]">
+                      <Loader2 size={16} className="mx-auto mb-2 animate-spin" />
+                      Cargando historial...
+                    </td>
+                  </tr>
+                ) : registros.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="px-4 py-8 text-center text-[#8a9290]">
                       No hay registros que coincidan con los filtros seleccionados.
                     </td>
                   </tr>
                 ) : (
-                  visibles.map((r) => (
+                  registros.map((r) => (
                     <tr key={r.id} className="border-t border-[#f0f2f2] text-[#48504d] hover:bg-[#fff8fa]">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2.5">
@@ -282,16 +382,19 @@ export default function HistorialSpePage() {
                       <td className="px-4 py-3">{formatearFecha(r.fecha)}</td>
                       <td className="px-4 py-3">
                         <span
-                          className={`rounded-full px-2 py-1 text-[10px] font-bold ${r.estado === 'Verificado' ? 'bg-[#eaf6ef] text-[#2f9e58]' : 'bg-[#fbf1de] text-[#b7891e]'
-                            }`}
+                          className={`rounded-full px-2 py-1 text-[10px] font-bold ${ESTILO_ESTADO[r.estado] || 'bg-[#f1f3f3] text-[#414845]'}`}
                         >
                           {r.estado}
                         </span>
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-3 text-[#8a9290]">
-                          <button type="button" className="hover:text-[#a00046]"><Eye size={14} /></button>
-                          <button type="button" className="hover:text-[#a00046]">
+                          {/* Detalle: pantalla de Kevin Prieto (US41) */}
+                          <Link to={`/spe/historial/${r.id}`} className="hover:text-[#a00046]">
+                            <Eye size={14} />
+                          </Link>
+                          {/* Eliminar: endpoint de Kevin Prieto (US42) */}
+                          <button onClick={() => setRegistroAEliminar(r)} className="hover:text-[#a00046]">
                             <Trash2 size={14} />
                           </button>
                         </div>
@@ -305,22 +408,22 @@ export default function HistorialSpePage() {
 
           <div className="flex flex-col gap-2 border-t border-[#edf0f1] px-4 py-3 text-[10px] text-[#8a9290] sm:flex-row sm:items-center sm:justify-between">
             <span>
-              Mostrando {visibles.length} de {total} registros
+              Mostrando {registros.length} de {total} registros
             </span>
             <div className="flex items-center gap-1.5">
               <button
-                disabled={paginaActual <= 1}
-                onClick={() => setPage(paginaActual - 1)}
+                disabled={page <= 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
                 className="rounded border border-[#e4e8e8] px-2 py-1 disabled:opacity-50"
               >
                 <ChevronDown size={12} className="rotate-90" />
               </button>
               <span className="px-2 font-semibold text-[#59615e]">
-                Página {paginaActual} de {totalPaginas}
+                Página {page} de {totalPaginas}
               </span>
               <button
-                disabled={paginaActual >= totalPaginas}
-                onClick={() => setPage(paginaActual + 1)}
+                disabled={page >= totalPaginas}
+                onClick={() => setPage((p) => Math.min(totalPaginas, p + 1))}
                 className="rounded border border-[#e4e8e8] px-2 py-1 disabled:opacity-50"
               >
                 <ChevronDown size={12} className="-rotate-90" />
@@ -329,9 +432,9 @@ export default function HistorialSpePage() {
           </div>
         </section>
 
-        {/* Tarjetas de resumen (en lugar de la ayuda de carga masiva) */}
+        {/* Tarjetas de resumen */}
         <section className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {TARJETAS.map(({ label, valor, Icono, estilo }) => (
+          {tarjetas.map(({ label, valor, Icono, estilo }) => (
             <div key={label} className="flex items-center gap-3 rounded-xl border border-[#e2e6e8] bg-white p-4 shadow-sm">
               <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${estilo}`}>
                 <Icono size={16} />
