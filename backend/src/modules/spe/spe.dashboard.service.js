@@ -53,34 +53,17 @@ function construirCondiciones(filtros) {
   return { sql: condiciones.join(' AND '), parametros };
 }
 function obtenerPeriodoAnterior(year, semester) {
-  if (semester === 1) {
-    return {
-      year: year - 1,
-      semester: 2,
-    };
-  }
-
-  return {
-    year,
-    semester: 1,
-  };
+  if (!semester) return { year: year - 1 };
+  if (semester === 1) return { year: year - 1, semester: 2 };
+  return { year, semester: 1 };
 }
 function construirCondicionesAnterior(filtros, periodoAnterior) {
-  const condiciones = [
-    'dl.module = ?',
-    'dl.status = ?',
-    'sr.status = ?',
-    'sr.year = ?',
-    'sr.semester = ?',
-  ];
-
-  const parametros = [
-    MODULO.SPE,
-    ESTADO_CARGA.APROBADA,
-    ESTADO.ACTIVO,
-    periodoAnterior.year,
-    periodoAnterior.semester,
-  ];
+  const condiciones = ['dl.module = ?', 'dl.status = ?', 'sr.status = ?', 'sr.year = ?'];
+const parametros = [MODULO.SPE, ESTADO_CARGA.APROBADA, ESTADO.ACTIVO, periodoAnterior.year];
+if (periodoAnterior.semester) {
+  condiciones.push('sr.semester = ?');
+  parametros.push(periodoAnterior.semester);
+}
 
   if (filtros.department) {
     condiciones.push('sr.s1_department = ?');
@@ -240,7 +223,19 @@ async function obtenerOpcionesFiltros() {
     tamanos: convertir(resultados[3][0]),
   };
 }
-
+// Último período real con datos, respetando los demás filtros (departamento, sector, tamaño).
+async function obtenerUltimoPeriodo(condiciones) {
+  const [rows] = await pool.query(
+    `SELECT sr.year, sr.semester
+       FROM spe_survey_response sr
+       INNER JOIN data_load dl ON dl.data_load_id = sr.data_load_id
+      WHERE ${condiciones.sql}
+      ORDER BY sr.year DESC, sr.semester DESC
+      LIMIT 1`,
+    condiciones.parametros,
+  );
+  return rows[0] ? { year: Number(rows[0].year), semester: Number(rows[0].semester) } : null;
+}
 async function obtenerDashboardSpe(filtros = {}) {
   const condiciones = construirCondiciones(filtros);
   const opcionesFiltros = await obtenerOpcionesFiltros();
@@ -275,11 +270,15 @@ async function obtenerDashboardSpe(filtros = {}) {
 
   const indice = indicesRows[0] || {};
 const numero = (valor) => (valor === null || valor === undefined ? null : Number(Number(valor).toFixed(2)));
-const periodo = resumen?.year ? { year: Number(resumen.year), semester: Number(resumen.semester) } : null;
+const periodo = !resumen?.year
+  ? null
+  : filtros.year || filtros.semester
+    ? { year: filtros.year ?? null, semester: filtros.semester ?? null }
+    : await obtenerUltimoPeriodo(condiciones);
 
 let indicesAnterior = null;
 
-if (filtros.year && filtros.semester) {
+if (filtros.year) {
   const periodoAnterior = obtenerPeriodoAnterior(filtros.year, filtros.semester);
   const condicionesAnterior = construirCondicionesAnterior(filtros, periodoAnterior);
 

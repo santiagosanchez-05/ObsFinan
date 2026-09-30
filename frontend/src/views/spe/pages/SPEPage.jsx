@@ -33,6 +33,8 @@ import {
   YAxis,
 } from 'recharts';
 import FiltrosSpe from '../components/FiltrosSpe';
+import InsightsSpe from '../components/InsightsSpe';
+import ExportarSpe from '../components/ExportarSpe';
 
 const COLORES = ['#961d4b', '#e3e7ee'];
 const TOOLTIP = { contentStyle: { border: 0, borderRadius: 10, boxShadow: '0 8px 24px rgba(31, 34, 32, .12)' } };
@@ -45,6 +47,13 @@ function prepararExpectativas(expectativas = {}) {
     inflacion: expectativas.inflacion?.find((item) => item.categoria === categoria)?.cantidad || 0,
     tipoCambio: expectativas.tipoCambio?.find((item) => item.categoria === categoria)?.cantidad || 0,
   }));
+}
+// El período puede venir con año y semestre, solo año, solo semestre, o vacío.
+function etiquetaPeriodo({ year, semester } = {}) {
+  if (year && semester) return `Sem ${semester} · ${year}`;
+  if (year) return `Año ${year}`;
+  if (semester) return `Semestre ${semester}`;
+  return 'Sin datos';
 }
 
 export default function SPEPage() {
@@ -112,7 +121,7 @@ export default function SPEPage() {
             </RoleGate>
           </div>
         </div>
-
+<ExportarSpe filtros={filtros} />
         {mostrarCarga && (
           <section className="relative ml-auto max-w-md rounded-xl border border-[#e2e6e8] bg-white p-4 shadow-lg">
             <div className="flex items-center justify-between">
@@ -136,8 +145,8 @@ export default function SPEPage() {
           <StatCard label="Empresas encuestadas" value={datos.totalEmpresas} detail="Respuestas aprobadas" icon={<Users size={19} />} />
           <StatCard label="ICE promedio" value={`${datos.indices.ice} pts`} detail="Índice de confianza empresarial" icon={<Gauge size={19} />} variation={variacion(datos.indices.ice, datos.indicesAnterior.ice)} />
           <StatCard label="Propensión a invertir" value={`${propensionSi}% Sí`} detail="En los próximos 12 meses" icon={<TrendingUp size={19} />} />
-          <StatCard label="Período actual" value={datos.periodo.year ? `Sem ${datos.periodo.semester} · ${datos.periodo.year}` : 'Sin datos'} detail="Última medición disponible" icon={<Building2 size={19} />} />
-        </div>
+          <StatCard label="Período actual" value={etiquetaPeriodo(datos.periodo)} detail="Última medición disponible" icon={<Building2 size={19} />} />
+          </div>
 
         <section className="grid gap-4 lg:grid-cols-[1.05fr_1.95fr]">
           <Panel title="Propensión a invertir en 12 meses" icon={<CircleDollarSign size={16} />}>
@@ -162,6 +171,7 @@ export default function SPEPage() {
           <IndexCard label="IIE" name="Índice de inversión" value={datos.indices.iie} previous={datos.indicesAnterior.iie} />
           <IndexCard label="ICIE" name="Índice de competitividad" value={datos.indices.icie} previous={datos.indicesAnterior.icie} />
         </section>
+        <InsightsSpe insights={datos?.insights ?? []} />
       </div>
     </main>
   );
