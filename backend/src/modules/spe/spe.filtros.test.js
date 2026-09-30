@@ -74,4 +74,5 @@ describe('parsearFiltrosSpe (US33)', () => {
   test.each(['Micro', 'Pequeña', 'Mediana', 'Grande'])('acepta el tamaño %s', (size) => {
     expect(parsearFiltrosSpe({ size })).toEqual({ size });
   });
+
 });
