@@ -1,11 +1,23 @@
 // Kevin Prieto — US56 (el encuestador ve los eventos a los que fue asignado).
 // Tablas: event_surveyor (surveyor_user_id = req.user.userId, status ACTIVO) + event.
-// Devolver has_ica y has_spe de cada evento: el frontend muestra el botón
-// "Registrar encuesta ICA" y/o "Registrar encuesta SPE" según esas columnas
-// (pendientes de agregar a la BD, ver docs/SPRINT2.md).
-// Crea tu events.misEventos.service.js al implementar.
-const pendiente = require('../../utils/pendiente');
+// Devuelve has_ica y has_spe de cada evento para habilitar los botones correspondientes.
+const misEventosService = require('./events.misEventos.service');
+
+async function getMisEventos(req, res) {
+  try {
+    const surveyorUserId = req.user?.userId;
+    if (!surveyorUserId) {
+      return res.status(401).json({ error: 'Usuario no autenticado' });
+    }
+
+    const eventos = await misEventosService.obtenerMisEventos(surveyorUserId);
+    return res.status(200).json(eventos);
+  } catch (err) {
+    console.error('Error al obtener mis eventos:', err);
+    return res.status(500).json({ error: 'No se pudieron cargar los eventos asignados' });
+  }
+}
 
 module.exports = {
-  getMisEventos: pendiente('US56', 'Kevin Prieto'),
+  getMisEventos,
 };
