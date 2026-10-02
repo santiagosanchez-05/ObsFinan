@@ -101,7 +101,7 @@ Las funciones de Liz ya existen vacías, así que Monserrat puede llamarlas desd
 ## Flujo del encuestador (ICA y SPE por evento)
 
 1. El Admin/Superadmin crea el evento y marca qué encuestas se toman: `has_ica`, `has_spe` o las dos (Santiago, US44). Solo el Superadmin puede marcar `has_spe`.
-2. Le asigna encuestadores (Santiago, US55).
+2. Le asigna encuestadores (Santiago, US55), **o el encuestador se anota solo** desde el detalle del evento ("Quiero participar como encuestador"), sin límite, en eventos con encuesta de su sede que no hayan pasado. Las dos formas guardan la misma fila en `event_surveyor`; también puede bajarse (status 0).
 3. El encuestador entra a **Mis eventos** (Kevin Prieto, US56): cada evento muestra "Registrar encuesta ICA" si `has_ica = 1` y "Registrar encuesta SPE" si `has_spe = 1`.
 4. El botón lleva a `/encuestador/eventos/:eventId/ica` (Liz, US57) o `/encuestador/eventos/:eventId/spe` (Kevin Alanes, US66). El backend valida que el evento esté asignado al encuestador y que tenga esa encuesta habilitada; si no, responde 400.
 5. La encuesta entra **pendiente** (`data_load.status = 1`) y llega a la bandeja de aprobaciones (Monserrat): las ICA al Admin de la sede del encuestador y a todos los Superadmin; las SPE solo a los Superadmin.
