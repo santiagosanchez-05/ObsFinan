@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../../shared/AuthContext';
 import ConfirmDialog from '../../../shared/ConfirmDialog';
-import PanelRevision from '../components/Aprobaciones.PanelRevision';
+import PanelRevision, { NO_APLICA } from '../components/Aprobaciones.PanelRevision';
 import {
   Search,
   ChevronDown,
@@ -17,10 +17,79 @@ import {
 } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
-// ICA — POR AHORA ESTÁTICO
+// ICA —ESTÁTICO
+//
+// Estructura que debe devolver el backend de ICA:
+//   manual -> respuestas: [{ grupo, items: [[pregunta, respuesta], ...] }]
+//   masiva -> resumen: { estadisticas, grupos, alertas }
+//
+// Valores de una respuesta:
+//   'texto'        respuesta normal
+//   ['a', 'b']     varias opciones marcadas
+//   null           sin responder (sale como alerta al aprobador)
+//   NO_APLICA      la pregunta se salta por una respuesta anterior
 // ---------------------------------------------------------------------------
 
+// Preguntas del instrumento ICA, por número.
+const PREGUNTAS_ICA = {
+  1: "¿Usted contribuye económicamente en su hogar y/o participa en la toma de decisiones financieras?",
+  2: "¿Qué edad tiene?",
+  3: "¿Cuál es su sexo?",
+  4: "Nivel de instrucción más alto alcanzado",
+  5: "¿Para qué sirve un seguro?",
+  6: "¿En cuáles de las siguientes actividades necesita un seguro obligatorio?",
+  7: "¿Conoce el significado del término 'tomador' en un seguro?",
+  8: "¿Conoce el significado del término 'siniestro'?",
+  9: "¿Conoce el significado del término 'prima'?",
+  10: "¿Conoce el significado del término 'franquicia'?",
+  11: "¿Conoce el significado del término 'exclusiones'?",
+  12: "¿Quién puede vender un seguro?",
+  13: "¿A quién perjudica más el fraude en el seguro?",
+  14: "¿A dónde acudiría en primer lugar si tuviera que hacer una reclamación?",
+  15: "¿De qué forma ha adquirido sus conocimientos en materia de seguros?",
+  16: "¿Qué método considera más adecuado para mejorar sus conocimientos sobre seguros?",
+  17: "¿Quién cree usted que se ocupa de mejorar la educación en materia de seguros de la población?",
+  18: "¿Qué haría para protegerse y proteger a su familia y patrimonio de un posible riesgo?",
+  19: "¿Cuál es su gasto anual estimado en seguros?",
+  20: "¿Qué está haciendo para preparar su jubilación?",
+  21: "¿Qué nivel de cultura aseguradora considera que tiene?",
+  22: "¿Actualmente tiene un seguro de vida?",
+  23: "¿Cuánto tiempo ha tenido su seguro de vida?",
+  24: "¿Cuál fue la razón principal por la que decidió adquirir un seguro de vida?",
+  25: "¿Con qué frecuencia revisa o actualiza su póliza de seguro de vida?",
+  26: "¿Cambiaría de aseguradora o de plan?",
+  27: "¿Qué tan satisfecho está con su seguro de vida actual?",
+  28: "¿Qué tan probable es que considere adquirir un seguro de vida en el futuro?",
+  29: "¿Cuáles son las principales barreras que le impiden contratar un seguro de vida?",
+  30: "¿En qué medida confía en las aseguradoras en Bolivia?",
+  31: "¿Qué porcentaje de sus ingresos estaría dispuesto a destinar mensualmente para contratarlo?",
+  32: "¿Qué factor considera más importante al momento de decidir si contratar un seguro de vida?",
+};
+
+// Bloques en que se muestran las preguntas en el panel de detalle.
+const BLOQUES_ICA = [
+  { grupo: 'Perfil', preguntas: [1, 2, 3, 4] },
+  {
+    grupo: 'Conocimiento de seguros',
+    preguntas: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
+  },
+  { grupo: 'Educación y cultura aseguradora', preguntas: [15, 16, 17, 21] },
+  { grupo: 'Protección y previsión', preguntas: [18, 19, 20] },
+  { grupo: 'Seguro de vida', preguntas: [22, 23, 24, 25, 26, 27] },
+  { grupo: 'Intención y percepción', preguntas: [28, 29, 30, 31, 32] },
+];
+
+// Convierte { 1: 'Sí', 2: '34', ... } en [{ grupo, items }].
+// Una pregunta ausente queda como null (sin responder).
+function armarRespuestasIca(r) {
+  return BLOQUES_ICA.map(({ grupo, preguntas }) => ({
+    grupo,
+    items: preguntas.map((n) => [PREGUNTAS_ICA[n], r[n] ?? null]),
+  }));
+}
+
 const MOCK_ICA = [
+  // Carga masiva
   {
     id: 101,
     tipo: 'masiva',
@@ -37,6 +106,8 @@ const MOCK_ICA = [
         ['Edad mínima', '18'],
         ['Edad máxima', '67'],
         ['Edad promedio', '36'],
+        ['Con seguro de vida', '19 de 48'],
+        ['Cultura aseguradora más frecuente', 'Medio'],
       ],
       grupos: [
         {
@@ -54,10 +125,55 @@ const MOCK_ICA = [
             ['Hombre', 21],
           ],
         },
+        {
+          titulo: 'Nivel de instrucción',
+          items: [
+            ['Universidad', 22],
+            ['Técnico', 11],
+            ['Bachiller', 9],
+            ['Postgrado', 6],
+          ],
+        },
+        {
+          titulo: 'Nivel de cultura aseguradora',
+          items: [
+            ['Muy bajo', 4],
+            ['Bajo', 12],
+            ['Medio', 19],
+            ['Alto', 10],
+            ['Muy alto', 3],
+          ],
+        },
+        {
+          titulo: 'Satisfacción con el seguro de vida (19 con seguro)',
+          items: [
+            ['Muy insatisfecho', 1],
+            ['Insatisfecho', 2],
+            ['Neutral', 4],
+            ['Satisfecho', 8],
+            ['Muy satisfecho', 4],
+          ],
+        },
+        {
+          titulo: 'Principal barrera (29 sin seguro de vida)',
+          items: [
+            ['Falta de información', 9],
+            ['Precio elevado', 7],
+            ['Falta de confianza', 6],
+            ['No tengo ingresos suficientes', 4],
+            ['No lo considero necesario', 3],
+          ],
+        },
       ],
-      alertas: ['2 encuestas con la pregunta 12 vacía'],
+      alertas: [
+        '2 encuestas con la pregunta 12 vacía',
+        '1 encuesta con edad no numérica en la pregunta 2',
+        '3 encuestas dicen no tener seguro de vida pero respondieron antigüedad o satisfacción (preguntas 23 a 27)',
+      ],
     },
   },
+
+  // Manual: con seguro de vida, todo respondido
   {
     id: 102,
     tipo: 'manual',
@@ -69,37 +185,88 @@ const MOCK_ICA = [
     sede: 'La Paz',
     fecha: '2026-09-28T09:05:00',
     evento: 'Feria de Seguros La Paz',
-    respuestas: [
-      {
-        grupo: 'Perfil',
-        items: [
-          ['Aporta económicamente al hogar', 'Sí'],
-          ['Edad', '34'],
-          ['Sexo', 'Mujer'],
-          ['Nivel de educación', 'Universidad'],
-        ],
-      },
-      {
-        grupo: 'Conocimiento',
-        items: [
-          [
-            '¿Para qué sirve un seguro?',
-            'Para proteger sus bienes y/o su familia ante sucesos inciertos',
-          ],
-          ['¿Dónde presentar un reclamo?', 'A la propia compañía de seguros'],
-          ['¿Cómo adquirió su conocimiento?', 'Con la experiencia personal'],
-        ],
-      },
-      {
-        grupo: 'Seguro de vida',
-        items: [
-          ['¿Tiene seguro de vida?', 'Sí'],
-          ['Duración', 'Entre 1 y 3 años'],
-          ['Satisfacción con su póliza', 'Satisfecho'],
-          ['Confianza en aseguradoras', 'Bastante'],
-        ],
-      },
-    ],
+    respuestas: armarRespuestasIca({
+      1: 'Sí',
+      2: '34',
+      3: 'Mujer',
+      4: 'Universidad',
+      5: 'Para proteger sus bienes y/o su familia ante sucesos inciertos',
+      6: ['Contratar una hipoteca', 'Conducir un vehículo'],
+      7: 'La persona que contrata el seguro',
+      8: 'El perjuicio producido por una persona a otra u otras',
+      9: 'La aportación económica que realiza el asegurado a la compañía de seguros',
+      10: 'Una cantidad por la cual el asegurado es su propio asegurador',
+      11: 'Los riesgos que no están incluidos en las coberturas de la póliza',
+      12: 'Una compañía de seguros',
+      13: 'A la compañía de seguro y a los asegurados',
+      14: 'A la propia compañía de seguros',
+      15: 'Con la experiencia personal',
+      16: 'Consultar materiales diversos (Internet, libros u otros)',
+      17: 'Los organismos reguladores del sector del seguro',
+      18: 'Contratar un seguro',
+      19: 'Entre Bs. 2,501 y Bs. 7,000',
+      20: 'Está aportando a la gestora para cobrar una pensión',
+      21: 'Medio',
+      22: 'Sí',
+      23: 'Entre 1 y 3 años',
+      24: 'Protección financiera para mi familia',
+      25: 'Anualmente',
+      26: 'No, estoy satisfecho con mi seguro actual',
+      27: 'Satisfecho',
+      28: 'Muy probable',
+      29: 'Precio elevado',
+      30: 'Bastante',
+      31: 'Entre 3% y 5% de mis ingresos',
+      32: 'Beneficios y coberturas',
+    }),
+  },
+
+  // Manual: sin seguro de vida (preguntas 23 a 27 "No aplica") y una sin responder
+  {
+    id: 103,
+    tipo: 'manual',
+    origen: 'Registro individual',
+    zonas: ['Sopocachi'],
+    periodo: '3T 2026',
+    registros: 1,
+    encuestador: 'Carla Mamani',
+    sede: 'La Paz',
+    fecha: '2026-09-30T11:30:00',
+    evento: 'Feria de Seguros La Paz',
+    respuestas: armarRespuestasIca({
+      1: 'Sí',
+      2: '52',
+      3: 'Hombre',
+      4: 'Bachiller',
+      5: 'Para la cobertura de todos mis riesgos',
+      6: ['Conducir un vehículo'],
+      7: 'La persona que vende el seguro',
+      8: 'El conjunto de bienes asegurados',
+      9: 'El nivel de protección de los bienes',
+      // 10 sin responder (queda null)
+      11: 'Los riesgos a los que un hogar está expuesto',
+      12: 'Un Banco',
+      13: 'A la compañía aseguradora',
+      14: 'Al Centro de atención al usuario y consumidor',
+      15: 'No sabe de seguros o sabe muy poco',
+      16: 'Asistir a cursos especializados',
+      17: 'No se ocupa nadie',
+      18: 'Ahorrar para subsanar los posibles daños futuros',
+      19: 'Solo lo necesario para seguros obligatorios',
+      20: 'No se lo ha planteado todavía',
+      21: 'Bajo',
+      22: 'No',
+      23: NO_APLICA,
+      24: NO_APLICA,
+      25: NO_APLICA,
+      26: NO_APLICA,
+      27: NO_APLICA,
+      28: 'Poco probable',
+      29: 'No tengo ingresos suficientes',
+      30: 'Poco',
+      31: 'Hasta un 2% de mis ingresos',
+      32: 'Precio',
+    }),
   },
 ];
 
@@ -273,8 +440,7 @@ function normalizarRegistro(registro) {
 }
 
 // ---------------------------------------------------------------------------
-// Acciones de cada fila: mismo estilo que UsuariosPage
-// (links de texto con icono + un solo botón relleno para la acción principal)
+// Acciones de cada fila
 // ---------------------------------------------------------------------------
 
 function AccionesFila({ onRevisar, onAprobar, onRechazar, disabled = false }) {
@@ -321,7 +487,7 @@ export default function AprobacionesPage() {
   const esSuperadmin = rol === 'superadmin' || rol === 'super_admin';
 
   /*
-   * ICA queda estático por ahora.
+   * ICA queda estático.
    * SPE sí viene del backend.
    */
   const [sistema, setSistema] = useState('spe');
@@ -442,9 +608,7 @@ export default function AprobacionesPage() {
     0,
   );
 
-  // -------------------------------------------------------------------------
-  // Escape del panel
-  // -------------------------------------------------------------------------
+ 
 
   useEffect(() => {
     if (!detalle || accion) return undefined;
@@ -460,9 +624,7 @@ export default function AprobacionesPage() {
     return () => window.removeEventListener('keydown', alTeclear);
   }, [detalle, accion]);
 
-  // -------------------------------------------------------------------------
-  // El aviso de éxito desaparece solo
-  // -------------------------------------------------------------------------
+
 
   useEffect(() => {
     if (!aviso) return undefined;
@@ -528,10 +690,7 @@ export default function AprobacionesPage() {
         );
       }
 
-      /*
-       * Quitamos inmediatamente la carga de la bandeja: el backend ya
-       * cambió su estado, por lo que no debe seguir como pendiente.
-       */
+     
       setPendientes((prev) => ({
         ...prev,
         spe: prev.spe.filter((r) => r.id !== registro.id),
@@ -579,9 +738,7 @@ export default function AprobacionesPage() {
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-[#f4f6f8] px-4 py-5 sm:px-6 lg:px-8">
 
-      {/* ----------------------------------------------------------------- */}
-      {/* Aviso flotante (se cierra solo) */}
-      {/* ----------------------------------------------------------------- */}
+      
 
       {aviso && (
         <div
@@ -688,6 +845,7 @@ export default function AprobacionesPage() {
       {detalle && (
         <PanelRevision
           registro={detalle}
+          sistema={sistema}
           procesando={procesando}
           onClose={() => setDetalle(null)}
           onAccion={(registro, tipo) => {
