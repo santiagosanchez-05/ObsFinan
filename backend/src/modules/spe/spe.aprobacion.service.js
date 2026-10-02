@@ -501,6 +501,11 @@ async function cambiarEstadoCargaSpe({
       throw new Error('CARGA_YA_REVISADA');
     }
 
+    const nota =
+      estado === 'rechazada'
+        ? (typeof motivo === 'string' ? motivo.trim() : '') || null
+        : null;
+
     await conexion.query(
       `UPDATE data_load
           SET status = ?,
@@ -508,14 +513,7 @@ async function cambiarEstadoCargaSpe({
               reviewed_at = NOW(),
               review_note = ?
         WHERE data_load_id = ?`,
-      [
-        nuevoEstado,
-        revisorId,
-        estado === 'rechazada'
-          ? motivo
-          : null,
-        dataLoadId,
-      ],
+      [nuevoEstado, revisorId, nota, dataLoadId],
     );
 
     await conexion.commit();
