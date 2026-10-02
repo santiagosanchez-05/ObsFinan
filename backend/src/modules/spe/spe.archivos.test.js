@@ -1,0 +1,225 @@
+const request = require('supertest');
+const jwt = require('jsonwebtoken');
+
+jest.mock('../../config/db', () => ({ query: jest.fn(), getConnection: jest.fn() }));
+jest.mock('../../config/mailer', () => ({ sendMail: jest.fn().mockResolvedValue(true) }));
+
+const pool = require('../../config/db');
+const app = require('../../app');
+
+const token = (role) => jwt.sign({ userId: 1, role, campusId: 1 }, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+const mockConexion = () => {
+  const conexion = {
+    query: jest.fn().mockResolvedValue([{ affectedRows: 1 }]),
+    beginTransaction: jest.fn().mockResolvedValue(),
+    commit: jest.fn().mockResolvedValue(),
+    rollback: jest.fn().mockResolvedValue(),
+    release: jest.fn().mockResolvedValue(),
+  };
+  pool.getConnection.mockResolvedValue(conexion);
+  return conexion;
+};
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  jest.spyOn(console, 'error').mockImplementation(() => {});
+});
+
+afterEach(() => {
+  console.error.mockRestore();
+});
+
+describe('US40 — Descarga de datos SPE pública (GET /api/spe/export)', () => {
+  it('exporta en JSON correctamente sin requerir autenticación', async () => {
+    const mockRows = [
+      {
+        id: 1,
+        year: 2026,
+        semester: 1,
+        departamento: 'Santa Cruz',
+        sectorExportador: 'Agroindustria',
+        tamanoEmpresa: 'Grande',
+        iee: 75.5,
+        ice: 80.0,
+      },
+    ];
+    pool.query.mockResolvedValueOnce([mockRows]);
+
+    const res = await request(app).get('/api/spe/export?formato=json');
+
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toContain('application/json');
+    expect(res.headers['content-disposition']).toContain('attachment; filename="dataset_spe.json"');
+    expect(res.body).toEqual(mockRows);
+  });
+
+  it('exporta en CSV con cabeceras y delimitador punto y coma', async () => {
+    const mockRows = [
+      {
+        id: 1,
+        departamento: 'La Paz',
+        sector: 'Manufactura',
+      },
+    ];
+    pool.query.mockResolvedValueOnce([mockRows]);
+
+    const res = await request(app).get('/api/spe/export?formato=csv');
+
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toContain('text/csv');
+    expect(res.headers['content-disposition']).toContain('attachment; filename="dataset_spe.csv"');
+    expect(res.text).toContain('id;departamento;sector');
+    expect(res.text).toContain('1;La Paz;Manufactura');
+  });
+
+  it('rechaza formatos no soportados con 400', async () => {
+    const res = await request(app).get('/api/spe/export?formato=xml');
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/Formato inválido/i);
+  });
+
+  it('aplica filtros de año, semestre y departamento', async () => {
+    pool.query.mockResolvedValueOnce([[]]);
+
+    const res = await request(app).get('/api/spe/export?year=2026&semester=1&department=Cochabamba&sector=Textiles&size=Mediana');
+
+    expect(res.status).toBe(200);
+    expect(pool.query).toHaveBeenCalledTimes(1);
+    const [sqlQuery, params] = pool.query.mock.calls[0];
+    expect(sqlQuery).toContain('sr.year = ?');
+    expect(sqlQuery).toContain('sr.s1_department = ?');
+    expect(params).toContain(2026);
+    expect(params).toContain(1);
+    expect(params).toContain('Cochabamba');
+    expect(params).toContain('Textiles');
+    expect(params).toContain('Mediana');
+  });
+
+  it('retorna vacío si no existen registros aprobados', async () => {
+    pool.query.mockResolvedValueOnce([[]]);
+
+    const res = await request(app).get('/api/spe/export?formato=json');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([]);
+  });
+});
+
+describe('US41 — Detalle de archivo SPE (GET /api/spe/files/:id)', () => {
+  it('retorna 400 si el ID es inválido', async () => {
+    const res = await request(app)
+      .get('/api/spe/files/abc')
+      .set('Authorization', `Bearer ${token('superadmin')}`);
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/inválido/i);
+  });
+
+  it('retorna 404 si el archivo no existe o fue eliminado', async () => {
+    pool.query.mockResolvedValueOnce([[]]); // sin cargas encontradas
+
+    const res = await request(app)
+      .get('/api/spe/files/999')
+      .set('Authorization', `Bearer ${token('superadmin')}`);
+
+    expect(res.status).toBe(404);
+    expect(res.body.error).toMatch(/no se encontró/i);
+  });
+
+  it('retorna metadatos y registros del archivo para superadmin', async () => {
+    const mockCarga = {
+      data_load_id: 10,
+      source_type: 2,
+      file_name: 'spe_censo_2026.xlsx',
+      total_rows: 2,
+      status: 2,
+      created_at: '2026-03-01T12:00:00.000Z',
+      first_name: 'Santiago',
+      paternal_last_name: 'Admin',
+    };
+    const mockRespuestas = [
+      { spe_survey_response_id: 101, s1_department: 'Santa Cruz', s1_export_sector: 'Agroindustria' },
+      { spe_survey_response_id: 102, s1_department: 'La Paz', s1_export_sector: 'Textiles' },
+    ];
+
+    pool.query
+      .mockResolvedValueOnce([[mockCarga]])
+      .mockResolvedValueOnce([mockRespuestas]);
+
+    const res = await request(app)
+      .get('/api/spe/files/10')
+      .set('Authorization', `Bearer ${token('superadmin')}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.archivo).toEqual(
+      expect.objectContaining({
+        id: 10,
+        nombre: 'spe_censo_2026.xlsx',
+        subidoPor: 'Santiago Admin',
+        totalRegistros: 2,
+        estado: 'aprobada',
+      })
+    );
+    expect(res.body.registros).toHaveLength(2);
+  });
+});
+
+describe('US42 — Eliminación SPE (DELETE /api/spe/files/:id y DELETE /api/spe/:id)', () => {
+  it('elimina un archivo SPE lógicamente con éxito', async () => {
+    const conexion = mockConexion();
+    conexion.query
+      .mockResolvedValueOnce([[{ data_load_id: 10 }]]) // SELECT carga
+      .mockResolvedValueOnce([{ affectedRows: 2 }]) // UPDATE spe_survey_response
+      .mockResolvedValueOnce([{ affectedRows: 1 }]); // UPDATE data_load
+
+    const res = await request(app)
+      .delete('/api/spe/files/10')
+      .set('Authorization', `Bearer ${token('superadmin')}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.message).toMatch(/eliminado correctamente/i);
+    expect(conexion.commit).toHaveBeenCalled();
+  });
+
+  it('retorna 404 al intentar eliminar un archivo inexistente', async () => {
+    const conexion = mockConexion();
+    conexion.query.mockResolvedValueOnce([[]]); // no encontrado
+
+    const res = await request(app)
+      .delete('/api/spe/files/999')
+      .set('Authorization', `Bearer ${token('superadmin')}`);
+
+    expect(res.status).toBe(404);
+    expect(conexion.rollback).toHaveBeenCalled();
+  });
+
+  it('elimina un registro individual SPE con éxito', async () => {
+    const conexion = mockConexion();
+    conexion.query
+      .mockResolvedValueOnce([[{ data_load_id: 50, source_type: 1 }]]) // SELECT data_load
+      .mockResolvedValueOnce([{ affectedRows: 1 }]) // UPDATE spe_survey_response
+      .mockResolvedValueOnce([{ affectedRows: 1 }]); // UPDATE data_load
+
+    const res = await request(app)
+      .delete('/api/spe/50')
+      .set('Authorization', `Bearer ${token('superadmin')}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.message).toMatch(/eliminado correctamente/i);
+    expect(conexion.commit).toHaveBeenCalled();
+  });
+
+  it('retorna 404 al intentar eliminar un registro inexistente', async () => {
+    const conexion = mockConexion();
+    conexion.query
+      .mockResolvedValueOnce([[]]) // no encontrado en data_load
+      .mockResolvedValueOnce([[]]); // no encontrado en spe_survey_response
+
+    const res = await request(app)
+      .delete('/api/spe/9999')
+      .set('Authorization', `Bearer ${token('superadmin')}`);
+
+    expect(res.status).toBe(404);
+    expect(conexion.rollback).toHaveBeenCalled();
+  });
+});
