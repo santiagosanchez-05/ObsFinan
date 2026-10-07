@@ -6,6 +6,7 @@
 const pendiente = require("../../utils/pendiente");
 const { convocatoriaSchema } = require("./convocatorias.gestion.validation");
 const gestionService = require("./convocatorias.gestion.service");
+const { puedeGestionarSede } = require("../../middlewares/sede.middleware");
 
 async function postConvocatoria(req, res) {
   // 1. Validar datos
@@ -14,6 +15,11 @@ async function postConvocatoria(req, res) {
     return res
       .status(400)
       .json({ error: "Datos inválidos", detalles: parsed.error.flatten() });
+  }
+
+  // Control por sede (US65 — Santiago): el Admin solo abre convocatorias de su sede.
+  if (!puedeGestionarSede(req.user, parsed.data.campus_id)) {
+    return res.status(403).json({ error: "Solo puedes crear convocatorias de tu sede" });
   }
 
   try {

@@ -278,7 +278,7 @@ export default function ICAHistory() {
               >
                 <option value="">Filtrar por Comuna</option>
                 {comunidades.map((c) => (
-                  <option key={c.id} value={c.id}>{c.nombre}</option>
+                  <option key={c.id} value={c.id}>{new Set(comunidades.map((x) => x.campusId)).size > 1 && c.sede ? `${c.nombre} (${c.sede})` : c.nombre}</option>
                 ))}
               </select>
               <ChevronDown size={13} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8a9290]" />

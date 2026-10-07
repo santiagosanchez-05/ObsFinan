@@ -143,10 +143,15 @@ function validarFilas(datos) {
   return { filasValidas, errores };
 }
 
+// campusId null = Superadmin: comunas de todas las sedes (US65).
 async function obtenerComunidadesPorSede(campusId) {
   const [comunidades] = await pool.query(
-    `SELECT community_id, community_name FROM community WHERE campus_id = ? AND status = 1`,
-    [campusId],
+    `SELECT co.community_id, co.community_name, co.campus_id, ca.campus_name
+       FROM community co
+       INNER JOIN campus ca ON ca.campus_id = co.campus_id
+      WHERE co.status = 1${campusId ? ' AND co.campus_id = ?' : ''}
+      ORDER BY ca.campus_name, co.community_name`,
+    campusId ? [campusId] : [],
   );
   return comunidades;
 }
@@ -525,8 +530,8 @@ async function obtenerExploradorPreguntas({ campusId, year, quarter, communityId
 
 async function registrarRegistroIndividual({ communityId, year, quarter, conocimiento, uso, educacion, prevision, icaHombres, icaMujeres, userId, campusId, rol }) {
   const [comunidades] = await pool.query(
-    'SELECT community_id FROM community WHERE community_id = ? AND campus_id = ? AND status = 1',
-    [communityId, campusId],
+    `SELECT community_id FROM community WHERE community_id = ? AND status = 1${campusId ? ' AND campus_id = ?' : ''}`,
+    campusId ? [communityId, campusId] : [communityId],
   );
   if (!comunidades.length) throw new Error('COMUNIDAD_NO_ENCONTRADA');
 
@@ -655,8 +660,8 @@ async function recalcularAgregadoManual({ conexion, communityId, year, quarter, 
 }
 async function registrarEntrevistaIndividual({ communityId, year, quarter, userId, campusId, rol, ...respuestas }) {
   const [comunidades] = await pool.query(
-    'SELECT community_id FROM community WHERE community_id = ? AND campus_id = ? AND status = 1',
-    [communityId, campusId],
+    `SELECT community_id FROM community WHERE community_id = ? AND status = 1${campusId ? ' AND campus_id = ?' : ''}`,
+    campusId ? [communityId, campusId] : [communityId],
   );
   if (!comunidades.length) throw new Error('COMUNIDAD_NO_ENCONTRADA');
 
@@ -710,13 +715,13 @@ async function obtenerArchivoParaDescarga({ campusId, dataLoadId }) {
         AND dl.module = ?
         AND dl.source_type = ?
         AND dl.status != 0
-        AND c.campus_id = ?
+        ${campusId ? 'AND c.campus_id = ?' : ''}
       LIMIT 1`,
     [
       dataLoadId,
       MODULE_ICA,
       SOURCE_TYPE_ARCHIVO,
-      campusId,
+      ...(campusId ? [campusId] : []),
     ],
   );
 
@@ -757,8 +762,8 @@ function borrarArchivoSiExiste(dataLoadId, nombreOriginal) {
 // cuando el motor de scoring esté listo (recalcularAgregado, bloqueado).
 async function registrarCargaPorArchivo({ filasValidas, communityId, campusId, quarter, year, userId, rol, nombreArchivo, buffer }) {
   const [comunidades] = await pool.query(
-    'SELECT community_id FROM community WHERE community_id = ? AND campus_id = ? AND status = 1',
-    [communityId, campusId],
+    `SELECT community_id FROM community WHERE community_id = ? AND status = 1${campusId ? ' AND campus_id = ?' : ''}`,
+    campusId ? [communityId, campusId] : [communityId],
   );
   if (!comunidades.length) {
     throw new Error('COMUNIDAD_NO_ENCONTRADA');
@@ -821,8 +826,12 @@ const COLUMNAS_ORDEN = {
 async function obtenerHistorialIca({ campusId, page = 1, pageSize = 10, tipo, communityId, busqueda, estado, sortBy, sortDir }) {
   const offset = (page - 1) * pageSize;
 
-  const condiciones = ['dl.module = ?', 'dl.status != 0', 'c.campus_id = ?'];
-  const parametros = [MODULE_ICA, campusId];
+  const condiciones = ['dl.module = ?', 'dl.status != 0'];
+  const parametros = [MODULE_ICA];
+  if (campusId) {
+    condiciones.push('c.campus_id = ?');
+    parametros.push(campusId);
+  }
 
   if (tipo === 'individuales') {
     condiciones.push('dl.source_type = ?');
@@ -917,9 +926,9 @@ async function eliminarRegistroIndividual({ campusId, dataLoadId }) {
     const [pertenencia] = await conexion.query(
       `SELECT 1 FROM ica_survey_response sr
          INNER JOIN community c ON c.community_id = sr.community_id
-        WHERE sr.data_load_id = ? AND sr.status = 1 AND c.campus_id = ?
+        WHERE sr.data_load_id = ? AND sr.status = 1${campusId ? ' AND c.campus_id = ?' : ''}
         LIMIT 1`,
-      [dataLoadId, campusId],
+      campusId ? [dataLoadId, campusId] : [dataLoadId],
     );
     if (!pertenencia.length) throw new Error('REGISTRO_NO_ENCONTRADO');
 
@@ -969,9 +978,9 @@ async function eliminarArchivoIca({ campusId, dataLoadId }) {
            ON c.community_id = sr.community_id
         WHERE sr.data_load_id = ?
           AND sr.status = 1
-          AND c.campus_id = ?
+          ${campusId ? 'AND c.campus_id = ?' : ''}
         LIMIT 1`,
-      [dataLoadId, campusId],
+      campusId ? [dataLoadId, campusId] : [dataLoadId],
     );
 
     if (!pertenencia.length) {
@@ -1023,13 +1032,13 @@ async function eliminarRespuestaIca({ campusId, surveyResponseId }) {
           AND dl.module = ?
           AND dl.source_type = ?
           AND dl.status != 0
-          AND c.campus_id = ?
+          ${campusId ? 'AND c.campus_id = ?' : ''}
         LIMIT 1`,
       [
         surveyResponseId,
         MODULE_ICA,
         SOURCE_TYPE_ARCHIVO,
-        campusId,
+        ...(campusId ? [campusId] : []),
       ],
     );
 
@@ -1081,9 +1090,9 @@ async function verificarCargaIca({ campusId, dataLoadId }) {
       WHERE dl.data_load_id = ?
         AND dl.module = ?
         AND dl.status = 1
-        AND c.campus_id = ?
+        ${campusId ? 'AND c.campus_id = ?' : ''}
       LIMIT 1`,
-    [dataLoadId, MODULE_ICA, campusId],
+    campusId ? [dataLoadId, MODULE_ICA, campusId] : [dataLoadId, MODULE_ICA],
   );
 
   if (!cargas.length) {
@@ -1136,8 +1145,9 @@ async function obtenerDetalleArchivoIca({ campusId, dataLoadId }) {
   );
 
   // El archivo es de UNA sola comuna, así que si no hay filas, o la comuna
-  // no pertenece a la sede del usuario, no existe para él.
-  if (!respuestas.length || respuestas[0].campus_id !== campusId) {
+  // no pertenece a la sede del usuario, no existe para él (el Superadmin,
+  // con campusId null, ve todas las sedes).
+  if (!respuestas.length || (campusId && respuestas[0].campus_id !== campusId)) {
     throw new Error('ARCHIVO_NO_ENCONTRADO');
   }
 
@@ -1198,7 +1208,7 @@ async function obtenerDatosRegistroIndividual({ campusId, dataLoadId }) {
       LIMIT 1`,
     [dataLoadId],
   );
-  if (!respuestas.length || respuestas[0].campus_id !== campusId) {
+  if (!respuestas.length || (campusId && respuestas[0].campus_id !== campusId)) {
     throw new Error('REGISTRO_NO_ENCONTRADO');
   }
   const fila = respuestas[0];
@@ -1244,8 +1254,12 @@ async function generarDescargaRegistroIndividual({ campusId, dataLoadId, formato
 }
 // Exporta TODAS las encuestas verificadas (estado 2)
 async function obtenerRespuestasIcaExport({ campusId, year, quarter, communityId }) {
-  const condiciones = ['c.campus_id = ?', 'c.status = 1', 'sr.status = 1', 'dl.status = 2'];
-  const parametros = [campusId];
+  const condiciones = ['c.status = 1', 'sr.status = 1', 'dl.status = 2'];
+  const parametros = [];
+  if (campusId) {
+    condiciones.unshift('c.campus_id = ?');
+    parametros.unshift(campusId);
+  }
 
   if (year) { condiciones.push('sr.year = ?'); parametros.push(year); }
   if (quarter) { condiciones.push('sr.quarter = ?'); parametros.push(quarter); }

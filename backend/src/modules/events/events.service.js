@@ -292,6 +292,79 @@ async function dejarDeParticipar(eventId, userId) {
   );
 }
 
+// US55 — asignación de encuestadores por el Admin/Superadmin. Misma tabla que
+// la autoinscripción: si created_modified_by es el propio encuestador, se
+// anotó solo; si no, lo asignó un Admin/Superadmin.
+function aEncuestador(row) {
+  return {
+    id: row.user_id,
+    nombre: [row.first_name, row.paternal_last_name, row.maternal_last_name].filter(Boolean).join(' '),
+    correo: row.email,
+  };
+}
+
+async function obtenerEncuestadoresEvento(eventId, campusId) {
+  const [asignados] = await pool.query(
+    `SELECT u.user_id, u.first_name, u.paternal_last_name, u.maternal_last_name, u.email,
+            es.created_modified_by, es.updated_at, es.created_at
+       FROM event_surveyor es
+       INNER JOIN user u ON u.user_id = es.surveyor_user_id
+      WHERE es.event_id = ? AND es.status = ?
+      ORDER BY u.first_name, u.paternal_last_name`,
+    [eventId, ESTADO.ACTIVO],
+  );
+  // Disponibles: encuestadores activos de la sede del evento que todavía no están asignados.
+  const [disponibles] = await pool.query(
+    `SELECT u.user_id, u.first_name, u.paternal_last_name, u.maternal_last_name, u.email
+       FROM user u
+       INNER JOIN role r ON r.role_id = u.role_id
+      WHERE r.role_name = 'encuestador' AND u.status = ? AND u.campus_id = ?
+        AND u.user_id NOT IN (
+          SELECT surveyor_user_id FROM event_surveyor WHERE event_id = ? AND status = ?
+        )
+      ORDER BY u.first_name, u.paternal_last_name`,
+    [ESTADO.ACTIVO, campusId, eventId, ESTADO.ACTIVO],
+  );
+  return {
+    asignados: asignados.map((row) => ({
+      ...aEncuestador(row),
+      seAnotoSolo: Number(row.created_modified_by) === Number(row.user_id),
+      desde: row.updated_at ?? row.created_at,
+    })),
+    disponibles: disponibles.map(aEncuestador),
+  };
+}
+
+async function esEncuestadorActivoDeSede(userId, campusId) {
+  const [rows] = await pool.query(
+    `SELECT 1
+       FROM user u
+       INNER JOIN role r ON r.role_id = u.role_id
+      WHERE u.user_id = ? AND r.role_name = 'encuestador' AND u.status = ? AND u.campus_id = ?`,
+    [userId, ESTADO.ACTIVO, campusId],
+  );
+  return rows.length > 0;
+}
+
+async function asignarEncuestador(eventId, userId, asignadoPor) {
+  await pool.query(
+    `INSERT INTO event_surveyor (event_id, surveyor_user_id, status, created_modified_by)
+     VALUES (?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE status = VALUES(status), created_modified_by = VALUES(created_modified_by)`,
+    [eventId, userId, ESTADO.ACTIVO, asignadoPor],
+  );
+}
+
+// Devuelve false si el encuestador no estaba asignado.
+async function quitarEncuestador(eventId, userId, quitadoPor) {
+  const [resultado] = await pool.query(
+    `UPDATE event_surveyor SET status = ?, created_modified_by = ?
+      WHERE event_id = ? AND surveyor_user_id = ? AND status = ?`,
+    [ESTADO.INACTIVO, quitadoPor, eventId, userId, ESTADO.ACTIVO],
+  );
+  return resultado.affectedRows > 0;
+}
+
 module.exports = {
   hoyEnBolivia,
   listarEventos,
@@ -305,4 +378,8 @@ module.exports = {
   estaParticipando,
   participarEnEvento,
   dejarDeParticipar,
+  obtenerEncuestadoresEvento,
+  esEncuestadorActivoDeSede,
+  asignarEncuestador,
+  quitarEncuestador,
 };
