@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../../shared/AuthContext';
 import ConfirmDialog from '../../../shared/ConfirmDialog';
-import PanelRevision, { NO_APLICA } from '../components/Aprobaciones.PanelRevision';
+import PanelRevision from '../components/Aprobaciones.PanelRevision';
 import {
   Search,
   ChevronDown,
@@ -17,260 +17,6 @@ import {
 } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
-// ICA —ESTÁTICO
-//
-// Estructura que debe devolver el backend de ICA:
-//   manual -> respuestas: [{ grupo, items: [[pregunta, respuesta], ...] }]
-//   masiva -> resumen: { estadisticas, grupos, alertas }
-//
-// Valores de una respuesta:
-//   'texto'        respuesta normal
-//   ['a', 'b']     varias opciones marcadas
-//   null           sin responder (sale como alerta al aprobador)
-//   NO_APLICA      la pregunta se salta por una respuesta anterior
-// ---------------------------------------------------------------------------
-
-// Preguntas del instrumento ICA, por número.
-const PREGUNTAS_ICA = {
-  1: "¿Usted contribuye económicamente en su hogar y/o participa en la toma de decisiones financieras?",
-  2: "¿Qué edad tiene?",
-  3: "¿Cuál es su sexo?",
-  4: "Nivel de instrucción más alto alcanzado",
-  5: "¿Para qué sirve un seguro?",
-  6: "¿En cuáles de las siguientes actividades necesita un seguro obligatorio?",
-  7: "¿Conoce el significado del término 'tomador' en un seguro?",
-  8: "¿Conoce el significado del término 'siniestro'?",
-  9: "¿Conoce el significado del término 'prima'?",
-  10: "¿Conoce el significado del término 'franquicia'?",
-  11: "¿Conoce el significado del término 'exclusiones'?",
-  12: "¿Quién puede vender un seguro?",
-  13: "¿A quién perjudica más el fraude en el seguro?",
-  14: "¿A dónde acudiría en primer lugar si tuviera que hacer una reclamación?",
-  15: "¿De qué forma ha adquirido sus conocimientos en materia de seguros?",
-  16: "¿Qué método considera más adecuado para mejorar sus conocimientos sobre seguros?",
-  17: "¿Quién cree usted que se ocupa de mejorar la educación en materia de seguros de la población?",
-  18: "¿Qué haría para protegerse y proteger a su familia y patrimonio de un posible riesgo?",
-  19: "¿Cuál es su gasto anual estimado en seguros?",
-  20: "¿Qué está haciendo para preparar su jubilación?",
-  21: "¿Qué nivel de cultura aseguradora considera que tiene?",
-  22: "¿Actualmente tiene un seguro de vida?",
-  23: "¿Cuánto tiempo ha tenido su seguro de vida?",
-  24: "¿Cuál fue la razón principal por la que decidió adquirir un seguro de vida?",
-  25: "¿Con qué frecuencia revisa o actualiza su póliza de seguro de vida?",
-  26: "¿Cambiaría de aseguradora o de plan?",
-  27: "¿Qué tan satisfecho está con su seguro de vida actual?",
-  28: "¿Qué tan probable es que considere adquirir un seguro de vida en el futuro?",
-  29: "¿Cuáles son las principales barreras que le impiden contratar un seguro de vida?",
-  30: "¿En qué medida confía en las aseguradoras en Bolivia?",
-  31: "¿Qué porcentaje de sus ingresos estaría dispuesto a destinar mensualmente para contratarlo?",
-  32: "¿Qué factor considera más importante al momento de decidir si contratar un seguro de vida?",
-};
-
-// Bloques en que se muestran las preguntas en el panel de detalle.
-const BLOQUES_ICA = [
-  { grupo: 'Perfil', preguntas: [1, 2, 3, 4] },
-  {
-    grupo: 'Conocimiento de seguros',
-    preguntas: [5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
-  },
-  { grupo: 'Educación y cultura aseguradora', preguntas: [15, 16, 17, 21] },
-  { grupo: 'Protección y previsión', preguntas: [18, 19, 20] },
-  { grupo: 'Seguro de vida', preguntas: [22, 23, 24, 25, 26, 27] },
-  { grupo: 'Intención y percepción', preguntas: [28, 29, 30, 31, 32] },
-];
-
-// Convierte { 1: 'Sí', 2: '34', ... } en [{ grupo, items }].
-// Una pregunta ausente queda como null (sin responder).
-function armarRespuestasIca(r) {
-  return BLOQUES_ICA.map(({ grupo, preguntas }) => ({
-    grupo,
-    items: preguntas.map((n) => [PREGUNTAS_ICA[n], r[n] ?? null]),
-  }));
-}
-
-const MOCK_ICA = [
-  // Carga masiva
-  {
-    id: 101,
-    tipo: 'masiva',
-    origen: 'ica_zona_sur_3t2026.xlsx',
-    zonas: ['Cotahuma', 'Sopocachi', 'San Antonio'],
-    periodo: '3T 2026',
-    registros: 48,
-    encuestador: 'Carla Mamani',
-    sede: 'La Paz',
-    fecha: '2026-09-28T14:20:00',
-    evento: 'Feria de Seguros La Paz',
-    resumen: {
-      estadisticas: [
-        ['Edad mínima', '18'],
-        ['Edad máxima', '67'],
-        ['Edad promedio', '36'],
-        ['Con seguro de vida', '19 de 48'],
-        ['Cultura aseguradora más frecuente', 'Medio'],
-      ],
-      grupos: [
-        {
-          titulo: 'Encuestas por comuna',
-          items: [
-            ['Cotahuma', 20],
-            ['Sopocachi', 16],
-            ['San Antonio', 12],
-          ],
-        },
-        {
-          titulo: 'Sexo',
-          items: [
-            ['Mujer', 27],
-            ['Hombre', 21],
-          ],
-        },
-        {
-          titulo: 'Nivel de instrucción',
-          items: [
-            ['Universidad', 22],
-            ['Técnico', 11],
-            ['Bachiller', 9],
-            ['Postgrado', 6],
-          ],
-        },
-        {
-          titulo: 'Nivel de cultura aseguradora',
-          items: [
-            ['Muy bajo', 4],
-            ['Bajo', 12],
-            ['Medio', 19],
-            ['Alto', 10],
-            ['Muy alto', 3],
-          ],
-        },
-        {
-          titulo: 'Satisfacción con el seguro de vida (19 con seguro)',
-          items: [
-            ['Muy insatisfecho', 1],
-            ['Insatisfecho', 2],
-            ['Neutral', 4],
-            ['Satisfecho', 8],
-            ['Muy satisfecho', 4],
-          ],
-        },
-        {
-          titulo: 'Principal barrera (29 sin seguro de vida)',
-          items: [
-            ['Falta de información', 9],
-            ['Precio elevado', 7],
-            ['Falta de confianza', 6],
-            ['No tengo ingresos suficientes', 4],
-            ['No lo considero necesario', 3],
-          ],
-        },
-      ],
-      alertas: [
-        '2 encuestas con la pregunta 12 vacía',
-        '1 encuesta con edad no numérica en la pregunta 2',
-        '3 encuestas dicen no tener seguro de vida pero respondieron antigüedad o satisfacción (preguntas 23 a 27)',
-      ],
-    },
-  },
-
-  // Manual: con seguro de vida, todo respondido
-  {
-    id: 102,
-    tipo: 'manual',
-    origen: 'Registro individual',
-    zonas: ['Max Paredes'],
-    periodo: '3T 2026',
-    registros: 1,
-    encuestador: 'Luis Quispe',
-    sede: 'La Paz',
-    fecha: '2026-09-28T09:05:00',
-    evento: 'Feria de Seguros La Paz',
-    respuestas: armarRespuestasIca({
-      1: 'Sí',
-      2: '34',
-      3: 'Mujer',
-      4: 'Universidad',
-      5: 'Para proteger sus bienes y/o su familia ante sucesos inciertos',
-      6: ['Contratar una hipoteca', 'Conducir un vehículo'],
-      7: 'La persona que contrata el seguro',
-      8: 'El perjuicio producido por una persona a otra u otras',
-      9: 'La aportación económica que realiza el asegurado a la compañía de seguros',
-      10: 'Una cantidad por la cual el asegurado es su propio asegurador',
-      11: 'Los riesgos que no están incluidos en las coberturas de la póliza',
-      12: 'Una compañía de seguros',
-      13: 'A la compañía de seguro y a los asegurados',
-      14: 'A la propia compañía de seguros',
-      15: 'Con la experiencia personal',
-      16: 'Consultar materiales diversos (Internet, libros u otros)',
-      17: 'Los organismos reguladores del sector del seguro',
-      18: 'Contratar un seguro',
-      19: 'Entre Bs. 2,501 y Bs. 7,000',
-      20: 'Está aportando a la gestora para cobrar una pensión',
-      21: 'Medio',
-      22: 'Sí',
-      23: 'Entre 1 y 3 años',
-      24: 'Protección financiera para mi familia',
-      25: 'Anualmente',
-      26: 'No, estoy satisfecho con mi seguro actual',
-      27: 'Satisfecho',
-      28: 'Muy probable',
-      29: 'Precio elevado',
-      30: 'Bastante',
-      31: 'Entre 3% y 5% de mis ingresos',
-      32: 'Beneficios y coberturas',
-    }),
-  },
-
-  // Manual: sin seguro de vida (preguntas 23 a 27 "No aplica") y una sin responder
-  {
-    id: 103,
-    tipo: 'manual',
-    origen: 'Registro individual',
-    zonas: ['Sopocachi'],
-    periodo: '3T 2026',
-    registros: 1,
-    encuestador: 'Carla Mamani',
-    sede: 'La Paz',
-    fecha: '2026-09-30T11:30:00',
-    evento: 'Feria de Seguros La Paz',
-    respuestas: armarRespuestasIca({
-      1: 'Sí',
-      2: '52',
-      3: 'Hombre',
-      4: 'Bachiller',
-      5: 'Para la cobertura de todos mis riesgos',
-      6: ['Conducir un vehículo'],
-      7: 'La persona que vende el seguro',
-      8: 'El conjunto de bienes asegurados',
-      9: 'El nivel de protección de los bienes',
-      // 10 sin responder (queda null)
-      11: 'Los riesgos a los que un hogar está expuesto',
-      12: 'Un Banco',
-      13: 'A la compañía aseguradora',
-      14: 'Al Centro de atención al usuario y consumidor',
-      15: 'No sabe de seguros o sabe muy poco',
-      16: 'Asistir a cursos especializados',
-      17: 'No se ocupa nadie',
-      18: 'Ahorrar para subsanar los posibles daños futuros',
-      19: 'Solo lo necesario para seguros obligatorios',
-      20: 'No se lo ha planteado todavía',
-      21: 'Bajo',
-      22: 'No',
-      23: NO_APLICA,
-      24: NO_APLICA,
-      25: NO_APLICA,
-      26: NO_APLICA,
-      27: NO_APLICA,
-      28: 'Poco probable',
-      29: 'No tengo ingresos suficientes',
-      30: 'Poco',
-      31: 'Hasta un 2% de mis ingresos',
-      32: 'Precio',
-    }),
-  },
-];
-
-// ---------------------------------------------------------------------------
 // Configuración
 // ---------------------------------------------------------------------------
 
@@ -281,6 +27,7 @@ const SISTEMAS = {
     columnaZona: 'Comunas',
     placeholderBusqueda: 'Buscar por archivo, comuna o encuestador...',
     filtroZona: 'Todas las comunas',
+    unidadZona: 'comunas',
     descripcion:
       'Encuestas ICA pendientes de revisión. Al aprobarlas pasan a contar en dashboards, explorador y exportación.',
   },
@@ -290,6 +37,7 @@ const SISTEMAS = {
     columnaZona: 'Sectores exportadores',
     placeholderBusqueda: 'Buscar por archivo, sector o encuestador...',
     filtroZona: 'Todos los sectores',
+    unidadZona: 'sectores',
     descripcion:
       'Registros SPE pendientes de revisión. Al aprobarlos se recalculan los índices del sector.',
   },
@@ -326,25 +74,18 @@ function diasEspera(valor) {
 }
 
 /*
- * El backend puede devolver directamente un array o un objeto como
- * { pendientes: [...] }. Soportamos ambos casos para que el componente
- * no dependa de una sola envoltura de respuesta.
+ * El backend puede devolver un array o un objeto como { pendientes: [...] }.
+ * Soportamos ambos casos para no depender de una sola envoltura.
  */
 function extraerPendientes(data) {
   if (Array.isArray(data)) return data;
-
   if (Array.isArray(data?.pendientes)) return data.pendientes;
-
   if (Array.isArray(data?.registros)) return data.registros;
-
   if (Array.isArray(data?.cargas)) return data.cargas;
-
   return [];
 }
 
 /*
- * Normalizamos los nombres que usa la pantalla.
- *
  * La UI trabaja siempre con:
  * id, tipo, origen, zonas, periodo, registros, encuestador,
  * sede, fecha, evento, resumen y respuestas.
@@ -483,25 +224,24 @@ export default function AprobacionesPage() {
   const { token, user } = useAuth();
 
   const rol = String(user?.rol ?? user?.role ?? '').toLowerCase();
-
   const esSuperadmin = rol === 'superadmin' || rol === 'super_admin';
 
-  /*
-   * ICA queda estático.
-   * SPE sí viene del backend.
-   */
-  const [sistema, setSistema] = useState('spe');
+  // SPE solo lo ve el Superadmin. Si el rol aún no se conoce, no se bloquea.
+  const puedeVerSpe = esSuperadmin || !rol;
+
+  const sistemasDisponibles = useMemo(
+    () => Object.values(SISTEMAS).filter((s) => s.id !== 'spe' || puedeVerSpe),
+    [puedeVerSpe],
+  );
+
+  const [sistema, setSistema] = useState('ica');
 
   const [busqueda, setBusqueda] = useState('');
   const [zona, setZona] = useState('');
   const [sede, setSede] = useState('');
 
-  const [pendientes, setPendientes] = useState({
-    ica: MOCK_ICA,
-    spe: [],
-  });
-
-  const [cargandoSpe, setCargandoSpe] = useState(true);
+  const [pendientes, setPendientes] = useState({ ica: [], spe: [] });
+  const [cargando, setCargando] = useState({ ica: true, spe: puedeVerSpe });
   const [error, setError] = useState('');
 
   const [accion, setAccion] = useState(null);
@@ -512,25 +252,21 @@ export default function AprobacionesPage() {
 
   const cfg = SISTEMAS[sistema];
   const lista = pendientes[sistema];
+  const cargandoActual = cargando[sistema];
 
   // -------------------------------------------------------------------------
-  // GET /api/spe/pendientes
+  // GET /api/ica/pendientes  y  GET /api/spe/pendientes
   // -------------------------------------------------------------------------
 
   useEffect(() => {
-    if (sistema !== 'spe') return;
-
     let cancelado = false;
 
-    async function cargarPendientesSpe() {
-      setCargandoSpe(true);
-      setError('');
+    async function cargarSistema(id) {
+      setCargando((prev) => ({ ...prev, [id]: true }));
 
       try {
-        const res = await fetch('/api/spe/pendientes', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+        const res = await fetch(`/api/${id}/pendientes`, {
+          headers: { Authorization: `Bearer ${token}` },
         });
 
         const data = await res.json();
@@ -539,17 +275,13 @@ export default function AprobacionesPage() {
           throw new Error(
             data.message ||
               data.error ||
-              'No se pudieron cargar las cargas pendientes SPE',
+              `No se pudieron cargar las cargas pendientes ${SISTEMAS[id].label}`,
           );
         }
 
         if (!cancelado) {
           const registros = extraerPendientes(data).map(normalizarRegistro);
-
-          setPendientes((prev) => ({
-            ...prev,
-            spe: registros,
-          }));
+          setPendientes((prev) => ({ ...prev, [id]: registros }));
         }
       } catch (err) {
         if (!cancelado) {
@@ -557,17 +289,18 @@ export default function AprobacionesPage() {
         }
       } finally {
         if (!cancelado) {
-          setCargandoSpe(false);
+          setCargando((prev) => ({ ...prev, [id]: false }));
         }
       }
     }
 
-    cargarPendientesSpe();
+    setError('');
+    sistemasDisponibles.forEach((s) => cargarSistema(s.id));
 
     return () => {
       cancelado = true;
     };
-  }, [token, sistema]);
+  }, [token, sistemasDisponibles]);
 
   // -------------------------------------------------------------------------
   // Filtros
@@ -608,29 +341,23 @@ export default function AprobacionesPage() {
     0,
   );
 
- 
-
+  // Cerrar el panel con Escape
   useEffect(() => {
     if (!detalle || accion) return undefined;
 
     const alTeclear = (e) => {
-      if (e.key === 'Escape') {
-        setDetalle(null);
-      }
+      if (e.key === 'Escape') setDetalle(null);
     };
 
     window.addEventListener('keydown', alTeclear);
-
     return () => window.removeEventListener('keydown', alTeclear);
   }, [detalle, accion]);
 
-
-
+  // Ocultar el aviso automáticamente
   useEffect(() => {
     if (!aviso) return undefined;
 
     const id = setTimeout(() => setAviso(''), 4000);
-
     return () => clearTimeout(id);
   }, [aviso]);
 
@@ -649,7 +376,7 @@ export default function AprobacionesPage() {
   }
 
   // -------------------------------------------------------------------------
-  // PATCH /api/spe/cargas/:id/estado
+  // PATCH /api/:sistema/cargas/:id/estado
   // -------------------------------------------------------------------------
 
   async function confirmarAccion() {
@@ -668,7 +395,7 @@ export default function AprobacionesPage() {
     try {
       const estado = tipo === 'aprobar' ? 'aprobada' : 'rechazada';
 
-      const res = await fetch(`/api/spe/cargas/${registro.id}/estado`, {
+      const res = await fetch(`/api/${sistema}/cargas/${registro.id}/estado`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -690,10 +417,9 @@ export default function AprobacionesPage() {
         );
       }
 
-     
       setPendientes((prev) => ({
         ...prev,
-        spe: prev.spe.filter((r) => r.id !== registro.id),
+        [sistema]: prev[sistema].filter((r) => r.id !== registro.id),
       }));
 
       setAviso(
@@ -717,19 +443,19 @@ export default function AprobacionesPage() {
   const tarjetas = [
     {
       label: 'Cargas pendientes',
-      valor: cargandoSpe ? '...' : lista.length,
+      valor: cargandoActual ? '...' : lista.length,
       Icono: Clock,
       estilo: 'bg-[#fbf1de] text-[#b7891e]',
     },
     {
       label: 'Encuestas por revisar',
-      valor: cargandoSpe ? '...' : totalEncuestas,
+      valor: cargandoActual ? '...' : totalEncuestas,
       Icono: ShieldCheck,
       estilo: 'bg-[#fbe9f0] text-[#a00046]',
     },
     {
       label: 'Espera más larga',
-      valor: cargandoSpe ? '...' : `${masAntigua} d`,
+      valor: cargandoActual ? '...' : `${masAntigua} d`,
       Icono: Clock,
       estilo: 'bg-[#e8f1fb] text-[#2f6fb0]',
     },
@@ -737,9 +463,6 @@ export default function AprobacionesPage() {
 
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-[#f4f6f8] px-4 py-5 sm:px-6 lg:px-8">
-
-      
-
       {aviso && (
         <div
           role="status"
@@ -760,10 +483,8 @@ export default function AprobacionesPage() {
           </button>
         </div>
       )}
-      {/* ----------------------------------------------------------------- */}
-      {/* Confirmación aprobar */}
-      {/* ----------------------------------------------------------------- */}
 
+      {/* Confirmación aprobar */}
       <ConfirmDialog
         open={accion?.tipo === 'aprobar'}
         titulo="¿Aprobar esta carga?"
@@ -775,10 +496,7 @@ export default function AprobacionesPage() {
         onCancel={() => !procesando && setAccion(null)}
       />
 
-      {/* ----------------------------------------------------------------- */}
       {/* Confirmación rechazar */}
-      {/* ----------------------------------------------------------------- */}
-
       {accion?.tipo === 'rechazar' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
           <div
@@ -838,10 +556,7 @@ export default function AprobacionesPage() {
         </div>
       )}
 
-      {/* ----------------------------------------------------------------- */}
       {/* Panel de revisión */}
-      {/* ----------------------------------------------------------------- */}
-
       {detalle && (
         <PanelRevision
           registro={detalle}
@@ -857,7 +572,6 @@ export default function AprobacionesPage() {
 
       <div className="mx-auto max-w-[1120px]">
         {/* Encabezado */}
-
         <div className="mb-5">
           <h1 className="text-2xl font-bold tracking-tight text-[#202522] sm:text-[28px]">
             Aprobación de encuestas
@@ -867,7 +581,6 @@ export default function AprobacionesPage() {
         </div>
 
         {/* Tarjetas */}
-
         <section className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
           {tarjetas.map(({ label, valor, Icono, estilo }) => (
             <div
@@ -892,30 +605,25 @@ export default function AprobacionesPage() {
         </section>
 
         {/* Tabs + filtros */}
-
         <section className="mb-5 flex flex-col gap-3 rounded-xl border border-[#e2e6e8] bg-white p-3 shadow-sm lg:flex-row lg:items-center">
           <div className="inline-flex rounded-lg bg-[#f4f6f8] p-1">
-            {Object.values(SISTEMAS)
-              .filter((s) => s.id !== 'spe' || esSuperadmin || !rol)
-              .map((s) => (
-                <button
-                  key={s.id}
-                  onClick={() => cambiarSistema(s.id)}
-                  className={`inline-flex items-center gap-2 rounded-md px-3.5 py-1.5 text-xs font-semibold transition ${
-                    sistema === s.id
-                      ? 'bg-white text-[#202522] shadow-sm'
-                      : 'text-[#8a9290] hover:text-[#59615e]'
-                  }`}
-                >
-                  {s.label}
+            {sistemasDisponibles.map((s) => (
+              <button
+                key={s.id}
+                onClick={() => cambiarSistema(s.id)}
+                className={`inline-flex items-center gap-2 rounded-md px-3.5 py-1.5 text-xs font-semibold transition ${
+                  sistema === s.id
+                    ? 'bg-white text-[#202522] shadow-sm'
+                    : 'text-[#8a9290] hover:text-[#59615e]'
+                }`}
+              >
+                {s.label}
 
-                  <span className="rounded-full bg-[#fbe9f0] px-1.5 py-0.5 text-[10px] font-bold text-[#a00046]">
-                    {s.id === 'spe' && cargandoSpe
-                      ? '...'
-                      : pendientes[s.id].length}
-                  </span>
-                </button>
-              ))}
+                <span className="rounded-full bg-[#fbe9f0] px-1.5 py-0.5 text-[10px] font-bold text-[#a00046]">
+                  {cargando[s.id] ? '...' : pendientes[s.id].length}
+                </span>
+              </button>
+            ))}
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
@@ -981,7 +689,6 @@ export default function AprobacionesPage() {
         </section>
 
         {/* Error */}
-
         {error && (
           <div className="mb-5 flex items-center justify-between gap-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
             <span>{error}</span>
@@ -996,7 +703,6 @@ export default function AprobacionesPage() {
         )}
 
         {/* Tabla */}
-
         <section className="overflow-hidden rounded-xl border border-[#e2e6e8] bg-white shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[980px] text-left text-xs">
@@ -1013,7 +719,7 @@ export default function AprobacionesPage() {
               </thead>
 
               <tbody>
-                {sistema === 'spe' && cargandoSpe ? (
+                {cargandoActual ? (
                   <tr>
                     <td
                       colSpan={7}
@@ -1023,7 +729,7 @@ export default function AprobacionesPage() {
                         size={18}
                         className="mx-auto mb-2 animate-spin"
                       />
-                      Cargando cargas pendientes SPE...
+                      Cargando cargas pendientes {cfg.label}...
                     </td>
                   </tr>
                 ) : filtrados.length === 0 ? (
@@ -1083,9 +789,7 @@ export default function AprobacionesPage() {
                         <td className="px-4 py-3" title={zonasR.join(', ')}>
                           {zonasR.length === 1
                             ? zonasR[0]
-                            : `${zonasR.length} ${
-                                sistema === 'ica' ? 'comunas' : 'sectores'
-                              }`}
+                            : `${zonasR.length} ${cfg.unidadZona}`}
 
                           {zonasR.length > 1 && (
                             <p className="max-w-[180px] truncate text-[10px] text-[#8a9290]">

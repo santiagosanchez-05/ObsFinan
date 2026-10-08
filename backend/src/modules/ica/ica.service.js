@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const xlsx = require('xlsx');
 const pool = require('../../config/db');
+const { ESTADO_CARGA } = require('../../config/estados');
 const { filaEncuestaIcaSchema, ENCABEZADOS_ESPERADOS, OPCIONES } = require('./ica.validation');
 
 // module: 1=ICA, 2=SPE; source_type: 1=individual, 2=archivo
@@ -469,13 +470,15 @@ async function obtenerExploradorPreguntas({ campusId, year, quarter, communityId
   }
 
   const [filas] = await pool.query(
-    `SELECT sr.year, sr.quarter, ${columnas.join(', ')}
-       FROM ica_survey_response sr
-       INNER JOIN community c ON c.community_id = sr.community_id
-      WHERE ${condiciones.join(' AND ')}
-      ORDER BY sr.year DESC, sr.quarter DESC`,
-    parametros,
-  );
+  `SELECT sr.year, sr.quarter, ${columnas.join(', ')}
+     FROM ica_survey_response sr
+     INNER JOIN community c ON c.community_id = sr.community_id
+     INNER JOIN data_load dl ON dl.data_load_id = sr.data_load_id
+                            AND dl.status = ${ESTADO_CARGA.APROBADA}
+    WHERE ${condiciones.join(' AND ')}
+    ORDER BY sr.year DESC, sr.quarter DESC`,
+  parametros,
+);
 
   let filasPeriodo = filas;
   let periodo = null;
@@ -620,9 +623,16 @@ function promedioGeneralGrupo(filasGrupo) {
 // se actualiza siempre la misma fila con el promedio acumulado.
 async function recalcularAgregadoManual({ conexion, communityId, year, quarter, dataLoadId }) {
   const [filas] = await conexion.query(
-    'SELECT * FROM ica_survey_response WHERE community_id = ? AND year = ? AND quarter = ? AND status = 1',
-    [communityId, year, quarter],
-  );
+  `SELECT sr.*
+     FROM ica_survey_response sr
+     INNER JOIN data_load dl ON dl.data_load_id = sr.data_load_id
+    WHERE sr.community_id = ?
+      AND sr.year = ?
+      AND sr.quarter = ?
+      AND sr.status = 1
+      AND dl.status = ?`,
+  [communityId, year, quarter, ESTADO_CARGA.APROBADA],
+);
 
   const mediciones = filas.map((fila) => medirEntrevista(filaSqlARespuestas(fila)));
   const knowledgeIndex = Number(promedio(mediciones.map((m) => m.conocimiento)).toFixed(2));
@@ -1363,4 +1373,6 @@ module.exports = {
   obtenerDatasetIcaExport,
   obtenerPlantillaIca,
   estadoInicialCarga,
+  CAMPOS_ENCUESTA,
+  recalcularAgregadoManual,
 };
