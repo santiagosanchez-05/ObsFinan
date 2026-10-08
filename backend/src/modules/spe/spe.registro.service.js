@@ -95,7 +95,7 @@ async function registrarRegistroIndividual({ userId, ...respuestas }) {
       `INSERT INTO spe_survey_response
          (data_load_id, year, semester, surveyor_user_id, event_id, ${columnas.join(', ')}, status)
        VALUES (?, ?, ?, ?, ?, ${columnas.map(() => '?').join(', ')}, 1)`,
-      [carga.insertId, respuestas.year, respuestas.semester, null, null, ...valores],
+      [carga.insertId, respuestas.year, respuestas.semester, userId, null, ...valores],
     );
     await conexion.commit();
     return { dataLoadId: carga.insertId, surveyResponseId: respuesta.insertId };

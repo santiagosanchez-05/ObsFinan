@@ -44,7 +44,9 @@ export default function RegistrarSpePage() {
       });
       const body = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(body.error || 'No se pudo guardar el registro SPE.');
+        const errores = body.detalles?.fieldErrors || {};
+        const primerError = Object.values(errores).flat()[0];
+        throw new Error(primerError || body.error || 'No se pudo guardar el registro SPE.');
       }
       setSaved(true);
     } catch (requestError) {
