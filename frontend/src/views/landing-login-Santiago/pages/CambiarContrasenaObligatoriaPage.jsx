@@ -12,7 +12,6 @@ const FORMATO_TEMPORAL_REGEX = /^UVL-[A-Za-z0-9]{6}$/i;
 
 const schema = z
   .object({
-    currentPassword: z.string().min(1, 'Ingresá tu contraseña temporal'),
     newPassword: z
       .string()
       .min(8, 'Debe tener al menos 8 caracteres')
@@ -29,10 +28,9 @@ const schema = z
   });
 
 export default function CambiarContrasenaObligatoriaPage() {
-  const { token, user, actualizarUsuario, logout } = useAuth();
+  const { token, user, login, logout } = useAuth();
   const navigate = useNavigate();
 
-  const [verActual, setVerActual] = useState(false);
   const [verNueva, setVerNueva] = useState(false);
   const [verConfirmar, setVerConfirmar] = useState(false);
   const [cargando, setCargando] = useState(false);
@@ -56,20 +54,22 @@ export default function CambiarContrasenaObligatoriaPage() {
     setErrorServidor('');
     setCargando(true);
     try {
-      const res = await fetch('/api/auth/change-password', {
+      // Acaba de ingresar con la temporal: el token ya lo prueba, así que no
+      // se le vuelve a pedir. El backend devuelve un token nuevo sin la marca.
+      const res = await fetch('/api/auth/first-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ currentPassword: data.currentPassword, newPassword: data.newPassword }),
+        body: JSON.stringify({ newPassword: data.newPassword }),
       });
       const body = await res.json();
       if (!res.ok) {
         setErrorServidor(body.error || 'No se pudo actualizar la contraseña');
         return;
       }
-      actualizarUsuario({ debeCambiarPassword: false });
+      login({ token: body.token, user: { ...user, debeCambiarPassword: false } });
       navigate(DEFAULT_ROUTE_BY_ROLE[user.role] ?? '/', { replace: true });
     } catch {
-      setErrorServidor('No se pudo conectar con el servidor. Intentá de nuevo.');
+      setErrorServidor('No se pudo conectar con el servidor. Intenta de nuevo.');
     } finally {
       setCargando(false);
     }
@@ -81,42 +81,15 @@ export default function CambiarContrasenaObligatoriaPage() {
         <div className="rounded-2xl border border-black/5 bg-white shadow-sm">
           <div className="flex flex-col items-center px-8 pt-8 pb-6 text-center">
             <img src={univalleLogo} alt="Univalle" className="h-12 w-12" />
-            <h1 className="mt-3 text-lg font-bold text-ink">Tenés que cambiar tu contraseña</h1>
+            <h1 className="mt-3 text-lg font-bold text-ink">Tienes que cambiar tu contraseña</h1>
             <p className="mt-2 flex items-center gap-1.5 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
               <ShieldAlert size={14} className="shrink-0" />
-              Iniciaste sesión con una contraseña temporal. Elegí una nueva antes de seguir.
+              Iniciaste sesión con una contraseña temporal. Elige una nueva antes de seguir.
             </p>
           </div>
 
           <div className="border-t border-black/5 px-8 py-6">
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <div>
-                <label htmlFor="currentPassword" className="mb-1 block text-sm font-medium text-ink">
-                  Contraseña temporal
-                </label>
-                <div className="relative">
-                  <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/40" />
-                  <input
-                    id="currentPassword"
-                    type={verActual ? 'text' : 'password'}
-                    autoComplete="current-password"
-                    {...register('currentPassword')}
-                    className="w-full rounded-lg border border-black/10 bg-surface py-2.5 pl-9 pr-9 text-sm focus:border-maroon focus:outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setVerActual((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-ink/40"
-                    tabIndex={-1}
-                  >
-                    {verActual ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-                {errors.currentPassword && (
-                  <p className="mt-1 text-xs text-red-600">{errors.currentPassword.message}</p>
-                )}
-              </div>
-
               <div>
                 <label htmlFor="newPassword" className="mb-1 block text-sm font-medium text-ink">
                   Nueva contraseña

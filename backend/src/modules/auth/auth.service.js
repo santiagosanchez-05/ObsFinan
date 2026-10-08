@@ -22,6 +22,19 @@ async function buscarUsuarioPorCorreo(email) {
   return rows[0] || null;
 }
 
+function firmarToken(usuario, { debeCambiarPassword = false } = {}) {
+  return jwt.sign(
+    {
+      userId: usuario.user_id,
+      role: usuario.role_name,
+      campusId: usuario.campus_id,
+      ...(debeCambiarPassword ? { debeCambiarPassword: true } : {}),
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: TOKEN_EXPIRA_EN },
+  );
+}
+
 async function login(email, password) {
   const usuario = await buscarUsuarioPorCorreo(email);
 
@@ -36,17 +49,16 @@ async function login(email, password) {
     throw new Error('CREDENCIALES_INVALIDAS');
   }
 
-  const token = jwt.sign(
-    { userId: usuario.user_id, role: usuario.role_name, campusId: usuario.campus_id },
-    process.env.JWT_SECRET,
-    { expiresIn: TOKEN_EXPIRA_EN },
-  );
-
   // No guardamos ningún flag en la base para esto — la propia contraseña que
   // acaba de escribir YA nos dice si es una temporal (formato UVL-XXXXXX),
   // porque ese formato está prohibido para cualquier contraseña elegida por
   // el usuario (ver passwordSchema). Si coincide, es porque todavía no la cambió.
   const debeCambiarPassword = FORMATO_TEMPORAL_REGEX.test(password);
+
+  // La marca va FIRMADA dentro del token: requireAuth bloquea todo lo demás
+  // hasta que la cambie, y /first-password la acepta como prueba de que acaba
+  // de ingresar con la temporal (por eso no le pedimos la contraseña actual).
+  const token = firmarToken(usuario, { debeCambiarPassword });
 
   return {
     token,
@@ -172,6 +184,18 @@ async function cambiarPasswordPropia(userId, currentPassword, newPassword) {
   await pool.query('UPDATE user SET password_hash = ? WHERE user_id = ?', [passwordHash, userId]);
 }
 
+// Primer ingreso: el token ya prueba que acaba de entrar con la contraseña
+// temporal, así que solo se pide la nueva. Devuelve un token nuevo, sin la marca.
+async function establecerPasswordInicial({ userId, role, campusId }, newPassword) {
+  const [rows] = await pool.query('SELECT user_id FROM user WHERE user_id = ? AND status = 1', [userId]);
+  if (!rows.length) {
+    throw new Error('USUARIO_NO_ENCONTRADO');
+  }
+  const passwordHash = await bcrypt.hash(newPassword, 10);
+  await pool.query('UPDATE user SET password_hash = ? WHERE user_id = ?', [passwordHash, userId]);
+  return firmarToken({ user_id: userId, role_name: role, campus_id: campusId });
+}
+
 async function actualizarPerfil(userId, datos) {
   const firstName = (datos.first_name ?? datos.nombres ?? '').trim();
   const paternalLastName = (datos.paternal_last_name ?? datos.apellidoPaterno ?? '').trim();
@@ -225,6 +249,7 @@ module.exports = {
   verificarCodigo,
   restablecerContrasena,
   cambiarPasswordPropia,
+  establecerPasswordInicial,
   actualizarPerfil,
 };
 
