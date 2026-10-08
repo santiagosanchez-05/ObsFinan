@@ -1,6 +1,7 @@
-import PlaceholderPage from '../../../shared/PlaceholderPage';
+import { useParams } from 'react-router-dom';
+import ICARegisterPage from '../../ica/pages/ICARegisterPage';
 
-// Liz — US57. Reemplaza el placeholder por tu pantalla.
 export default function EncuestaIcaPage() {
-  return <PlaceholderPage titulo="Registrar encuesta ICA" historia="US57" encargado="Liz" />;
+  const { eventId } = useParams();
+  return <ICARegisterPage eventId={eventId} encuestador />;
 }

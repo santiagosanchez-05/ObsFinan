@@ -163,6 +163,7 @@ const entrevistaIcaSchema = z.object({
   communityId: z.coerce.number().int().positive('Falta seleccionar la comuna'),
   quarter: z.coerce.number().int().min(1).max(4, { message: 'Trimestre inválido (1-4)' }),
   year: z.coerce.number().int().min(2019).max(new Date().getFullYear()),
+  eventId: z.coerce.number().int().positive().optional(),
 }).and(z.preprocess((data) => ({ ...data, filaExcel: 0 }), filaEncuestaIcaSchema));
 
 module.exports = {

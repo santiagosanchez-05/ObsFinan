@@ -31,7 +31,7 @@ router.get('/:id/download', requireAuth, requireRole('admin', 'superadmin'), dow
 router.post('/', requireAuth, requireRole('admin', 'superadmin'), postRegistroIca);
 // US57 (Liz): sumar el rol 'encuestador'. Si lo manda un encuestador, el body trae eventId y
 // se valida que el evento esté asignado a él (event_surveyor) y tenga has_ica = 1; si no, 400.
-router.post('/entrevistas', requireAuth, requireRole('admin', 'superadmin'), postEntrevistaIca);
+router.post('/entrevistas', requireAuth, requireRole('admin', 'superadmin', 'encuestador'), postEntrevistaIca);
 router.post('/upload', requireAuth, requireRole('admin', 'superadmin'), upload.single('archivo'), postUploadIca);
 router.delete('/:id', requireAuth, requireRole('admin', 'superadmin'), deleteRegistroIca);
 router.delete('/files/:id', requireAuth, requireRole('admin', 'superadmin'), deleteArchivoIca);
