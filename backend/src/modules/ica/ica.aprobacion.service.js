@@ -27,7 +27,8 @@ const BLOQUES_ICA = [
 ];
 
 // Preguntas 23 a 27: solo aplican si q22 (tiene seguro de vida) = 'Sí'
-const esCondicional = (n) => n >= 23 && n <= 27;
+const SOLO_CON_SEGURO = [23, 24, 25, 26, 27];
+const SOLO_SIN_SEGURO = [28, 29];
 
 const vacio = (v) => v === null || v === undefined || v === '';
 
@@ -40,24 +41,42 @@ function filaANumeradas(fila) {
   return r;
 }
 
+// DESPUÉS
 const tieneSeguro = (r) => r[22] === 'Sí';
 
-// ¿La pregunta n debía responderse en esta entrevista?
-const aplica = (n, r) => !esCondicional(n) || tieneSeguro(r);
+// ¿Le tocaba responder la pregunta n?
+function aplica(n, r) {
+  if (SOLO_CON_SEGURO.includes(n)) return r[22] === 'Sí';
+  if (SOLO_SIN_SEGURO.includes(n)) return r[22] === 'No';
+  return true;
+}
 
+// DESPUÉS
 function armarRespuestas(fila) {
   const r = filaANumeradas(fila);
 
   return BLOQUES_ICA.map(({ grupo, preguntas }) => ({
     grupo,
     items: preguntas.map((n) => {
+      const pregunta = ENCABEZADOS_ESPERADOS[n - 1];
+
+      // No le correspondía -> "No aplica"
+      if (!aplica(n, r)) return [pregunta, NO_APLICA];
+
       let valor = r[n];
-      if (esCondicional(n) && !tieneSeguro(r) && vacio(valor)) valor = NO_APLICA;
-      return [ENCABEZADOS_ESPERADOS[n - 1], vacio(valor) ? null : valor];
+
+      // Le correspondía y está vacío -> "Sin responder"
+      if (vacio(valor)) return [pregunta, null];
+
+      // Texto libre de "Otra (Especifique)"
+      if (n === 24 && valor === 'Otra (Especifique)' && fila.q24b_reason_other_text) {
+        valor = `Otra: ${fila.q24b_reason_other_text}`;
+      }
+
+      return [pregunta, valor];
     }),
   }));
 }
-
 function contar(valores) {
   const conteo = new Map();
   valores.forEach((v) => {
@@ -123,16 +142,18 @@ function armarResumen(filas, comunaPorFila) {
     );
   }
 
-  const incoherentes = sinSeguro.filter((r) =>
-    [23, 24, 25, 26, 27].some((n) => !vacio(r[n])),
-  ).length;
-  if (incoherentes > 0) {
-    alertas.push(
-      `${incoherentes} ${
-        incoherentes === 1 ? 'encuesta dice' : 'encuestas dicen'
-      } no tener seguro de vida pero respondieron antigüedad o satisfacción (preguntas 23 a 27)`,
-    );
-  }
+  // DESPUÉS
+const incoherentes =
+  sinSeguro.filter((r) => SOLO_CON_SEGURO.some((n) => !vacio(r[n]))).length +
+  conSeguro.filter((r) => SOLO_SIN_SEGURO.some((n) => !vacio(r[n]))).length;
+
+if (incoherentes > 0) {
+  alertas.push(
+    `${incoherentes} ${
+      incoherentes === 1 ? 'encuesta tiene' : 'encuestas tienen'
+    } respuestas que no corresponden a su respuesta sobre el seguro de vida`,
+  );
+}
 
   return { estadisticas, grupos, alertas };
 }
