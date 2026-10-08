@@ -663,12 +663,29 @@ async function recalcularAgregadoManual({ conexion, communityId, year, quarter, 
     [communityId, dataLoadId, year, quarter, knowledgeIndex, usageIndex, educationIndex, foresightIndex, icaMale, icaFemale],
   );
 }
-async function registrarEntrevistaIndividual({ communityId, year, quarter, userId, campusId, rol, ...respuestas }) {
+async function registrarEntrevistaIndividual({ communityId, year, quarter, eventId, userId, campusId, rol, ...respuestas }) {
   const [comunidades] = await pool.query(
     'SELECT community_id FROM community WHERE community_id = ? AND campus_id = ? AND status = 1',
     [communityId, campusId],
   );
   if (!comunidades.length) throw new Error('COMUNIDAD_NO_ENCONTRADA');
+
+  if (rol === 'encuestador') {
+    const [eventos] = await pool.query(
+      `SELECT e.event_id
+         FROM event e
+         INNER JOIN event_surveyor es
+           ON es.event_id = e.event_id
+          AND es.surveyor_user_id = ?
+          AND es.status = 1
+        WHERE e.event_id = ?
+          AND e.has_ica = 1
+          AND e.status = 1
+        LIMIT 1`,
+      [userId, eventId],
+    );
+    if (!eventos.length) throw new Error('EVENTO_ICA_NO_ASIGNADO');
+  }
 
   const conexion = await pool.getConnection();
   try {
@@ -682,9 +699,9 @@ async function registrarEntrevistaIndividual({ communityId, year, quarter, userI
     const valores = CAMPOS_ENCUESTA.map(([campo]) => respuestas[campo] ?? null);
     const [respuesta] = await conexion.query(
       `INSERT INTO ica_survey_response
-         (data_load_id, community_id, year, quarter, surveyor_user_id, ${columnas.join(', ')}, status)
-       VALUES (?, ?, ?, ?, ?, ${columnas.map(() => '?').join(', ')}, 1)`,
-      [carga.insertId, communityId, year, quarter, userId, ...valores],
+         (data_load_id, community_id, year, quarter, surveyor_user_id, event_id, ${columnas.join(', ')}, status)
+       VALUES (?, ?, ?, ?, ?, ?, ${columnas.map(() => '?').join(', ')}, 1)`,
+      [carga.insertId, communityId, year, quarter, userId, eventId ?? null, ...valores],
     );
    
     await conexion.commit();

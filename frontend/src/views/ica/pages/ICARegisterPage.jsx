@@ -41,7 +41,7 @@ const PREGUNTAS = [
   ['q32MostImportantFactor', '¿Qué factor considera más importante al momento de decidir si contratar un seguro de vida?', ['Precio', 'Beneficios y coberturas', 'Confianza en la aseguradora', 'Experiencia previa con seguros', 'Recomendación de un familiar o amigo']],
 ];
 
-export default function ICARegisterPage() {
+export default function ICARegisterPage({ eventId = null, encuestador = false }) {
   const [guardado, setGuardado] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [errorServidor, setErrorServidor] = useState('');
@@ -96,7 +96,7 @@ export default function ICARegisterPage() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(datos),
+        body: JSON.stringify({ ...datos, ...(eventId ? { eventId: Number(eventId) } : {}) }),
       });
       const resultado = await respuesta.json();
       if (!respuesta.ok) throw new Error(resultado.error || 'No se pudo guardar la entrevista');
@@ -114,9 +114,9 @@ export default function ICARegisterPage() {
         <div className="mx-auto max-w-lg rounded-xl border border-[#e2e6e8] bg-white p-8 text-center shadow-sm">
           <CheckCircle2 size={40} className="mx-auto text-[#3c8d66]" />
           <h1 className="mt-3 text-xl font-bold text-[#252927]">Formulario completado</h1>
-          <p className="mt-2 text-sm text-[#6d7673]">La entrevista se guardó correctamente y sus resultados ya están disponibles en el dashboard ICA.</p>
-          <Link to="/ica" className="mt-6 inline-flex rounded-lg bg-[#a00046] px-5 py-2.5 text-xs font-semibold text-white hover:bg-[#820039]">
-            Volver al dashboard
+          <p className="mt-2 text-sm text-[#6d7673]">{encuestador ? 'La encuesta se guardó correctamente y quedó pendiente de aprobación.' : 'La entrevista se guardó correctamente y sus resultados ya están disponibles en el dashboard ICA.'}</p>
+          <Link to={encuestador ? '/encuestador/eventos' : '/ica'} className="mt-6 inline-flex rounded-lg bg-[#a00046] px-5 py-2.5 text-xs font-semibold text-white hover:bg-[#820039]">
+            {encuestador ? 'Volver a mis eventos' : 'Volver al dashboard'}
           </Link>
         </div>
       </main>
@@ -126,13 +126,13 @@ export default function ICARegisterPage() {
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-[#f4f6f8] px-4 py-5 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-2xl">
-        <Link to="/ica" className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#a00046] hover:underline">
+        <Link to={encuestador ? '/encuestador/eventos' : '/ica'} className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#a00046] hover:underline">
           <ArrowLeft size={13} /> Volver al Dashboard ICA
         </Link>
 
         <div className="mb-5 mt-3">
-          <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.18em] text-[#a00046]">Registro individual</p>
-          <h1 className="text-2xl font-bold tracking-tight text-[#202522] sm:text-[28px]">Registrar nuevo registro — ICA</h1>
+          <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.18em] text-[#a00046]">{encuestador ? 'Encuesta de campo' : 'Registro individual'}</p>
+          <h1 className="text-2xl font-bold tracking-tight text-[#202522] sm:text-[28px]">{encuestador ? 'Registrar encuesta ICA' : 'Registrar nuevo registro — ICA'}</h1>
           <p className="mt-1 max-w-xl text-sm text-[#6d7673]">Aplicá el instrumento ICA a una persona. Las respuestas se organizan en 32 preguntas y la pregunta 22 define el bloque que corresponde completar.</p>
         </div>
 
