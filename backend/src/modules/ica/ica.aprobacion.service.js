@@ -1,7 +1,8 @@
 const pool = require('../../config/db');
 const { MODULO, ESTADO_CARGA } = require('../../config/estados');
 const { ENCABEZADOS_ESPERADOS } = require('./ica.validation');
-const { CAMPOS_ENCUESTA, recalcularAgregadoManual } = require('./ica.service');
+const { CAMPOS_ENCUESTA } = require('./ica.service');
+const { recalcularAgregadoIca } = require('./ica.scoring.service');
 
 const SOURCE_TYPE_ARCHIVO = 2;
 
@@ -299,7 +300,13 @@ async function cambiarEstadoCargaIca({ dataLoadId, estado, motivo, revisorId, ca
     // dentro de la misma transacción: si falla el cálculo, no queda aprobada.
     if (estado === 'aprobada') {
       for (const { community_id: communityId, year, quarter } of combinaciones) {
-        await recalcularAgregadoManual({ conexion, communityId, year, quarter, dataLoadId });
+        await recalcularAgregadoIca({
+          conexion,
+          communityId,
+          year,
+          quarter,
+          dataLoadId,
+        });
       }
     }
 
