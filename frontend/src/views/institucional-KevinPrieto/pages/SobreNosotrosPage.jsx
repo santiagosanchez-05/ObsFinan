@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import CitaAcademica from '../../../shared/CitaAcademica';
 
 export const SobreNosotrosPage = () => {
   return (
@@ -145,6 +146,13 @@ export const SobreNosotrosPage = () => {
               </p>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Cómo citar (Santiago — cita académica) */}
+      <section className="px-6 py-12">
+        <div className="mx-auto max-w-4xl">
+          <CitaAcademica recurso="observatorio" />
         </div>
       </section>
 

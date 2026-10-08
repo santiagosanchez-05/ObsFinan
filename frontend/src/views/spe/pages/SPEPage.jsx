@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ROLES } from '../../../shared/AuthContext';
 import RoleGate from '../../../shared/RoleGate';
+import CitaAcademica from '../../../shared/CitaAcademica';
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -172,6 +173,7 @@ export default function SPEPage() {
           <IndexCard label="ICIE" name="Índice de competitividad" value={datos.indices.icie} previous={datos.indicesAnterior.icie} />
         </section>
         <InsightsSpe insights={datos?.insights ?? []} />
+        <CitaAcademica recurso="spe" />
       </div>
     </main>
   );
