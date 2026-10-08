@@ -17,93 +17,6 @@ import {
 } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
-// ICA — POR AHORA ESTÁTICO
-// ---------------------------------------------------------------------------
-
-const MOCK_ICA = [
-  {
-    id: 101,
-    tipo: 'masiva',
-    origen: 'ica_zona_sur_3t2026.xlsx',
-    zonas: ['Cotahuma', 'Sopocachi', 'San Antonio'],
-    periodo: '3T 2026',
-    registros: 48,
-    encuestador: 'Carla Mamani',
-    sede: 'La Paz',
-    fecha: '2026-09-28T14:20:00',
-    evento: 'Feria de Seguros La Paz',
-    resumen: {
-      estadisticas: [
-        ['Edad mínima', '18'],
-        ['Edad máxima', '67'],
-        ['Edad promedio', '36'],
-      ],
-      grupos: [
-        {
-          titulo: 'Encuestas por comuna',
-          items: [
-            ['Cotahuma', 20],
-            ['Sopocachi', 16],
-            ['San Antonio', 12],
-          ],
-        },
-        {
-          titulo: 'Sexo',
-          items: [
-            ['Mujer', 27],
-            ['Hombre', 21],
-          ],
-        },
-      ],
-      alertas: ['2 encuestas con la pregunta 12 vacía'],
-    },
-  },
-  {
-    id: 102,
-    tipo: 'manual',
-    origen: 'Registro individual',
-    zonas: ['Max Paredes'],
-    periodo: '3T 2026',
-    registros: 1,
-    encuestador: 'Luis Quispe',
-    sede: 'La Paz',
-    fecha: '2026-09-28T09:05:00',
-    evento: 'Feria de Seguros La Paz',
-    respuestas: [
-      {
-        grupo: 'Perfil',
-        items: [
-          ['Aporta económicamente al hogar', 'Sí'],
-          ['Edad', '34'],
-          ['Sexo', 'Mujer'],
-          ['Nivel de educación', 'Universidad'],
-        ],
-      },
-      {
-        grupo: 'Conocimiento',
-        items: [
-          [
-            '¿Para qué sirve un seguro?',
-            'Para proteger sus bienes y/o su familia ante sucesos inciertos',
-          ],
-          ['¿Dónde presentar un reclamo?', 'A la propia compañía de seguros'],
-          ['¿Cómo adquirió su conocimiento?', 'Con la experiencia personal'],
-        ],
-      },
-      {
-        grupo: 'Seguro de vida',
-        items: [
-          ['¿Tiene seguro de vida?', 'Sí'],
-          ['Duración', 'Entre 1 y 3 años'],
-          ['Satisfacción con su póliza', 'Satisfecho'],
-          ['Confianza en aseguradoras', 'Bastante'],
-        ],
-      },
-    ],
-  },
-];
-
-// ---------------------------------------------------------------------------
 // Configuración
 // ---------------------------------------------------------------------------
 
@@ -114,6 +27,7 @@ const SISTEMAS = {
     columnaZona: 'Comunas',
     placeholderBusqueda: 'Buscar por archivo, comuna o encuestador...',
     filtroZona: 'Todas las comunas',
+    unidadZona: 'comunas',
     descripcion:
       'Encuestas ICA pendientes de revisión. Al aprobarlas pasan a contar en dashboards, explorador y exportación.',
   },
@@ -123,6 +37,7 @@ const SISTEMAS = {
     columnaZona: 'Sectores exportadores',
     placeholderBusqueda: 'Buscar por archivo, sector o encuestador...',
     filtroZona: 'Todos los sectores',
+    unidadZona: 'sectores',
     descripcion:
       'Registros SPE pendientes de revisión. Al aprobarlos se recalculan los índices del sector.',
   },
@@ -159,25 +74,18 @@ function diasEspera(valor) {
 }
 
 /*
- * El backend puede devolver directamente un array o un objeto como
- * { pendientes: [...] }. Soportamos ambos casos para que el componente
- * no dependa de una sola envoltura de respuesta.
+ * El backend puede devolver un array o un objeto como { pendientes: [...] }.
+ * Soportamos ambos casos para no depender de una sola envoltura.
  */
 function extraerPendientes(data) {
   if (Array.isArray(data)) return data;
-
   if (Array.isArray(data?.pendientes)) return data.pendientes;
-
   if (Array.isArray(data?.registros)) return data.registros;
-
   if (Array.isArray(data?.cargas)) return data.cargas;
-
   return [];
 }
 
 /*
- * Normalizamos los nombres que usa la pantalla.
- *
  * La UI trabaja siempre con:
  * id, tipo, origen, zonas, periodo, registros, encuestador,
  * sede, fecha, evento, resumen y respuestas.
@@ -273,8 +181,7 @@ function normalizarRegistro(registro) {
 }
 
 // ---------------------------------------------------------------------------
-// Acciones de cada fila: mismo estilo que UsuariosPage
-// (links de texto con icono + un solo botón relleno para la acción principal)
+// Acciones de cada fila
 // ---------------------------------------------------------------------------
 
 function AccionesFila({ onRevisar, onAprobar, onRechazar, disabled = false }) {
@@ -317,25 +224,24 @@ export default function AprobacionesPage() {
   const { token, user } = useAuth();
 
   const rol = String(user?.rol ?? user?.role ?? '').toLowerCase();
-
   const esSuperadmin = rol === 'superadmin' || rol === 'super_admin';
 
-  /*
-   * ICA queda estático por ahora.
-   * SPE sí viene del backend.
-   */
-  const [sistema, setSistema] = useState('spe');
+  // SPE solo lo ve el Superadmin. Si el rol aún no se conoce, no se bloquea.
+  const puedeVerSpe = esSuperadmin || !rol;
+
+  const sistemasDisponibles = useMemo(
+    () => Object.values(SISTEMAS).filter((s) => s.id !== 'spe' || puedeVerSpe),
+    [puedeVerSpe],
+  );
+
+  const [sistema, setSistema] = useState('ica');
 
   const [busqueda, setBusqueda] = useState('');
   const [zona, setZona] = useState('');
   const [sede, setSede] = useState('');
 
-  const [pendientes, setPendientes] = useState({
-    ica: MOCK_ICA,
-    spe: [],
-  });
-
-  const [cargandoSpe, setCargandoSpe] = useState(true);
+  const [pendientes, setPendientes] = useState({ ica: [], spe: [] });
+  const [cargando, setCargando] = useState({ ica: true, spe: puedeVerSpe });
   const [error, setError] = useState('');
 
   const [accion, setAccion] = useState(null);
@@ -346,25 +252,21 @@ export default function AprobacionesPage() {
 
   const cfg = SISTEMAS[sistema];
   const lista = pendientes[sistema];
+  const cargandoActual = cargando[sistema];
 
   // -------------------------------------------------------------------------
-  // GET /api/spe/pendientes
+  // GET /api/ica/pendientes  y  GET /api/spe/pendientes
   // -------------------------------------------------------------------------
 
   useEffect(() => {
-    if (sistema !== 'spe') return;
-
     let cancelado = false;
 
-    async function cargarPendientesSpe() {
-      setCargandoSpe(true);
-      setError('');
+    async function cargarSistema(id) {
+      setCargando((prev) => ({ ...prev, [id]: true }));
 
       try {
-        const res = await fetch('/api/spe/pendientes', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+        const res = await fetch(`/api/${id}/pendientes`, {
+          headers: { Authorization: `Bearer ${token}` },
         });
 
         const data = await res.json();
@@ -373,17 +275,13 @@ export default function AprobacionesPage() {
           throw new Error(
             data.message ||
               data.error ||
-              'No se pudieron cargar las cargas pendientes SPE',
+              `No se pudieron cargar las cargas pendientes ${SISTEMAS[id].label}`,
           );
         }
 
         if (!cancelado) {
           const registros = extraerPendientes(data).map(normalizarRegistro);
-
-          setPendientes((prev) => ({
-            ...prev,
-            spe: registros,
-          }));
+          setPendientes((prev) => ({ ...prev, [id]: registros }));
         }
       } catch (err) {
         if (!cancelado) {
@@ -391,17 +289,18 @@ export default function AprobacionesPage() {
         }
       } finally {
         if (!cancelado) {
-          setCargandoSpe(false);
+          setCargando((prev) => ({ ...prev, [id]: false }));
         }
       }
     }
 
-    cargarPendientesSpe();
+    setError('');
+    sistemasDisponibles.forEach((s) => cargarSistema(s.id));
 
     return () => {
       cancelado = true;
     };
-  }, [token, sistema]);
+  }, [token, sistemasDisponibles]);
 
   // -------------------------------------------------------------------------
   // Filtros
@@ -442,33 +341,23 @@ export default function AprobacionesPage() {
     0,
   );
 
-  // -------------------------------------------------------------------------
-  // Escape del panel
-  // -------------------------------------------------------------------------
-
+  // Cerrar el panel con Escape
   useEffect(() => {
     if (!detalle || accion) return undefined;
 
     const alTeclear = (e) => {
-      if (e.key === 'Escape') {
-        setDetalle(null);
-      }
+      if (e.key === 'Escape') setDetalle(null);
     };
 
     window.addEventListener('keydown', alTeclear);
-
     return () => window.removeEventListener('keydown', alTeclear);
   }, [detalle, accion]);
 
-  // -------------------------------------------------------------------------
-  // El aviso de éxito desaparece solo
-  // -------------------------------------------------------------------------
-
+  // Ocultar el aviso automáticamente
   useEffect(() => {
     if (!aviso) return undefined;
 
     const id = setTimeout(() => setAviso(''), 4000);
-
     return () => clearTimeout(id);
   }, [aviso]);
 
@@ -487,7 +376,7 @@ export default function AprobacionesPage() {
   }
 
   // -------------------------------------------------------------------------
-  // PATCH /api/spe/cargas/:id/estado
+  // PATCH /api/:sistema/cargas/:id/estado
   // -------------------------------------------------------------------------
 
   async function confirmarAccion() {
@@ -506,7 +395,7 @@ export default function AprobacionesPage() {
     try {
       const estado = tipo === 'aprobar' ? 'aprobada' : 'rechazada';
 
-      const res = await fetch(`/api/spe/cargas/${registro.id}/estado`, {
+      const res = await fetch(`/api/${sistema}/cargas/${registro.id}/estado`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -528,13 +417,9 @@ export default function AprobacionesPage() {
         );
       }
 
-      /*
-       * Quitamos inmediatamente la carga de la bandeja: el backend ya
-       * cambió su estado, por lo que no debe seguir como pendiente.
-       */
       setPendientes((prev) => ({
         ...prev,
-        spe: prev.spe.filter((r) => r.id !== registro.id),
+        [sistema]: prev[sistema].filter((r) => r.id !== registro.id),
       }));
 
       setAviso(
@@ -558,19 +443,19 @@ export default function AprobacionesPage() {
   const tarjetas = [
     {
       label: 'Cargas pendientes',
-      valor: cargandoSpe ? '...' : lista.length,
+      valor: cargandoActual ? '...' : lista.length,
       Icono: Clock,
       estilo: 'bg-[#fbf1de] text-[#b7891e]',
     },
     {
       label: 'Encuestas por revisar',
-      valor: cargandoSpe ? '...' : totalEncuestas,
+      valor: cargandoActual ? '...' : totalEncuestas,
       Icono: ShieldCheck,
       estilo: 'bg-[#fbe9f0] text-[#a00046]',
     },
     {
       label: 'Espera más larga',
-      valor: cargandoSpe ? '...' : `${masAntigua} d`,
+      valor: cargandoActual ? '...' : `${masAntigua} d`,
       Icono: Clock,
       estilo: 'bg-[#e8f1fb] text-[#2f6fb0]',
     },
@@ -578,11 +463,6 @@ export default function AprobacionesPage() {
 
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-[#f4f6f8] px-4 py-5 sm:px-6 lg:px-8">
-
-      {/* ----------------------------------------------------------------- */}
-      {/* Aviso flotante (se cierra solo) */}
-      {/* ----------------------------------------------------------------- */}
-
       {aviso && (
         <div
           role="status"
@@ -603,10 +483,8 @@ export default function AprobacionesPage() {
           </button>
         </div>
       )}
-      {/* ----------------------------------------------------------------- */}
-      {/* Confirmación aprobar */}
-      {/* ----------------------------------------------------------------- */}
 
+      {/* Confirmación aprobar */}
       <ConfirmDialog
         open={accion?.tipo === 'aprobar'}
         titulo="¿Aprobar esta carga?"
@@ -618,10 +496,7 @@ export default function AprobacionesPage() {
         onCancel={() => !procesando && setAccion(null)}
       />
 
-      {/* ----------------------------------------------------------------- */}
       {/* Confirmación rechazar */}
-      {/* ----------------------------------------------------------------- */}
-
       {accion?.tipo === 'rechazar' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
           <div
@@ -681,13 +556,11 @@ export default function AprobacionesPage() {
         </div>
       )}
 
-      {/* ----------------------------------------------------------------- */}
       {/* Panel de revisión */}
-      {/* ----------------------------------------------------------------- */}
-
       {detalle && (
         <PanelRevision
           registro={detalle}
+          sistema={sistema}
           procesando={procesando}
           onClose={() => setDetalle(null)}
           onAccion={(registro, tipo) => {
@@ -699,7 +572,6 @@ export default function AprobacionesPage() {
 
       <div className="mx-auto max-w-[1120px]">
         {/* Encabezado */}
-
         <div className="mb-5">
           <h1 className="text-2xl font-bold tracking-tight text-[#202522] sm:text-[28px]">
             Aprobación de encuestas
@@ -709,7 +581,6 @@ export default function AprobacionesPage() {
         </div>
 
         {/* Tarjetas */}
-
         <section className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
           {tarjetas.map(({ label, valor, Icono, estilo }) => (
             <div
@@ -734,30 +605,25 @@ export default function AprobacionesPage() {
         </section>
 
         {/* Tabs + filtros */}
-
         <section className="mb-5 flex flex-col gap-3 rounded-xl border border-[#e2e6e8] bg-white p-3 shadow-sm lg:flex-row lg:items-center">
           <div className="inline-flex rounded-lg bg-[#f4f6f8] p-1">
-            {Object.values(SISTEMAS)
-              .filter((s) => s.id !== 'spe' || esSuperadmin || !rol)
-              .map((s) => (
-                <button
-                  key={s.id}
-                  onClick={() => cambiarSistema(s.id)}
-                  className={`inline-flex items-center gap-2 rounded-md px-3.5 py-1.5 text-xs font-semibold transition ${
-                    sistema === s.id
-                      ? 'bg-white text-[#202522] shadow-sm'
-                      : 'text-[#8a9290] hover:text-[#59615e]'
-                  }`}
-                >
-                  {s.label}
+            {sistemasDisponibles.map((s) => (
+              <button
+                key={s.id}
+                onClick={() => cambiarSistema(s.id)}
+                className={`inline-flex items-center gap-2 rounded-md px-3.5 py-1.5 text-xs font-semibold transition ${
+                  sistema === s.id
+                    ? 'bg-white text-[#202522] shadow-sm'
+                    : 'text-[#8a9290] hover:text-[#59615e]'
+                }`}
+              >
+                {s.label}
 
-                  <span className="rounded-full bg-[#fbe9f0] px-1.5 py-0.5 text-[10px] font-bold text-[#a00046]">
-                    {s.id === 'spe' && cargandoSpe
-                      ? '...'
-                      : pendientes[s.id].length}
-                  </span>
-                </button>
-              ))}
+                <span className="rounded-full bg-[#fbe9f0] px-1.5 py-0.5 text-[10px] font-bold text-[#a00046]">
+                  {cargando[s.id] ? '...' : pendientes[s.id].length}
+                </span>
+              </button>
+            ))}
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
@@ -823,7 +689,6 @@ export default function AprobacionesPage() {
         </section>
 
         {/* Error */}
-
         {error && (
           <div className="mb-5 flex items-center justify-between gap-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
             <span>{error}</span>
@@ -838,7 +703,6 @@ export default function AprobacionesPage() {
         )}
 
         {/* Tabla */}
-
         <section className="overflow-hidden rounded-xl border border-[#e2e6e8] bg-white shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[980px] text-left text-xs">
@@ -855,7 +719,7 @@ export default function AprobacionesPage() {
               </thead>
 
               <tbody>
-                {sistema === 'spe' && cargandoSpe ? (
+                {cargandoActual ? (
                   <tr>
                     <td
                       colSpan={7}
@@ -865,7 +729,7 @@ export default function AprobacionesPage() {
                         size={18}
                         className="mx-auto mb-2 animate-spin"
                       />
-                      Cargando cargas pendientes SPE...
+                      Cargando cargas pendientes {cfg.label}...
                     </td>
                   </tr>
                 ) : filtrados.length === 0 ? (
@@ -925,9 +789,7 @@ export default function AprobacionesPage() {
                         <td className="px-4 py-3" title={zonasR.join(', ')}>
                           {zonasR.length === 1
                             ? zonasR[0]
-                            : `${zonasR.length} ${
-                                sistema === 'ica' ? 'comunas' : 'sectores'
-                              }`}
+                            : `${zonasR.length} ${cfg.unidadZona}`}
 
                           {zonasR.length > 1 && (
                             <p className="max-w-[180px] truncate text-[10px] text-[#8a9290]">
