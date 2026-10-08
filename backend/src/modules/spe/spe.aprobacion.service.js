@@ -321,6 +321,10 @@ async function obtenerPendientesSpe() {
               DISTINCT sr.s1_export_sector
               SEPARATOR '||'
             ) AS sectores,
+            GROUP_CONCAT(
+              DISTINCT sr.s1_department
+              SEPARATOR '||'
+            ) AS departamentos,
             MIN(sr.year) AS year,
             MIN(sr.semester) AS semester,
             COUNT(
@@ -407,6 +411,12 @@ async function obtenerPendientesSpe() {
           ? fila.sectores.split('||')
           : []
       ).sort(),
+
+      // Departamento donde se hizo la encuesta (s1_department)
+      departamento:
+        (fila.departamentos
+          ? fila.departamentos.split('||').sort().join(', ')
+          : '') || '-',
 
       periodo:
         Number(fila.num_periodos) === 1
@@ -528,7 +538,6 @@ async function cambiarEstadoCargaSpe({
   // Al aprobar, llamar:
   // await calcularIndicesSpe(dataLoadId)
   //
-
 
   return {
     id: dataLoadId,

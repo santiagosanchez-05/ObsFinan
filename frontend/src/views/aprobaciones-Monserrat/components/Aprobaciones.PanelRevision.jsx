@@ -357,7 +357,14 @@ export default function PanelRevision({
 
         <div className="flex-1 space-y-6 overflow-y-auto px-5 py-5">
           <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
-            <Dato label="Encuestador">{r.encuestador}</Dato>
+            <Dato label="Encuestador">
+              {r.encuestador}
+              {sistema === 'spe' && r.departamento && r.departamento !== '-' && (
+                <span className="mt-0.5 block text-[10px] font-normal text-[#8a9290]">
+                  Encuesta en {r.departamento}
+                </span>
+              )}
+            </Dato>
             <Dato label="Sede">{r.sede}</Dato>
             <Dato label="Periodo">{r.periodo}</Dato>
             <Dato label="Fecha de carga">

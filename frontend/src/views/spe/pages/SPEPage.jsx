@@ -115,11 +115,11 @@ export default function SPEPage() {
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
             <span className="inline-flex items-center gap-1.5 rounded-lg border border-[#dfe4e5] bg-white px-3 py-2 text-[11px] font-semibold text-[#5e6763]"><FileCheck2 size={14} className="text-[#3d916b]" /> Datos aprobados</span>
-            {/* <RoleGate allow={[ROLES.SUPERADMIN]}>
+            <RoleGate allow={[ROLES.SUPERADMIN]}>
               <Link to="/spe/historial" className="inline-flex items-center gap-2 rounded-lg border border-[#dfe4e5] bg-white px-3 py-2 text-xs font-semibold text-[#59615e] shadow-sm transition hover:border-[#961d4b] hover:text-[#961d4b]"><History size={14} /> Historial de registros</Link>
-              <button type="button" onClick={() => setMostrarCarga((valor) => !valor)} className="inline-flex items-center gap-2 rounded-lg border border-[#d6a4b7] bg-white px-3 py-2 text-xs font-semibold text-[#961d4b] transition hover:bg-[#fff3f7]"><Upload size={14} /> Subir dataset</button>
+              {/* <button type="button" onClick={() => setMostrarCarga((valor) => !valor)} className="inline-flex items-center gap-2 rounded-lg border border-[#d6a4b7] bg-white px-3 py-2 text-xs font-semibold text-[#961d4b] transition hover:bg-[#fff3f7]"><Upload size={14} /> Subir dataset</button> */}
               <Link to="/spe/registrar" className="inline-flex items-center gap-2 rounded-lg bg-[#961d4b] px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#780f39]"><Plus size={14} /> Registrar registro</Link>
-            </RoleGate> */}
+            </RoleGate>
           </div>
         </div>
 <ExportarSpe filtros={filtros} />

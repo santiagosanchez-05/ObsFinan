@@ -5,13 +5,10 @@ import PanelRevision from '../components/Aprobaciones.PanelRevision';
 import {
   Search,
   ChevronDown,
-  Folder,
-  SquarePen,
   Eye,
   Check,
   X,
   Clock,
-  ShieldCheck,
   Loader2,
   CheckCircle2,
 } from 'lucide-react';
@@ -24,20 +21,18 @@ const SISTEMAS = {
   ica: {
     id: 'ica',
     label: 'ICA',
-    columnaZona: 'Comunas',
-    placeholderBusqueda: 'Buscar por archivo, comuna o encuestador...',
+    columnaZona: 'Comuna',
+    placeholderBusqueda: 'Buscar por comuna o encuestador...',
     filtroZona: 'Todas las comunas',
-    unidadZona: 'comunas',
     descripcion:
-      'Encuestas ICA pendientes de revisión. Al aprobarlas pasan a contar en dashboards, explorador y exportación.',
+      'Registros ICA pendientes de revisión. Al aprobarlos pasan a contar en dashboards.',
   },
   spe: {
     id: 'spe',
     label: 'SPE',
-    columnaZona: 'Sectores exportadores',
-    placeholderBusqueda: 'Buscar por archivo, sector o encuestador...',
+    columnaZona: 'Sector exportador',
+    placeholderBusqueda: 'Buscar por sector, departamento o encuestador...',
     filtroZona: 'Todos los sectores',
-    unidadZona: 'sectores',
     descripcion:
       'Registros SPE pendientes de revisión. Al aprobarlos se recalculan los índices del sector.',
   },
@@ -73,9 +68,25 @@ function diasEspera(valor) {
   return Math.max(0, Math.floor(ms / 86400000));
 }
 
+// El departamento llega como texto ("La Paz" o "La Paz, Santa Cruz").
+function listaDepartamentos(registro) {
+  return String(registro.departamento ?? '')
+    .split(', ')
+    .map((d) => d.trim())
+    .filter((d) => d && d !== '-');
+}
+
+// Nombre corto para mostrar en diálogos y avisos.
+function etiquetaRegistro(registro) {
+  const zonas = (registro?.zonas ?? []).join(', ');
+  if (zonas && registro?.periodo && registro.periodo !== '-') {
+    return `${zonas} · ${registro.periodo}`;
+  }
+  return zonas || 'este registro';
+}
+
 /*
  * El backend puede devolver un array o un objeto como { pendientes: [...] }.
- * Soportamos ambos casos para no depender de una sola envoltura.
  */
 function extraerPendientes(data) {
   if (Array.isArray(data)) return data;
@@ -87,16 +98,10 @@ function extraerPendientes(data) {
 
 /*
  * La UI trabaja siempre con:
- * id, tipo, origen, zonas, periodo, registros, encuestador,
+ * id, zonas, departamento, periodo, registros, encuestador,
  * sede, fecha, evento, resumen y respuestas.
  */
 function normalizarRegistro(registro) {
-  const tipo =
-    registro.tipo ??
-    (registro.source_type === 2 || registro.sourceType === 2
-      ? 'masiva'
-      : 'manual');
-
   const zonasOrigen =
     registro.zonas ?? registro.sectores ?? registro.sectorExportador;
 
@@ -116,17 +121,9 @@ function normalizarRegistro(registro) {
       registro.cargaId ??
       registro.carga_id,
 
-    tipo,
-
-    origen:
-      registro.origen ??
-      registro.nombreArchivo ??
-      registro.nombre_archivo ??
-      registro.filename ??
-      registro.file_name ??
-      'Registro individual',
-
     zonas,
+
+    departamento: registro.departamento ?? '-',
 
     periodo:
       registro.periodo ??
@@ -135,12 +132,7 @@ function normalizarRegistro(registro) {
         ? `${registro.semester}S ${registro.year}`
         : '-'),
 
-    registros:
-      registro.registros ??
-      registro.totalEncuestas ??
-      registro.total_encuestas ??
-      registro.cantidad ??
-      1,
+    registros: registro.registros ?? 1,
 
     encuestador:
       registro.encuestador ??
@@ -220,6 +212,9 @@ function AccionesFila({ onRevisar, onAprobar, onRechazar, disabled = false }) {
 // Página
 // ---------------------------------------------------------------------------
 
+const CLASE_SELECT =
+  'appearance-none rounded-lg border border-[#dfe4e5] bg-white py-2 pl-3 pr-8 text-xs font-semibold text-[#59615e] outline-none focus:border-[#a00046]';
+
 export default function AprobacionesPage() {
   const { token, user } = useAuth();
 
@@ -239,6 +234,7 @@ export default function AprobacionesPage() {
   const [busqueda, setBusqueda] = useState('');
   const [zona, setZona] = useState('');
   const [sede, setSede] = useState('');
+  const [departamento, setDepartamento] = useState('');
 
   const [pendientes, setPendientes] = useState({ ica: [], spe: [] });
   const [cargando, setCargando] = useState({ ica: true, spe: puedeVerSpe });
@@ -251,6 +247,7 @@ export default function AprobacionesPage() {
   const [aviso, setAviso] = useState('');
 
   const cfg = SISTEMAS[sistema];
+  const esSpe = sistema === 'spe';
   const lista = pendientes[sistema];
   const cargandoActual = cargando[sistema];
 
@@ -275,7 +272,7 @@ export default function AprobacionesPage() {
           throw new Error(
             data.message ||
               data.error ||
-              `No se pudieron cargar las cargas pendientes ${SISTEMAS[id].label}`,
+              `No se pudieron cargar los registros pendientes ${SISTEMAS[id].label}`,
           );
         }
 
@@ -316,30 +313,40 @@ export default function AprobacionesPage() {
     [lista],
   );
 
+  const departamentos = useMemo(
+    () => [...new Set(lista.flatMap((r) => listaDepartamentos(r)))].sort(),
+    [lista],
+  );
+
   const filtrados = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
 
     return lista.filter((r) => {
       if (zona && !(r.zonas ?? []).includes(zona)) return false;
 
-      if (sede && r.sede !== sede) return false;
+      if (esSpe) {
+        if (departamento && !listaDepartamentos(r).includes(departamento)) {
+          return false;
+        }
+      } else if (sede && r.sede !== sede) {
+        return false;
+      }
 
       if (!q) return true;
 
-      return [r.origen, (r.zonas ?? []).join(' '), r.encuestador]
+      return [
+        (r.zonas ?? []).join(' '),
+        r.encuestador,
+        esSpe ? r.departamento : null,
+      ]
         .filter(Boolean)
         .some((campo) => String(campo).toLowerCase().includes(q));
     });
-  }, [lista, busqueda, zona, sede]);
+  }, [lista, busqueda, zona, sede, departamento, esSpe]);
 
   const masAntigua = lista.length
     ? Math.max(...lista.map((r) => diasEspera(r.fecha)))
     : 0;
-
-  const totalEncuestas = lista.reduce(
-    (suma, r) => suma + Number(r.registros || 0),
-    0,
-  );
 
   // Cerrar el panel con Escape
   useEffect(() => {
@@ -370,6 +377,7 @@ export default function AprobacionesPage() {
     setBusqueda('');
     setZona('');
     setSede('');
+    setDepartamento('');
     setAviso('');
     setError('');
     setDetalle(null);
@@ -385,7 +393,7 @@ export default function AprobacionesPage() {
     const { registro, tipo } = accion;
 
     if (!registro.id) {
-      setError('La carga no tiene un identificador válido.');
+      setError('El registro no tiene un identificador válido.');
       return;
     }
 
@@ -413,7 +421,7 @@ export default function AprobacionesPage() {
         throw new Error(
           data.message ||
             data.error ||
-            'No se pudo actualizar el estado de la carga',
+            'No se pudo actualizar el estado del registro',
         );
       }
 
@@ -424,34 +432,26 @@ export default function AprobacionesPage() {
 
       setAviso(
         tipo === 'aprobar'
-          ? `"${registro.origen}" aprobado. Ya cuenta en los dashboards.`
-          : `"${registro.origen}" rechazado. No contará en los dashboards.`,
+          ? `${etiquetaRegistro(registro)} aprobado. Ya cuenta en los dashboards.`
+          : `${etiquetaRegistro(registro)} rechazado. No contará en los dashboards.`,
       );
 
       setAccion(null);
       setDetalle(null);
       setMotivo('');
     } catch (err) {
-      setError(err.message || 'No se pudo actualizar la carga');
+      setError(err.message || 'No se pudo actualizar el registro');
     } finally {
       setProcesando(false);
     }
   }
 
-  const cantidad = accion?.registro?.registros ?? 0;
-
   const tarjetas = [
     {
-      label: 'Cargas pendientes',
+      label: 'Registros pendientes',
       valor: cargandoActual ? '...' : lista.length,
       Icono: Clock,
       estilo: 'bg-[#fbf1de] text-[#b7891e]',
-    },
-    {
-      label: 'Encuestas por revisar',
-      valor: cargandoActual ? '...' : totalEncuestas,
-      Icono: ShieldCheck,
-      estilo: 'bg-[#fbe9f0] text-[#a00046]',
     },
     {
       label: 'Espera más larga',
@@ -487,10 +487,8 @@ export default function AprobacionesPage() {
       {/* Confirmación aprobar */}
       <ConfirmDialog
         open={accion?.tipo === 'aprobar'}
-        titulo="¿Aprobar esta carga?"
-        mensaje={`Se aprobarán ${cantidad} ${
-          cantidad === 1 ? 'encuesta' : 'encuestas'
-        } de "${accion?.registro?.origen}" y se recalcularán los indicadores.`}
+        titulo="¿Aprobar este registro?"
+        mensaje={`Se aprobará el registro de ${etiquetaRegistro(accion?.registro)} y se recalcularán los indicadores.`}
         textoConfirmar={procesando ? 'Procesando...' : 'Aprobar'}
         onConfirm={confirmarAccion}
         onCancel={() => !procesando && setAccion(null)}
@@ -505,13 +503,12 @@ export default function AprobacionesPage() {
             className="w-full max-w-md rounded-xl bg-white p-5 shadow-xl"
           >
             <h2 className="text-base font-bold text-[#202522]">
-              ¿Rechazar esta carga?
+              ¿Rechazar este registro?
             </h2>
 
             <p className="mt-1 text-sm text-[#6d7673]">
-              Se rechazarán {cantidad}{' '}
-              {cantidad === 1 ? 'encuesta' : 'encuestas'} de "
-              {accion.registro.origen}". No contarán en los dashboards.
+              Se rechazará el registro de {etiquetaRegistro(accion.registro)}.
+              No contará en los dashboards.
             </p>
 
             <label className="mt-4 block text-xs font-semibold text-[#59615e]">
@@ -581,7 +578,7 @@ export default function AprobacionesPage() {
         </div>
 
         {/* Tarjetas */}
-        <section className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <section className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
           {tarjetas.map(({ label, valor, Icono, estilo }) => (
             <div
               key={label}
@@ -631,7 +628,7 @@ export default function AprobacionesPage() {
               <select
                 value={zona}
                 onChange={(e) => setZona(e.target.value)}
-                className="appearance-none rounded-lg border border-[#dfe4e5] bg-white py-2 pl-3 pr-8 text-xs font-semibold text-[#59615e] outline-none focus:border-[#a00046]"
+                className={CLASE_SELECT}
               >
                 <option value="">{cfg.filtroZona}</option>
 
@@ -648,12 +645,37 @@ export default function AprobacionesPage() {
               />
             </div>
 
-            {esSuperadmin || !rol ? (
+            {/* SPE: filtro por departamento donde se hizo la encuesta */}
+            {esSpe && (
+              <div className="relative">
+                <select
+                  value={departamento}
+                  onChange={(e) => setDepartamento(e.target.value)}
+                  className={CLASE_SELECT}
+                >
+                  <option value="">Todos los departamentos</option>
+
+                  {departamentos.map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
+                </select>
+
+                <ChevronDown
+                  size={13}
+                  className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8a9290]"
+                />
+              </div>
+            )}
+
+            {/* ICA: filtro por sede (solo superadmin) */}
+            {!esSpe && (esSuperadmin || !rol) ? (
               <div className="relative">
                 <select
                   value={sede}
                   onChange={(e) => setSede(e.target.value)}
-                  className="appearance-none rounded-lg border border-[#dfe4e5] bg-white py-2 pl-3 pr-8 text-xs font-semibold text-[#59615e] outline-none focus:border-[#a00046]"
+                  className={CLASE_SELECT}
                 >
                   <option value="">Todas las sedes</option>
 
@@ -705,13 +727,11 @@ export default function AprobacionesPage() {
         {/* Tabla */}
         <section className="overflow-hidden rounded-xl border border-[#e2e6e8] bg-white shadow-sm">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[980px] text-left text-xs">
+            <table className="w-full min-w-[760px] text-left text-xs">
               <thead className="bg-[#fafbfb] text-[9px] font-bold uppercase tracking-wider text-[#8a9290]">
                 <tr>
-                  <th className="px-4 py-3">Origen</th>
                   <th className="px-4 py-3">{cfg.columnaZona}</th>
                   <th className="px-4 py-3">Periodo</th>
-                  <th className="px-4 py-3">Encuestas</th>
                   <th className="px-4 py-3">Encuestador</th>
                   <th className="px-4 py-3">Fecha de carga</th>
                   <th className="px-4 py-3 text-right">Acciones</th>
@@ -722,89 +742,41 @@ export default function AprobacionesPage() {
                 {cargandoActual ? (
                   <tr>
                     <td
-                      colSpan={7}
+                      colSpan={5}
                       className="px-4 py-10 text-center text-[#8a9290]"
                     >
                       <Loader2
                         size={18}
                         className="mx-auto mb-2 animate-spin"
                       />
-                      Cargando cargas pendientes {cfg.label}...
+                      Cargando registros pendientes {cfg.label}...
                     </td>
                   </tr>
                 ) : filtrados.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={7}
+                      colSpan={5}
                       className="px-4 py-10 text-center text-[#8a9290]"
                     >
                       {lista.length === 0
-                        ? 'No hay cargas pendientes. Todo está al día.'
-                        : 'Ninguna carga coincide con los filtros. Cambia o limpia los filtros para ver más.'}
+                        ? 'No hay registros pendientes. Todo está al día.'
+                        : 'Ningún registro coincide con los filtros. Cambia o limpia los filtros para ver más.'}
                     </td>
                   </tr>
                 ) : (
                   filtrados.map((r) => {
                     const espera = diasEspera(r.fecha);
-                    const masiva = r.tipo === 'masiva';
-                    const zonasR = r.zonas ?? [];
 
                     return (
                       <tr
                         key={r.id}
                         className="border-t border-[#f0f2f2] text-[#48504d] hover:bg-[#fff8fa]"
                       >
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2.5">
-                            <span
-                              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
-                                masiva
-                                  ? 'bg-[#e8f1fb] text-[#2f6fb0]'
-                                  : 'bg-[#f3ecfb] text-[#7c4dbd]'
-                              }`}
-                            >
-                              {masiva ? (
-                                <Folder size={14} />
-                              ) : (
-                                <SquarePen size={14} />
-                              )}
-                            </span>
-
-                            <div>
-                              <p className="font-semibold text-[#252927]">
-                                {r.origen}
-                              </p>
-
-                              <p
-                                className={`text-[9px] font-bold uppercase tracking-wider ${
-                                  masiva ? 'text-[#2f6fb0]' : 'text-[#7c4dbd]'
-                                }`}
-                              >
-                                {masiva ? 'Carga masiva' : 'Manual'}
-                              </p>
-                            </div>
-                          </div>
-                        </td>
-
-                        <td className="px-4 py-3" title={zonasR.join(', ')}>
-                          {zonasR.length === 1
-                            ? zonasR[0]
-                            : `${zonasR.length} ${cfg.unidadZona}`}
-
-                          {zonasR.length > 1 && (
-                            <p className="max-w-[180px] truncate text-[10px] text-[#8a9290]">
-                              {zonasR.join(', ')}
-                            </p>
-                          )}
+                        <td className="px-4 py-3 font-semibold text-[#252927]">
+                          {(r.zonas ?? []).join(', ') || '-'}
                         </td>
 
                         <td className="px-4 py-3">{r.periodo}</td>
-
-                        <td className="px-4 py-3">
-                          <span className="rounded-full bg-[#f1f3f3] px-2 py-1 text-[10px] font-bold text-[#414845]">
-                            {r.registros}
-                          </span>
-                        </td>
 
                         <td className="px-4 py-3">
                           <p className="font-semibold text-[#252927]">
@@ -812,7 +784,9 @@ export default function AprobacionesPage() {
                           </p>
 
                           <p className="text-[10px] text-[#8a9290]">
-                            Sede {r.sede}
+                            {esSpe
+                              ? `Encuesta en ${r.departamento || '-'}`
+                              : `Sede ${r.sede}`}
                           </p>
                         </td>
 
@@ -852,7 +826,7 @@ export default function AprobacionesPage() {
 
           <div className="flex items-center justify-between border-t border-[#edf0f1] px-4 py-3 text-[10px] text-[#8a9290]">
             <span>
-              Mostrando {filtrados.length} de {lista.length} cargas pendientes
+              Mostrando {filtrados.length} de {lista.length} registros pendientes
             </span>
 
             {procesando && (
