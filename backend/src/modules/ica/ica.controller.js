@@ -91,6 +91,9 @@ async function postEntrevistaIca(req, res) {
   if (!parsed.success) return res.status(400).json({ error: 'Datos inválidos', detalles: parsed.error.flatten() });
   const { campusId, sinSede } = sedeDeGestionIca(req);
   if (sinSede) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
+  if (req.user.role === 'encuestador' && !parsed.data.eventId) {
+    return res.status(400).json({ error: 'Falta indicar el evento asignado' });
+  }
 
   try {
     const resultado = await icaService.registrarEntrevistaIndividual({
@@ -103,6 +106,9 @@ async function postEntrevistaIca(req, res) {
   } catch (err) {
     if (err.message === 'COMUNIDAD_NO_ENCONTRADA') {
       return res.status(400).json({ error: 'La comuna no pertenece a tu sede o ya no está disponible' });
+    }
+    if (err.message === 'EVENTO_ICA_NO_ASIGNADO') {
+      return res.status(400).json({ error: 'El evento no está asignado a este encuestador o no habilita encuestas ICA' });
     }
     console.error('Error al guardar entrevista ICA:', err);
     return res.status(500).json({ error: 'No se pudo guardar la entrevista ICA' });

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Check, ChevronLeft, ChevronRight, ClipboardCheck, Save } from 'lucide-react';
 import { SPE_SECTIONS } from '../spe.questions';
+import { useAuth } from '../../../shared/AuthContext';
 
 const INPUT_CLASS = 'w-full rounded-lg border border-[#dfe4e5] bg-white px-3 py-2.5 text-xs text-[#414845] outline-none placeholder:text-[#adb5b2] focus:border-[#a00046] focus:ring-2 focus:ring-[#f7eaf0]';
 const INITIAL_VALUES = { year: '2026', semester: '2' };
@@ -10,10 +11,14 @@ export default function RegistrarSpePage() {
   const [sectionIndex, setSectionIndex] = useState(0);
   const [values, setValues] = useState(INITIAL_VALUES);
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const { token } = useAuth();
   const section = SPE_SECTIONS[sectionIndex];
 
   function cambiarValor(name, value) {
     setSaved(false);
+    setError('');
     setValues((current) => ({ ...current, [name]: value }));
   }
 
@@ -22,9 +27,31 @@ export default function RegistrarSpePage() {
     cambiarValor(name, current.includes(option) ? current.filter((item) => item !== option) : [...current, option]);
   }
 
-  function guardarRegistro(event) {
+  async function guardarRegistro(event) {
     event.preventDefault();
-    setSaved(true);
+    if (!values.companyName?.trim()) {
+      setError('Ingresa el nombre de la empresa antes de guardar.');
+      setSectionIndex(0);
+      return;
+    }
+    setSaving(true);
+    setError('');
+    try {
+      const response = await fetch('/api/spe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(values),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(body.error || 'No se pudo guardar el registro SPE.');
+      }
+      setSaved(true);
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -41,7 +68,7 @@ export default function RegistrarSpePage() {
             <div className="border-b border-[#edf0f1] px-5 py-4 sm:px-7"><div className="flex items-start justify-between gap-4"><div><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#a00046]">Sección {section.number} de {SPE_SECTIONS.length}</p><h2 className="mt-1 text-lg font-bold text-[#252927]">{section.title}</h2><p className="mt-1 text-xs text-[#737b78]">{section.description}</p></div><span className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#f7eaf0] text-[#a00046] sm:flex"><ClipboardCheck size={18} /></span></div><div className="mt-4 h-1 overflow-hidden rounded-full bg-[#edf0f1]"><div className="h-full rounded-full bg-[#a00046] transition-all" style={{ width: `${((sectionIndex + 1) / SPE_SECTIONS.length) * 100}%` }} /></div></div>
             {sectionIndex === 0 && <div className="grid gap-4 border-b border-[#edf0f1] bg-[#fafbfc] px-5 py-4 sm:grid-cols-2 sm:px-7"><Field label="Periodo" required><div className="grid grid-cols-2 gap-2"><select value={values.semester} onChange={(event) => cambiarValor('semester', event.target.value)} className={INPUT_CLASS}><option value="1">Semestre 1</option><option value="2">Semestre 2</option></select><input value={values.year} onChange={(event) => cambiarValor('year', event.target.value)} type="number" className={INPUT_CLASS} aria-label="Año" /></div></Field><Field label="Nombre de la empresa" required><input value={values.companyName || ''} onChange={(event) => cambiarValor('companyName', event.target.value)} placeholder="Ej. TechExport S.A." className={INPUT_CLASS} /></Field></div>}
             <div className="grid gap-5 px-5 py-6 sm:grid-cols-2 sm:px-7">{section.fields.map((field) => <Question key={field.name} field={field} value={values[field.name]} onChange={cambiarValor} onToggle={cambiarCheckbox} />)}</div>
-            <footer className="flex flex-col-reverse gap-3 border-t border-[#edf0f1] bg-[#fafbfc] px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-7"><div>{saved && <p className="flex items-center gap-1.5 text-xs font-semibold text-[#32845d]"><Check size={15} /> Registro preparado para guardar.</p>}</div><div className="flex justify-end gap-2"><button type="button" disabled={sectionIndex === 0} onClick={() => setSectionIndex((index) => index - 1)} className="inline-flex items-center gap-1 rounded-lg border border-[#dfe4e5] bg-white px-3 py-2 text-xs font-semibold text-[#68716e] disabled:cursor-not-allowed disabled:opacity-40"><ChevronLeft size={14} /> Anterior</button>{sectionIndex < SPE_SECTIONS.length - 1 ? <button type="button" onClick={() => setSectionIndex((index) => index + 1)} className="inline-flex items-center gap-1 rounded-lg bg-[#a00046] px-4 py-2 text-xs font-semibold text-white hover:bg-[#7d0035]">Siguiente <ChevronRight size={14} /></button> : <button type="submit" className="inline-flex items-center gap-2 rounded-lg bg-[#a00046] px-4 py-2 text-xs font-semibold text-white hover:bg-[#7d0035]"><Save size={14} /> Guardar registro</button>}</div></footer>
+            <footer className="flex flex-col-reverse gap-3 border-t border-[#edf0f1] bg-[#fafbfc] px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-7"><div>{saved && <p className="flex items-center gap-1.5 text-xs font-semibold text-[#32845d]"><Check size={15} /> Registro guardado correctamente.</p>}{error && <p className="text-xs font-semibold text-[#b42318]">{error}</p>}</div><div className="flex justify-end gap-2"><button type="button" disabled={sectionIndex === 0 || saving} onClick={() => setSectionIndex((index) => index - 1)} className="inline-flex items-center gap-1 rounded-lg border border-[#dfe4e5] bg-white px-3 py-2 text-xs font-semibold text-[#68716e] disabled:cursor-not-allowed disabled:opacity-40"><ChevronLeft size={14} /> Anterior</button>{sectionIndex < SPE_SECTIONS.length - 1 ? <button type="button" disabled={saving} onClick={() => setSectionIndex((index) => index + 1)} className="inline-flex items-center gap-1 rounded-lg bg-[#a00046] px-4 py-2 text-xs font-semibold text-white hover:bg-[#7d0035] disabled:opacity-50">Siguiente <ChevronRight size={14} /></button> : <button type="submit" disabled={saving} className="inline-flex items-center gap-2 rounded-lg bg-[#a00046] px-4 py-2 text-xs font-semibold text-white hover:bg-[#7d0035] disabled:opacity-50"><Save size={14} /> {saving ? 'Guardando...' : 'Guardar registro'}</button>}</div></footer>
           </form>
         </div>
       </div>
