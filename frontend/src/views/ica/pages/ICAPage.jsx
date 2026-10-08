@@ -181,87 +181,8 @@ export default function ICAPage() {
   const metricas = dashboard?.metricas;
   const comunaMinima = comunas.reduce((minima, comuna) => (!minima || comuna.valor < minima.valor ? comuna : minima), null);
 
-  async function handleConfirmarUpload() {
-    if (!communityId || !archivo || !quarter || !year) {
-      setEstado({
-        cargando: false,
-        resultado: null,
-        error: 'Completa comuna, año, trimestre y archivo.'
-      });
-      return;
-    }
-
-    const yearNumber = Number(year);
-
-    if (!Number.isInteger(yearNumber) || yearNumber < 2019 || yearNumber > new Date().getFullYear()) {
-      setEstado({
-        cargando: false,
-        resultado: null,
-        error: `El año debe estar entre 2019 y ${new Date().getFullYear()}.`
-      });
-      return;
-    }
-    setEstado({ cargando: true, resultado: null, error: null });
-
-    const formData = new FormData();
-    formData.append('archivo', archivo);
-    formData.append('quarter', quarter);
-    formData.append('year', yearNumber);
-    formData.append('communityId', communityId);
-
-    try {
-      const res = await fetch('/api/ica/upload', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      });
-      const data = await res.json();
-      if (!res.ok) {
-
-        const esFormatoInvalido = data.tipo === 'formato_invalido';
-        if (esFormatoInvalido) {
-          setModalUpload({ tipo: 'formato', mensaje: data.error || 'El archivo no tiene las columnas esperadas o contiene filas vacías.' });
-          setEstado({ cargando: false, resultado: null, error: null });
-          return;
-        }
-        setEstado({ cargando: false, resultado: null, error: data.error || 'No se pudo subir el archivo' });
-        return;
-      }
-      setEstado({ cargando: false, resultado: data, error: null });
-      setModalUpload({ tipo: 'exito' });
-    } catch {
-      setEstado({ cargando: false, resultado: null, error: 'Error de conexión con el servidor' });
-    }
-  }
-  async function handleDescargarPlantilla() {
-    try {
-      const res = await fetch('/api/ica/template', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'No se pudo descargar la plantilla');
-      }
-
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-
-      const enlace = document.createElement('a');
-      enlace.href = url;
-     enlace.download = 'plantilla_diccionario_ica.xlsx';
-
-      document.body.appendChild(enlace);
-      enlace.click();
-      enlace.remove();
-
-      window.URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error('Error al descargar plantilla ICA:', err);
-    }
-  }
+  
+  
   async function handleExportarRespuestas(formato) {
     try {
       const params = new URLSearchParams({ formato });
@@ -348,68 +269,9 @@ export default function ICAPage() {
     setModalUpload(null);
     setEstado({ cargando: false, resultado: null, error: null });
   }
-
-  function cerrarModalUpload() {
-    if (modalUpload?.tipo === 'exito') {
-      handleCancelar();
-    } else {
-      setModalUpload(null);
-    }
-  }
   return (
     <>
-      {modalUpload && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 px-6" onClick={cerrarModalUpload}>
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-lg" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center gap-3">
-              <div className={`flex h-10 w-10 items-center justify-center rounded-full ${modalUpload.tipo === 'exito' ? 'bg-[#eaf6ef] text-[#3c8d66]' : 'bg-[#fdeceb] text-[#a00046]'
-                }`}>
-                {modalUpload.tipo === 'exito' ? <CheckCircle2 size={22} /> : <AlertTriangle size={22} />}
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold text-[#252927]">
-                  {modalUpload.tipo === 'exito' ? 'Archivo cargado correctamente' : 'Formato de archivo incorrecto'}
-                </h2>
-                <p className="mt-1 text-xs text-[#8a9290]">
-                  {modalUpload.tipo === 'exito' ? 'La carga se registró correctamente.' : modalUpload.mensaje}
-                </p>
-              </div>
-            </div>
-
-            {modalUpload.tipo === 'exito' ? (
-              <div className="mt-5 rounded-lg bg-[#f4f6f8] p-3 text-xs text-[#59615e]">
-                <p><span className="font-semibold">Archivo:</span> {archivo?.name}</p>
-                <p className="mt-1"><span className="font-semibold">Registros cargados:</span> {estado.resultado?.filasInsertadas}</p>
-                <p className="mt-1"><span className="font-semibold">Año:</span> {year} · <span className="font-semibold">Trimestre:</span> Q{quarter}</p>
-              </div>
-            ) : (
-              <div className="mt-5 rounded-lg bg-[#f4f6f8] p-3 text-xs text-[#59615e]">
-                Verifica que el Excel corresponda al formato de las 32 preguntas del instrumento ICA y que no contenga columnas adicionales.</div>
-            )}
-
-            {modalUpload.tipo === 'exito' && estado.resultado?.filasConError?.length > 0 && (
-              <p className="mt-3 flex items-center gap-1 text-xs text-[#b77d18]">
-                <AlertCircle size={13} /> {estado.resultado.filasConError.length} filas con error.
-              </p>
-            )}
-
-            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              {modalUpload.tipo === 'formato' && (
-                <button
-                  type="button"
-                  onClick={handleDescargarPlantilla}
-                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#dce1e4] px-4 py-2 text-xs font-semibold text-[#a00046] hover:bg-[#fff3f7]"
-                >
-                  <Download size={13} /> Descargar formato
-                </button>
-              )}
-              <button onClick={cerrarModalUpload} className="rounded-lg bg-[#a00046] px-4 py-2 text-xs font-semibold text-white hover:bg-[#820039]">
-                Cerrar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      
       <main className="min-h-[calc(100vh-4rem)] bg-[#f4f6f8] px-4 py-5 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-[1440px]">
           <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -427,14 +289,7 @@ export default function ICAPage() {
                   <History size={14} /> Historial de registros
                 </Link>
               </RoleGate>
-              <RoleGate allow={[ROLES.ADMIN, ROLES.SUPERADMIN]}>
-                <button
-                  onClick={() => setMostrarUpload((v) => !v)}
-                  className="inline-flex items-center gap-2 rounded-lg border border-[#d6a4b7] bg-white px-3 py-2 text-xs font-semibold text-[#a00046] transition hover:bg-[#fff3f7]"
-                >
-                  <Upload size={14} /> Subir dataset
-                </button>
-              </RoleGate>
+             
               <RoleGate allow={[ROLES.ADMIN, ROLES.SUPERADMIN]}>
                 <Link
                   to="/ica/registrar"
@@ -501,122 +356,7 @@ export default function ICAPage() {
                 <button onClick={() => setFiltrosAplicados(filtros)} className="rounded-lg bg-[#252927] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#a00046]">Aplicar filtros</button>
               </div>
             </section>
-            {mostrarUpload && (
-              <section className="mb-5 rounded-xl border border-[#e2e6e8] bg-white p-4 shadow-sm">
-                <div className="mb-3 flex items-center justify-between">
-                  <h2 className="text-sm font-bold text-[#252927]">Subir dataset ICA</h2>
-                  <button onClick={handleCancelar} className="text-[#8a9290] hover:text-[#a00046]"><X size={16} /></button>
-                </div>
-
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                  <div>
-                    <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#8a9290]">Sede</span>
-                    <p className="rounded-lg border border-[#dfe4e5] bg-[#f4f6f8] px-3 py-2 text-xs text-[#414845]">
-                      {user?.campusName ?? 'Cochabamba'}
-                    </p>
-                  </div>
-                  <label className="block">
-                    <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#8a9290]">
-                      Comuna
-                    </span>
-
-                    <select
-                      value={communityId}
-                      onChange={(e) => setCommunityId(e.target.value)}
-                      disabled={cargandoComunidades}
-                      className="w-full rounded-lg border border-[#dfe4e5] bg-white px-3 py-2 text-xs"
-                    >
-                      <option value="">
-                        {cargandoComunidades ? 'Cargando...' : 'Selecciona una comuna'}
-                      </option>
-
-                      {comunidades.map((comunidad) => (
-                        <option key={comunidad.id} value={comunidad.id}>
-                          {new Set(comunidades.map((c) => c.campusId)).size > 1 && comunidad.sede ? `${comunidad.nombre} (${comunidad.sede})` : comunidad.nombre}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="block">
-                    <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#8a9290]">Año</span>
-                    <input
-                      type="number"
-                      min="2020"
-                      max="2100"
-                      value={year}
-                      onChange={(e) => setYear(e.target.value)}
-                      className="w-full rounded-lg border border-[#dfe4e5] px-3 py-2 text-xs"
-                    />
-                  </label>
-
-                  <label className="block">
-                    <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#8a9290]">Trimestre</span>
-                    <select
-                      value={quarter}
-                      onChange={(e) => setQuarter(e.target.value)}
-                      className="w-full rounded-lg border border-[#dfe4e5] px-3 py-2 text-xs"
-                    >
-                      <option value="">Selecciona</option>
-                      {[1, 2, 3, 4].map((q) => (
-                        <option key={q} value={q}>Q{q}</option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
-
-                <div className="mt-3">
-                  <div className="mt-3">
-                    <label className="block">
-                      <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#8a9290]">
-                        Archivo Excel
-                      </span>
-
-                      <div className="flex items-center gap-2">
-                        <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-[#d6a4b7] bg-white px-3 py-2 text-xs font-semibold text-[#a00046] transition hover:bg-[#fff3f7]">
-                          <Upload size={14} />
-                          Seleccionar archivo
-                          <input
-                            type="file"
-                            accept=".xlsx,.xls"
-                            onChange={(e) => setArchivo(e.target.files[0] || null)}
-                            className="hidden"
-                          />
-                        </label>
-
-                        {archivo && (
-                          <span className="text-xs text-[#59615e]">
-                            {archivo.name}
-                          </span>
-                        )}
-                      </div>
-                    </label>
-
-
-                  </div>
-                  <p className="mt-1 text-[10px] text-[#8a9290]">
-                    Excel (.xlsx/.xls) · Debe contener las 32 preguntas del instrumento ICA.</p>
-                </div>
-
-                {estado.error && <p className="mt-2 flex items-center gap-1 text-xs text-[#a00046]"><AlertCircle size={13} /> {estado.error}</p>}
-                {estado.resultado && (
-                  <p className="mt-2 flex items-center gap-1 text-xs text-[#3c8d66]">
-                    <CheckCircle2 size={13} /> {estado.resultado.filasInsertadas} filas cargadas correctamente.
-                    {estado.resultado.filasConError?.length > 0 && ` ${estado.resultado.filasConError.length} filas con error, revisá el detalle.`}
-                  </p>
-                )}
-
-                <div className="mt-4 flex justify-end gap-2">
-                  <button onClick={handleCancelar} className="rounded-lg border border-[#dce1e4] px-4 py-2 text-xs font-semibold text-[#59615e]">Cancelar</button>
-                  <button
-                    onClick={handleConfirmarUpload}
-                    disabled={estado.cargando}
-                    className="inline-flex items-center gap-2 rounded-lg bg-[#a00046] px-4 py-2 text-xs font-semibold text-white hover:bg-[#820039] disabled:opacity-50"
-                  >
-                    {estado.cargando ? <Loader2 size={13} className="animate-spin" /> : null} Confirmar
-                  </button>
-                </div>
-              </section>
-            )}
+           
             <section className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <MetricCard label="ICA general" value={metricas ? metricas.general : '-'} detail="Puntaje promedio del período" icon={<BarChart3 size={22} />} />
               <MetricCard label="Mejor comuna" value={metricas?.mejorComuna?.nombre ?? '-'} detail="ICA promedio" accent={metricas ? `${metricas.mejorComuna.valor} pts` : ''} icon={<Medal size={22} />} />

@@ -877,13 +877,16 @@ async function obtenerHistorialIca({ campusId, page = 1, pageSize = 10, tipo, co
     condiciones.push('(dl.file_name LIKE ? OR c.community_name LIKE ?)');
     parametros.push(`%${busqueda}%`, `%${busqueda}%`);
   }
-  if (estado === 'verificado') {
-    condiciones.push('dl.status = ?');
-    parametros.push(2);
-  } else if (estado === 'no_verificado') {
-    condiciones.push('dl.status = ?');
-    parametros.push(1);
-  }
+if (estado === 'verificado') {
+  condiciones.push('dl.status = ?');
+  parametros.push(ESTADO_CARGA.APROBADA);
+} else if (estado === 'no_verificado') {
+  condiciones.push('dl.status = ?');
+  parametros.push(ESTADO_CARGA.PENDIENTE);
+} else if (estado === 'rechazado') {
+  condiciones.push('dl.status = ?');
+  parametros.push(ESTADO_CARGA.RECHAZADA);
+}
 
   const whereSql = condiciones.join(' AND ');
   const columnasOrden = COLUMNAS_ORDEN[sortBy] || COLUMNAS_ORDEN.fecha;
@@ -927,7 +930,11 @@ async function obtenerHistorialIca({ campusId, page = 1, pageSize = 10, tipo, co
     periodo: Number(fila.num_periodos) === 1 ? `Q${fila.quarter} ${fila.year}` : 'Varios períodos',
     registros: Number(fila.total_registros),
     fecha: fila.created_at,
-    estado: Number(fila.status) === 2 ? 'Verificado' : 'No verificado',
+    estado: Number(fila.status) === ESTADO_CARGA.APROBADA
+  ? 'Verificado'
+  : Number(fila.status) === ESTADO_CARGA.RECHAZADA
+    ? 'Rechazado'
+    : 'Pendiente',
   }));
 
   return { registros, total, page, pageSize };
@@ -1187,7 +1194,10 @@ async function obtenerDetalleArchivoIca({ campusId, dataLoadId }) {
   });
 
   const nombreUsuario = [carga.first_name, carga.paternal_last_name].filter(Boolean).join(' ') || 'Usuario del sistema';
+  const dashboard = await obtenerDashboard({ campusId });
 
+  const porcentajeActual = dashboard.metricas?.general ?? null;
+  const brechaGenero = dashboard.metricas?.brechaGenero?.valor ?? null;
   return {
     archivo: {
       id: carga.data_load_id,
@@ -1196,11 +1206,17 @@ async function obtenerDetalleArchivoIca({ campusId, dataLoadId }) {
       fechaCarga: carga.created_at,
       subidoPor: nombreUsuario,
       totalRegistros: respuestas.length,
-      estado: Number(carga.status) === 2 ? 'Verificado' : 'No verificado',
+      estado: Number(carga.status) === ESTADO_CARGA.APROBADA
+  ? 'Verificado'
+  : Number(carga.status) === ESTADO_CARGA.RECHAZADA
+    ? 'Rechazado'
+    : 'Pendiente',
       comunidad: respuestas[0].community_name,
       periodo: `Q${respuestas[0].quarter} ${respuestas[0].year}`,
     },
     registros,
+    porcentajeActual,
+    brechaGenero,
   };
 }
 

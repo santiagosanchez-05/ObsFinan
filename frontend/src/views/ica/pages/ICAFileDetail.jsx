@@ -74,6 +74,8 @@ export default function ICAFileDetail() {
 
   const [archivo, setArchivo] = useState(null);
   const [registros, setRegistros] = useState([]);
+  const [porcentajeActual, setPorcentajeActual] = useState(null);
+  const [brechaGenero, setBrechaGenero] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
 
@@ -130,6 +132,8 @@ export default function ICAFileDetail() {
         if (!cancelado) {
           setArchivo(data.archivo);
           setRegistros(data.registros || []);
+          setPorcentajeActual(data.porcentajeActual ?? null);
+          setBrechaGenero(data.brechaGenero ?? null);
           setPaginaActual(1);
         }
       } catch (err) {
@@ -472,20 +476,6 @@ export default function ICAFileDetail() {
 
           <div className="flex items-center gap-2">
 
-            {/* Verificar entrevista */}
-            <RoleGate allow={[ROLES.SUPERADMIN]}>
-              {archivo?.estado === 'No verificado' && (
-                <button
-                  onClick={verificarArchivo}
-                  disabled={verificandoArchivo}
-                  className="inline-flex items-center gap-2 rounded-lg border border-[#cfe2d6] bg-[#f5faf7] px-4 py-2 text-xs font-semibold text-[#2f7d4b] transition hover:bg-[#eaf6ef] disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {verificandoArchivo ? <Loader2 size={14} className="animate-spin" /> : <ShieldCheck size={14} />}
-                  {verificandoArchivo ? 'Verificando...' : 'Verificar registro'}
-                </button>
-              )}
-            </RoleGate>
-
             {/* Eliminar archivo */}
             <button
               onClick={() => setMostrarModalArchivo(true)}
@@ -558,7 +548,9 @@ export default function ICAFileDetail() {
                 <span
                   className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold ${archivo.estado === 'Verificado'
                     ? 'bg-[#eaf6ef] text-[#2f9e58]'
-                    : 'bg-[#f1f3f3] text-[#78827f]'
+                    : archivo.estado === 'Rechazado'
+                      ? 'bg-[#fdeaea] text-[#dc2626]'
+                      : 'bg-[#fbf1de] text-[#b7891e]'
                     }`}
                 >
                   <CheckCircle2 size={11} />
@@ -628,35 +620,35 @@ export default function ICAFileDetail() {
                       )}
                     </button>
 
-                   {/* Descargar */}
-{Number(archivo?.tipoCarga) === 2 ? (
-  <button
-    onClick={() => descargarArchivo()}
-    disabled={descargando}
-    className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#e1e5e5] bg-white px-3 py-2 text-xs font-semibold text-[#59615e] transition hover:bg-[#f7f8f8] hover:text-[#a00046] disabled:cursor-not-allowed disabled:opacity-60"
-    title="Descargar"
-  >
-    {descargando ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
-    <span className="sm:hidden">Descargar</span>
-  </button>
-) : (
-  <div className="flex gap-2">
-    <button
-      onClick={() => descargarArchivo('xlsx')}
-      disabled={descargando}
-      className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#e1e5e5] bg-white px-3 py-2 text-xs font-semibold text-[#59615e] transition hover:bg-[#f7f8f8] hover:text-[#a00046] disabled:cursor-not-allowed disabled:opacity-60"
-    >
-      {descargando ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} Excel
-    </button>
-    <button
-      onClick={() => descargarArchivo('json')}
-      disabled={descargando}
-      className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#e1e5e5] bg-white px-3 py-2 text-xs font-semibold text-[#59615e] transition hover:bg-[#f7f8f8] hover:text-[#a00046] disabled:cursor-not-allowed disabled:opacity-60"
-    >
-      {descargando ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} JSON
-    </button>
-  </div>
-)}
+                    {/* Descargar */}
+                    {Number(archivo?.tipoCarga) === 2 ? (
+                      <button
+                        onClick={() => descargarArchivo()}
+                        disabled={descargando}
+                        className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#e1e5e5] bg-white px-3 py-2 text-xs font-semibold text-[#59615e] transition hover:bg-[#f7f8f8] hover:text-[#a00046] disabled:cursor-not-allowed disabled:opacity-60"
+                        title="Descargar"
+                      >
+                        {descargando ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+                        <span className="sm:hidden">Descargar</span>
+                      </button>
+                    ) : (
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => descargarArchivo('xlsx')}
+                          disabled={descargando}
+                          className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#e1e5e5] bg-white px-3 py-2 text-xs font-semibold text-[#59615e] transition hover:bg-[#f7f8f8] hover:text-[#a00046] disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {descargando ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} Excel
+                        </button>
+                        <button
+                          onClick={() => descargarArchivo('json')}
+                          disabled={descargando}
+                          className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#e1e5e5] bg-white px-3 py-2 text-xs font-semibold text-[#59615e] transition hover:bg-[#f7f8f8] hover:text-[#a00046] disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {descargando ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} JSON
+                        </button>
+                      </div>
+                    )}
 
                   </div>
                 </div>
@@ -891,19 +883,19 @@ export default function ICAFileDetail() {
               <SummaryCard
                 icon={<BarChart3 size={16} />}
                 iconClass="bg-[#eaf1fb] text-[#2f6fb0]"
-                label="Promedio global"
-                value="62.1"
-                suffix="Índice ICA"
-                description="Valor de ejemplo — el cálculo real depende del motor de scoring, todavía pendiente."
+                label="ICA general"
+                value={porcentajeActual != null ? porcentajeActual.toFixed(1) : '—'}
+                suffix="pts"
+                description="Índice general del último período."
               />
 
               <SummaryCard
                 icon={<Users size={16} />}
                 iconClass="bg-[#f6ecfb] text-[#a34fc4]"
                 label="Brecha de género"
-                value="3.4%"
-                suffix="Diferencia H/M"
-                description="Valor de ejemplo — el cálculo real depende del motor de scoring, todavía pendiente."
+                value={brechaGenero != null ? brechaGenero.toFixed(1) : '—'}
+                suffix="pts"
+                description="Mayor diferencia entre hombres y mujeres entre comunas."
               />
 
               <article className="flex items-start gap-3 rounded-xl border border-[#e4e8e9] bg-white p-4 shadow-sm">

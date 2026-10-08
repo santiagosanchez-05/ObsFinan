@@ -17,11 +17,7 @@ import {
   Loader2,
 } from 'lucide-react';
 
-const TABS = [
-  { id: 'todos', label: 'Todos', tipo: undefined },
-  { id: 'individuales', label: 'Registros individuales', tipo: 'individuales' },
-  { id: 'archivos', label: 'Archivos', tipo: 'archivos' },
-];
+
 
 // Columnas sobre las que se puede ordenar, clickeando su encabezado.
 const COLUMNAS_ORDENABLES = {
@@ -48,36 +44,6 @@ function rutaEliminar(registro) {
 
 export default function ICAHistory() {
   const { token } = useAuth();
-  async function handleDescargarPlantilla() {
-    try {
-      const res = await fetch('/api/ica/template', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'No se pudo descargar la plantilla');
-      }
-
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-
-      const enlace = document.createElement('a');
-      enlace.href = url;
-     enlace.download = 'plantilla_diccionario_ica.xlsx';
-
-      document.body.appendChild(enlace);
-      enlace.click();
-      enlace.remove();
-
-      window.URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error('Error al descargar plantilla ICA:', err);
-    }
-  }
-  const [tab, setTab] = useState('todos');
   const [busquedaInput, setBusquedaInput] = useState('');
   const [busqueda, setBusqueda] = useState('');
   const [communityId, setCommunityId] = useState('');
@@ -136,15 +102,12 @@ export default function ICAHistory() {
     async function cargarHistorial() {
       setCargando(true);
       setError('');
-
-      const tipoActual = TABS.find((t) => t.id === tab)?.tipo;
       const params = new URLSearchParams({
         page: String(page),
         pageSize: String(PAGE_SIZE),
         sortBy,
         sortDir,
       });
-      if (tipoActual) params.set('tipo', tipoActual);
       if (communityId) params.set('communityId', communityId);
       if (busqueda) params.set('busqueda', busqueda);
       if (estado) params.set('estado', estado);
@@ -169,14 +132,9 @@ export default function ICAHistory() {
     return () => {
       cancelado = true;
     };
-  }, [token, tab, communityId, estado, busqueda, page, sortBy, sortDir, recargarClave]);
+  }, [token, communityId, estado, busqueda, page, sortBy, sortDir, recargarClave]);
 
   const totalPaginas = Math.max(1, Math.ceil(total / PAGE_SIZE));
-
-  function cambiarTab(idTab) {
-    setTab(idTab);
-    setPage(1);
-  }
 
   function cambiarComunidad(valor) {
     setCommunityId(valor);
@@ -255,20 +213,6 @@ export default function ICAHistory() {
         {/* Barra de tabs, filtro, búsqueda y acción */}
         <section className="mb-5 flex flex-col gap-3 rounded-xl border border-[#e2e6e8] bg-white p-3 shadow-sm lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-wrap items-center gap-3">
-            <div className="inline-flex rounded-lg bg-[#f4f6f8] p-1">
-              {TABS.map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => cambiarTab(t.id)}
-                  className={`rounded-md px-3.5 py-1.5 text-xs font-semibold transition ${tab === t.id
-                    ? 'bg-white text-[#202522] shadow-sm'
-                    : 'text-[#8a9290] hover:text-[#59615e]'
-                    }`}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
 
             <div className="relative">
               <select
@@ -295,6 +239,7 @@ export default function ICAHistory() {
                 <option value="">Filtrar por Estado</option>
                 <option value="verificado">Verificado</option>
                 <option value="no_verificado">No verificado</option>
+                <option value="rechazado">Rechazado</option>
               </select>
 
               <ChevronDown
@@ -399,7 +344,11 @@ export default function ICAHistory() {
                       <td className="px-4 py-3">{formatearFecha(r.fecha)}</td>
                       <td className="px-4 py-3">
                         <span
-                          className={`rounded-full px-2 py-1 text-[10px] font-bold ${r.estado === 'Verificado' ? 'bg-[#eaf6ef] text-[#2f9e58]' : 'bg-[#fbf1de] text-[#b7891e]'
+                          className={`rounded-full px-2 py-1 text-[10px] font-bold ${r.estado === 'Verificado'
+                              ? 'bg-[#eaf6ef] text-[#2f9e58]'
+                              : r.estado === 'Rechazado'
+                                ? 'bg-[#fdeaea] text-[#dc2626]'
+                                : 'bg-[#fbf1de] text-[#b7891e]'
                             }`}
                         >
                           {r.estado}
@@ -446,27 +395,7 @@ export default function ICAHistory() {
           </div>
         </section>
 
-        {/* Ayuda carga masiva */}
-        <section className="mt-4 flex flex-col items-start justify-between gap-3 rounded-xl border border-[#f0d6e0] bg-white p-4 shadow-sm sm:flex-row sm:items-center">
-          <div className="flex items-start gap-3">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#a00046] text-white">
-              <Info size={14} />
-            </span>
-            <div>
-              <p className="text-xs font-bold text-[#252927]">¿Necesitas ayuda con la carga masiva?</p>
-              <p className="mt-0.5 text-[11px] text-[#8a9290]">
-                Descarga nuestra guía de usuario o el formato oficial de Excel para evitar errores durante el procesamiento de datos ICA.
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={handleDescargarPlantilla}
-            className="shrink-0 rounded-lg border border-[#a00046] px-4 py-2 text-xs font-semibold text-[#a00046] transition hover:bg-[#fff3f7]"
-          >
-            Descargar formato
-          </button>
-        </section>
+
       </div>
     </main>
   );
