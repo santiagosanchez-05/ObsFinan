@@ -9,28 +9,18 @@ import {
   ChevronsUpDown,
   Search,
   Plus,
-  Folder,
-  SquarePen,
   Eye,
   Trash2,
   Landmark,
-  Database,
-  FileText,
-  PenLine,
+  Clock,
+  CheckCircle2,
+  XCircle,
   Loader2,
 } from 'lucide-react';
 
-// Monserrat — US38 · US39. Historial de registros SPE.
-
-const TABS = [
-  { id: 'todos', label: 'Todos', tipo: undefined },
-  { id: 'individuales', label: 'Registros individuales', tipo: 'individuales' },
-  { id: 'archivos', label: 'Archivos', tipo: 'archivos' },
-];
-
-// Columnas sobre las que se puede ordenar, clickeando su encabezado.
 const COLUMNAS_ORDENABLES = {
   sector: 'Sector exportador',
+  departamento: 'Departamento',
   periodo: 'Periodo',
   fecha: 'Fecha de carga',
 };
@@ -48,8 +38,6 @@ const ESTILO_ESTADO = {
 };
 
 const PAGE_SIZE = 10;
-
-// El semestre es siempre 1 o 2, no depende de lo que haya en la base.
 const SEMESTRES = [1, 2];
 
 const CLASE_SELECT =
@@ -62,20 +50,14 @@ function formatearFecha(valor) {
   return fecha.toLocaleDateString('es-BO', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
-// US42 (Kevin Prieto): la ruta de borrado depende del tipo de registro.
-// DELETE /api/spe/:id para individuales, DELETE /api/spe/files/:id para archivos.
-function rutaEliminar(registro) {
-  return registro.tipo === 'masiva' ? `/api/spe/files/${registro.id}` : `/api/spe/${registro.id}`;
-}
-
 export default function HistorialSpePage() {
   const { token } = useAuth();
 
-  const [tab, setTab] = useState('todos');
   const [busquedaInput, setBusquedaInput] = useState('');
   const [busqueda, setBusqueda] = useState('');
   const [year, setYear] = useState('');
   const [semester, setSemester] = useState('');
+  const [departamento, setDepartamento] = useState('');
   const [estado, setEstado] = useState('');
   const [page, setPage] = useState(1);
   const [sortBy, setSortBy] = useState('fecha');
@@ -85,15 +67,15 @@ export default function HistorialSpePage() {
   const [total, setTotal] = useState(0);
   const [resumen, setResumen] = useState(null);
   const [anios, setAnios] = useState([]);
+  const [departamentos, setDepartamentos] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
   const [recargarClave, setRecargarClave] = useState(0);
 
-  // Registro pendiente de confirmar borrado (o null si el diálogo está cerrado).
   const [registroAEliminar, setRegistroAEliminar] = useState(null);
   const [eliminando, setEliminando] = useState(false);
 
-  // Debounce del buscador: esperamos 400ms sin tipeo antes de disparar la consulta.
+  // Debounce del buscador
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       setBusqueda(busquedaInput.trim());
@@ -102,7 +84,6 @@ export default function HistorialSpePage() {
     return () => clearTimeout(timeoutId);
   }, [busquedaInput]);
 
-  // Historial de registros (el servidor filtra, ordena y pagina)
   useEffect(() => {
     let cancelado = false;
 
@@ -110,16 +91,15 @@ export default function HistorialSpePage() {
       setCargando(true);
       setError('');
 
-      const tipoActual = TABS.find((t) => t.id === tab)?.tipo;
       const params = new URLSearchParams({
         page: String(page),
         pageSize: String(PAGE_SIZE),
         sortBy,
         sortDir,
       });
-      if (tipoActual) params.set('tipo', tipoActual);
       if (year) params.set('year', year);
       if (semester) params.set('semester', semester);
+      if (departamento) params.set('departamento', departamento);
       if (estado) params.set('estado', estado);
       if (busqueda) params.set('busqueda', busqueda);
 
@@ -130,13 +110,13 @@ export default function HistorialSpePage() {
         const json = await res.json();
         if (!res.ok) throw new Error(json.error || json.message || 'No se pudo cargar el historial');
 
-        // Acepta tanto { registros, total, ... } como { ok, data: { registros, total, ... } }
         const data = json.data ?? json;
         if (!cancelado) {
           setRegistros(data.registros ?? []);
           setTotal(data.total ?? 0);
           setResumen(data.resumen ?? null);
           setAnios(data.anios ?? []);
+          setDepartamentos(data.departamentos ?? []);
         }
       } catch (err) {
         if (!cancelado) setError(err.message || 'Error de conexión con el servidor');
@@ -149,38 +129,25 @@ export default function HistorialSpePage() {
     return () => {
       cancelado = true;
     };
-  }, [token, tab, year, semester, estado, busqueda, page, sortBy, sortDir, recargarClave]);
+  }, [token, year, semester, departamento, estado, busqueda, page, sortBy, sortDir, recargarClave]);
 
   const totalPaginas = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   const tarjetas = useMemo(
     () => [
       { label: 'Total registros', valor: resumen?.totalRegistros ?? '-', Icono: Landmark, estilo: 'bg-[#fbe9f0] text-[#a00046]' },
-      { label: 'Archivos cargados', valor: resumen?.totalArchivos ?? '-', Icono: FileText, estilo: 'bg-[#e8f1fb] text-[#2f6fb0]' },
-      { label: 'Carga manual', valor: resumen?.cargaManual ?? '-', Icono: PenLine, estilo: 'bg-[#f3ecfb] text-[#7c4dbd]' },
-      { label: 'Pendientes', valor: resumen?.pendientes ?? '-', Icono: Database, estilo: 'bg-[#fbf1de] text-[#b7891e]' },
+      { label: 'Pendientes', valor: resumen?.pendientes ?? '-', Icono: Clock, estilo: 'bg-[#fbf1de] text-[#b7891e]' },
+      { label: 'Aprobados', valor: resumen?.aprobadas ?? '-', Icono: CheckCircle2, estilo: 'bg-[#eaf6ef] text-[#2f9e58]' },
+      { label: 'Rechazados', valor: resumen?.rechazadas ?? '-', Icono: XCircle, estilo: 'bg-[#fdeaea] text-[#c0392b]' },
     ],
     [resumen],
   );
 
-  function cambiarTab(idTab) {
-    setTab(idTab);
-    setPage(1);
-  }
-
-  function cambiarYear(valor) {
-    setYear(valor);
-    setPage(1);
-  }
-
-  function cambiarSemester(valor) {
-    setSemester(valor);
-    setPage(1);
-  }
-
-  function cambiarEstado(valor) {
-    setEstado(valor);
-    setPage(1);
+  function cambiarFiltro(setter) {
+    return (valor) => {
+      setter(valor);
+      setPage(1);
+    };
   }
 
   function alternarOrden(columna) {
@@ -198,11 +165,21 @@ export default function HistorialSpePage() {
     return sortDir === 'asc' ? <ChevronUp size={11} /> : <ChevronDown size={11} />;
   }
 
+  function Encabezado({ columna }) {
+    return (
+      <th className="px-4 py-3">
+        <button onClick={() => alternarOrden(columna)} className="inline-flex items-center gap-1 hover:text-[#a00046]">
+          {COLUMNAS_ORDENABLES[columna]} <IconoOrden columna={columna} />
+        </button>
+      </th>
+    );
+  }
+
   async function confirmarEliminacion() {
     if (!registroAEliminar) return;
     setEliminando(true);
     try {
-      const res = await fetch(rutaEliminar(registroAEliminar), {
+      const res = await fetch(`/api/spe/${registroAEliminar.id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -222,19 +199,14 @@ export default function HistorialSpePage() {
     <main className="min-h-[calc(100vh-4rem)] bg-[#f4f6f8] px-4 py-5 sm:px-6 lg:px-8">
       <ConfirmDialog
         open={Boolean(registroAEliminar)}
-        titulo={registroAEliminar?.tipo === 'masiva' ? '¿Eliminar este archivo?' : '¿Eliminar este registro?'}
-        mensaje={
-          registroAEliminar?.tipo === 'masiva'
-            ? `Se eliminará "${registroAEliminar?.origen}" y todas sus encuestas asociadas. Esta acción no se puede deshacer.`
-            : 'Este registro individual dejará de contar para los dashboards. Esta acción no se puede deshacer.'
-        }
+        titulo="¿Eliminar este registro?"
+        mensaje="Este registro dejará de contar para los dashboards. Esta acción no se puede deshacer."
         textoConfirmar={eliminando ? 'Eliminando...' : 'Eliminar'}
         onConfirm={confirmarEliminacion}
         onCancel={() => setRegistroAEliminar(null)}
       />
 
       <div className="mx-auto max-w-[1120px]">
-        {/* Breadcrumb */}
         <Link
           to="/spe"
           className="mb-3 inline-flex items-center gap-1.5 text-xs font-semibold text-[#a00046] hover:underline"
@@ -243,46 +215,39 @@ export default function HistorialSpePage() {
         </Link>
 
         {/* Encabezado */}
-        <div className="mb-5">
-          <h1 className="text-2xl font-bold tracking-tight text-[#202522] sm:text-[28px]">
-            Historial de registros — Sector Privado Exportador
-          </h1>
-          <p className="mt-1 text-sm text-[#6d7673]">
-            Todos los registros ingresados manualmente o cargados por archivo para el Sector Privado Exportador.
-          </p>
-        </div>
-
-        {/* Barra de tabs, filtros, búsqueda y acción */}
-        <section className="mb-5 space-y-3 rounded-xl border border-[#e2e6e8] bg-white p-3 shadow-sm">
-          {/* Fila 1: pestañas y acción principal */}
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="inline-flex rounded-lg bg-[#f4f6f8] p-1">
-              {TABS.map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => cambiarTab(t.id)}
-                  className={`rounded-md px-3.5 py-1.5 text-xs font-semibold transition ${tab === t.id
-                    ? 'bg-white text-[#202522] shadow-sm'
-                    : 'text-[#8a9290] hover:text-[#59615e]'
-                    }`}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
-
-            <Link
-              to="/spe/registrar"
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#a00046] px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#820039]"
-            >
-              <Plus size={14} /> Nuevo Registro
-            </Link>
+        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-[#202522] sm:text-[28px]">
+              Historial de registros — Sector Privado Exportador
+            </h1>
+            <p className="mt-1 text-sm text-[#6d7673]">
+              Todos los registros ingresados para el Sector Privado Exportador.
+            </p>
           </div>
 
-          {/* Fila 2: filtros y buscador */}
-          <div className="flex flex-wrap items-center gap-3 border-t border-[#f0f2f2] pt-3">
+          <Link
+            to="/spe/registrar"
+            className="inline-flex items-center justify-center gap-2 self-start rounded-lg bg-[#a00046] px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#820039] sm:self-auto"
+          >
+            <Plus size={14} /> Nuevo Registro
+          </Link>
+        </div>
+
+        {/* Filtros y búsqueda */}
+        <section className="mb-5 rounded-xl border border-[#e2e6e8] bg-white p-3 shadow-sm">
+          <div className="flex flex-wrap items-center gap-3">
             <div className="relative">
-              <select value={year} onChange={(e) => cambiarYear(e.target.value)} className={CLASE_SELECT}>
+              <select value={departamento} onChange={(e) => cambiarFiltro(setDepartamento)(e.target.value)} className={CLASE_SELECT}>
+                <option value="">Todos los departamentos</option>
+                {departamentos.map((d) => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+              <ChevronDown size={13} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8a9290]" />
+            </div>
+
+            <div className="relative">
+              <select value={year} onChange={(e) => cambiarFiltro(setYear)(e.target.value)} className={CLASE_SELECT}>
                 <option value="">Todos los años</option>
                 {anios.map((a) => (
                   <option key={a} value={a}>{a}</option>
@@ -292,7 +257,7 @@ export default function HistorialSpePage() {
             </div>
 
             <div className="relative">
-              <select value={semester} onChange={(e) => cambiarSemester(e.target.value)} className={CLASE_SELECT}>
+              <select value={semester} onChange={(e) => cambiarFiltro(setSemester)(e.target.value)} className={CLASE_SELECT}>
                 <option value="">Todos los semestres</option>
                 {SEMESTRES.map((s) => (
                   <option key={s} value={s}>Semestre {s}</option>
@@ -302,7 +267,7 @@ export default function HistorialSpePage() {
             </div>
 
             <div className="relative">
-              <select value={estado} onChange={(e) => cambiarEstado(e.target.value)} className={CLASE_SELECT}>
+              <select value={estado} onChange={(e) => cambiarFiltro(setEstado)(e.target.value)} className={CLASE_SELECT}>
                 <option value="">Todos los estados</option>
                 {ESTADOS.map((e) => (
                   <option key={e.valor} value={e.valor}>{e.etiqueta}</option>
@@ -317,7 +282,7 @@ export default function HistorialSpePage() {
                 type="text"
                 value={busquedaInput}
                 onChange={(e) => setBusquedaInput(e.target.value)}
-                placeholder="Buscar por archivo o sector..."
+                placeholder="Buscar por sector..."
                 className="w-full rounded-lg border border-[#dfe4e5] bg-white py-2 pl-8 pr-3 text-xs text-[#414845] outline-none focus:border-[#a00046]"
               />
             </label>
@@ -331,26 +296,13 @@ export default function HistorialSpePage() {
         {/* Tabla */}
         <section className="overflow-hidden rounded-xl border border-[#e2e6e8] bg-white shadow-sm">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[880px] text-left text-xs">
+            <table className="w-full min-w-[760px] text-left text-xs">
               <thead className="bg-[#fafbfb] text-[9px] font-bold uppercase tracking-wider text-[#8a9290]">
                 <tr>
-                  <th className="px-4 py-3">Origen</th>
-                  <th className="px-4 py-3">
-                    <button onClick={() => alternarOrden('sector')} className="inline-flex items-center gap-1 hover:text-[#a00046]">
-                      {COLUMNAS_ORDENABLES.sector} <IconoOrden columna="sector" />
-                    </button>
-                  </th>
-                  <th className="px-4 py-3">
-                    <button onClick={() => alternarOrden('periodo')} className="inline-flex items-center gap-1 hover:text-[#a00046]">
-                      {COLUMNAS_ORDENABLES.periodo} <IconoOrden columna="periodo" />
-                    </button>
-                  </th>
-                  <th className="px-4 py-3">Registros</th>
-                  <th className="px-4 py-3">
-                    <button onClick={() => alternarOrden('fecha')} className="inline-flex items-center gap-1 hover:text-[#a00046]">
-                      {COLUMNAS_ORDENABLES.fecha} <IconoOrden columna="fecha" />
-                    </button>
-                  </th>
+                  <Encabezado columna="sector" />
+                  <Encabezado columna="departamento" />
+                  <Encabezado columna="periodo" />
+                  <Encabezado columna="fecha" />
                   <th className="px-4 py-3">Estado</th>
                   <th className="px-4 py-3 text-right">Acciones</th>
                 </tr>
@@ -358,46 +310,23 @@ export default function HistorialSpePage() {
               <tbody>
                 {cargando ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-[#8a9290]">
+                    <td colSpan={6} className="px-4 py-8 text-center text-[#8a9290]">
                       <Loader2 size={16} className="mx-auto mb-2 animate-spin" />
                       Cargando historial...
                     </td>
                   </tr>
                 ) : registros.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-[#8a9290]">
+                    <td colSpan={6} className="px-4 py-8 text-center text-[#8a9290]">
                       No hay registros que coincidan con los filtros seleccionados.
                     </td>
                   </tr>
                 ) : (
                   registros.map((r) => (
                     <tr key={r.id} className="border-t border-[#f0f2f2] text-[#48504d] hover:bg-[#fff8fa]">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2.5">
-                          <span
-                            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${r.tipo === 'masiva' ? 'bg-[#e8f1fb] text-[#2f6fb0]' : 'bg-[#f3ecfb] text-[#7c4dbd]'
-                              }`}
-                          >
-                            {r.tipo === 'masiva' ? <Folder size={14} /> : <SquarePen size={14} />}
-                          </span>
-                          <div>
-                            <p className="font-semibold text-[#252927]">{r.origen}</p>
-                            <p
-                              className={`text-[9px] font-bold uppercase tracking-wider ${r.tipo === 'masiva' ? 'text-[#2f6fb0]' : 'text-[#7c4dbd]'
-                                }`}
-                            >
-                              {r.tipo === 'masiva' ? 'Carga masiva' : 'Manual'}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">{r.sector}</td>
+                      <td className="px-4 py-3 font-semibold text-[#252927]">{r.sector || '—'}</td>
+                      <td className="px-4 py-3">{r.departamento || '—'}</td>
                       <td className="px-4 py-3">{r.periodo}</td>
-                      <td className="px-4 py-3">
-                        <span className="rounded-full bg-[#f1f3f3] px-2 py-1 text-[10px] font-bold text-[#414845]">
-                          {r.registros}
-                        </span>
-                      </td>
                       <td className="px-4 py-3">{formatearFecha(r.fecha)}</td>
                       <td className="px-4 py-3">
                         <span
@@ -408,11 +337,9 @@ export default function HistorialSpePage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-3 text-[#8a9290]">
-                          {/* Detalle: pantalla de Kevin Prieto (US41) */}
                           <Link to={`/spe/historial/${r.id}`} className="hover:text-[#a00046]">
                             <Eye size={14} />
                           </Link>
-                          {/* Eliminar: endpoint de Kevin Prieto (US42) */}
                           <button onClick={() => setRegistroAEliminar(r)} className="hover:text-[#a00046]">
                             <Trash2 size={14} />
                           </button>
@@ -452,7 +379,7 @@ export default function HistorialSpePage() {
         </section>
 
         {/* Tarjetas de resumen */}
-        <section className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <section className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
           {tarjetas.map(({ label, valor, Icono, estilo }) => (
             <div key={label} className="flex items-center gap-3 rounded-xl border border-[#e2e6e8] bg-white p-4 shadow-sm">
               <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${estilo}`}>
