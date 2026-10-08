@@ -31,6 +31,10 @@ const resetPasswordSchema = z.object({
   newPassword: passwordSchema,
 });
 
+const primerPasswordSchema = z.object({
+  newPassword: passwordSchema,
+});
+
 const changePasswordSchema = z.object({
   currentPassword: z.string().min(1, 'Falta la contraseña actual'),
   newPassword: passwordSchema,
@@ -56,6 +60,7 @@ module.exports = {
   passwordSchema,
   resetPasswordSchema,
   changePasswordSchema,
+  primerPasswordSchema,
   updateProfileSchema,
 };
 

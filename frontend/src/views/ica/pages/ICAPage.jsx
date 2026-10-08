@@ -532,7 +532,7 @@ export default function ICAPage() {
 
                       {comunidades.map((comunidad) => (
                         <option key={comunidad.id} value={comunidad.id}>
-                          {comunidad.nombre}
+                          {new Set(comunidades.map((c) => c.campusId)).size > 1 && comunidad.sede ? `${comunidad.nombre} (${comunidad.sede})` : comunidad.nombre}
                         </option>
                       ))}
                     </select>

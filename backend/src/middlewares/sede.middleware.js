@@ -34,7 +34,7 @@ function requireSedeDelRecurso(obtenerCampusId) {
         return res.status(404).json({ error: 'Recurso no encontrado' });
       }
       if (!puedeGestionarSede(req.user, campusId)) {
-        return res.status(403).json({ error: 'No podés gestionar recursos de otra sede' });
+        return res.status(403).json({ error: 'No puedes gestionar recursos de otra sede' });
       }
       return next();
     } catch (err) {

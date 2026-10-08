@@ -56,8 +56,8 @@ router.delete('/:id/participacion', requireAuth, requireRole('encuestador'), eve
 router.post('/', requireAuth, requireRole('admin', 'superadmin'), subirImagen, eventos.postEvento);
 router.patch('/:id', requireAuth, requireRole('admin', 'superadmin'), sedeDelEvento, subirImagen, eventos.patchEvento);
 router.delete('/:id', requireAuth, requireRole('admin', 'superadmin'), sedeDelEvento, eventos.deleteEvento);
-router.get('/:id/encuestadores', requireAuth, requireRole('admin', 'superadmin'), eventos.getEncuestadoresEvento);
-router.post('/:id/encuestadores', requireAuth, requireRole('admin', 'superadmin'), eventos.postAsignarEncuestador);
-router.delete('/:id/encuestadores/:userId', requireAuth, requireRole('admin', 'superadmin'), eventos.deleteAsignacionEncuestador);
+router.get('/:id/encuestadores', requireAuth, requireRole('admin', 'superadmin'), sedeDelEvento, eventos.getEncuestadoresEvento);
+router.post('/:id/encuestadores', requireAuth, requireRole('admin', 'superadmin'), sedeDelEvento, eventos.postAsignarEncuestador);
+router.delete('/:id/encuestadores/:userId', requireAuth, requireRole('admin', 'superadmin'), sedeDelEvento, eventos.deleteAsignacionEncuestador);
 
 module.exports = router;

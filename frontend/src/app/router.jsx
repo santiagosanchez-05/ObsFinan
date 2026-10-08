@@ -15,6 +15,7 @@ import aprobacionesRoutes from '../views/aprobaciones-Monserrat/aprobaciones.rou
 import convocatoriasRoutes from '../views/convocatorias/convocatorias.routes';
 import diccionarioRoutes from '../views/diccionario-KevinAlanes/diccionario.routes';
 import notFoundRoutes from '../views/not-found-KevinAlanes/not-found.routes';
+import GuardiaCambioPassword from '../shared/GuardiaCambioPassword';
 
 // Esto es lo único "compartido" que se toca, y solo una vez por módulo
 // nuevo, no por cada pantalla nueva dentro de un módulo que ya existe.
@@ -22,20 +23,27 @@ import notFoundRoutes from '../views/not-found-KevinAlanes/not-found.routes';
 // notFoundRoutes (la ruta comodín "*") SIEMPRE tiene que quedar último en
 // este array — si un módulo nuevo se agrega después, ponelo ANTES de esa
 // línea, nunca después.
+// Todas las rutas van dentro de GuardiaCambioPassword: quien entró con su
+// contraseña temporal no puede ver ninguna pantalla (ni pública) sin cambiarla.
 const router = createBrowserRouter([
-  ...landingLoginRoutes,
-  ...miPerfilRoutes,
-  ...institucionalRoutes,
-  ...usuariosRoutes,
-  ...sedesRoutes,
-  ...eventosRoutes,
-  ...icaRoutes,
-  ...speRoutes,
-  ...encuestadorRoutes,
-  ...aprobacionesRoutes,
-  ...convocatoriasRoutes,
-  ...diccionarioRoutes,
-  ...notFoundRoutes,
+  {
+    element: <GuardiaCambioPassword />,
+    children: [
+      ...landingLoginRoutes,
+      ...miPerfilRoutes,
+      ...institucionalRoutes,
+      ...usuariosRoutes,
+      ...sedesRoutes,
+      ...eventosRoutes,
+      ...icaRoutes,
+      ...speRoutes,
+      ...encuestadorRoutes,
+      ...aprobacionesRoutes,
+      ...convocatoriasRoutes,
+      ...diccionarioRoutes,
+      ...notFoundRoutes,
+    ],
+  },
 ]);
 
 export default router;

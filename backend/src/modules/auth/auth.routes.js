@@ -7,6 +7,7 @@ const {
   postVerifyCode,
   postResetPassword,
   postChangePassword,
+  postFirstPassword,
   putUpdateProfile,
 } = require('./auth.controller');
 const { requireAuth } = require('../../middlewares/auth.middleware');
@@ -49,6 +50,8 @@ router.post('/forgot-password', forgotPasswordLimiter, postForgotPassword);
 router.post('/verify-code', verifyCodeLimiter, postVerifyCode);
 router.post('/reset-password', postResetPassword);
 router.post('/change-password', requireAuth, postChangePassword); // requiere sesión activa, no correo/código
+// Primer ingreso: solo con el token que trae la marca de contraseña temporal.
+router.post('/first-password', requireAuth, postFirstPassword);
 router.put('/update-profile', requireAuth, putUpdateProfile);
 
 module.exports = router;

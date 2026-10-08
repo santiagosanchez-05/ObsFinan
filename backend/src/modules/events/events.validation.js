@@ -48,4 +48,8 @@ const listarEventosQuerySchema = z.object({
   disponibles: booleano.default(false),
 });
 
-module.exports = { eventoSchema, listarEventosQuerySchema };
+const asignarEncuestadorSchema = z.object({
+  userId: z.coerce.number().int().positive('Selecciona un encuestador'),
+});
+
+module.exports = { eventoSchema, listarEventosQuerySchema, asignarEncuestadorSchema };

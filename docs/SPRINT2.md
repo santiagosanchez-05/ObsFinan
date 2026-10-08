@@ -61,7 +61,7 @@ Lo que carga un **Admin/Superadmin** entra **aprobado** (2). Lo que manda un **E
 | US58, US59 Bandeja y aprobación ICA | Monserrat | `GET /api/ica/pendientes`, `PATCH /api/ica/cargas/:id/estado` | `modules/ica/ica.aprobacion.controller.js` |
 | US60 Cálculo automático ICA | Liz | (lo llama la aprobación) | `modules/ica/ica.scoring.service.js` |
 | US61 Estado de mis encuestas | Kevin Prieto | `GET /api/encuestas/mias` | `modules/encuestas/encuestas.controller.js` |
-| US65 Control de acceso por sede | Santiago | — | `middlewares/sede.middleware.js` (ya hecho; falta aplicarlo a ICA) |
+| US65 Control de acceso por sede | Santiago | — | `middlewares/sede.middleware.js` — hecho y aplicado a eventos, ICA (el Superadmin gestiona todas las sedes; `?campusId=` para elegir una), convocatorias y registro de encuestadores |
 
 Los servicios y validaciones de cada historia los crea su encargado con el mismo nombre que su controlador (ej. `spe.carga.service.js`, `spe.carga.validation.js`).
 
