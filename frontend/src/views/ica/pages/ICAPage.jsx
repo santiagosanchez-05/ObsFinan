@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth, ROLES } from '../../../shared/AuthContext';
 import RoleGate from '../../../shared/RoleGate';
+import CitaAcademica from '../../../shared/CitaAcademica';
 import { Link } from 'react-router-dom';
 import {
   AlertTriangle,
@@ -531,7 +532,7 @@ export default function ICAPage() {
 
                       {comunidades.map((comunidad) => (
                         <option key={comunidad.id} value={comunidad.id}>
-                          {comunidad.nombre}
+                          {new Set(comunidades.map((c) => c.campusId)).size > 1 && comunidad.sede ? `${comunidad.nombre} (${comunidad.sede})` : comunidad.nombre}
                         </option>
                       ))}
                     </select>
@@ -689,6 +690,7 @@ export default function ICAPage() {
 
           {vista === 'dimensiones' && <DimensionProfileView dimensiones={dimensiones} metricas={metricas} periodoLabel={periodoLabel} />}
           {vista === 'preguntas' && <QuestionExplorerView preguntas={explorador.preguntas} pregunta={preguntaSeleccionada} onSelect={setPreguntaSeleccionada} periodoLabel={explorador.periodo ? `${explorador.periodo.year} - Trimestre ${explorador.periodo.quarter}` : periodoLabel} total={explorador.total} error={errorExplorador} onExportar={handleExportarRespuestas} />}
+          <CitaAcademica recurso="ica" className="mt-4" />
         </div>
       </main>
     </>

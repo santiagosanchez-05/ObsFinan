@@ -1,5 +1,7 @@
 const jwt = require('jsonwebtoken');
 
+const RUTA_PRIMER_INGRESO = '/api/auth/first-password';
+
 // Lee el JWT del header "Authorization: Bearer <token>", lo valida y
 // adjunta el payload a req.user — así cualquier endpoint protegido sabe
 // quién hace la petición sin volver a consultar la base de datos.
@@ -14,7 +16,20 @@ function requireAuth(req, res, next) {
 
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = { userId: payload.userId, role: payload.role, campusId: payload.campusId };
+    req.user = {
+      userId: payload.userId,
+      role: payload.role,
+      campusId: payload.campusId,
+      ...(payload.debeCambiarPassword ? { debeCambiarPassword: true } : {}),
+    };
+    // Entró con la contraseña temporal: hasta que la cambie, solo puede
+    // usar el endpoint de primer ingreso (el frontend también lo redirige).
+    if (req.user.debeCambiarPassword && (req.originalUrl || '').split('?')[0] !== RUTA_PRIMER_INGRESO) {
+      return res.status(403).json({
+        error: 'Debes cambiar tu contraseña temporal antes de continuar',
+        codigo: 'CAMBIO_PASSWORD_OBLIGATORIO',
+      });
+    }
     return next();
   } catch {
     return res.status(401).json({ error: 'Token inválido o expirado' });

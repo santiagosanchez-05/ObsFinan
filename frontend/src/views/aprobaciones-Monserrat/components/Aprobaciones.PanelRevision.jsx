@@ -19,12 +19,18 @@ export const SECCIONES_SPE = {
 const ORDEN_SECCIONES = Object.keys(SECCIONES_SPE);
 
 /*
- * Devuelve el número romano de una sección.
- * - Si el backend manda `seccion: 'II'`, se usa tal cual.
- * - Si solo manda `grupo: '2. Expectativas económicas'`, se deduce
- *   del número inicial (2 -> II). Así funciona aunque el backend
- *   todavía no envíe `seccion`.
+ * Valores especiales de una respuesta:
+ *  - null / undefined / ''  -> "Sin responder" (debió responderse)
+ *  - NO_APLICA              -> "No aplica" (la pregunta se salta por una
+ *                              respuesta anterior; no cuenta como vacía)
+ *  - ['a', 'b']             -> varias opciones marcadas
  */
+export const NO_APLICA = '__no_aplica__';
+
+const sinResponder = (valor) =>
+  valor === null || valor === undefined || valor === '';
+
+
 function codigoSeccion(g) {
   if (g.seccion) return g.seccion;
 
@@ -39,13 +45,11 @@ function porOrdenDeSeccion(a, b) {
   return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
 }
 
-// ---------------------------------------------------------------------------
-// Piezas pequeñas
-// ---------------------------------------------------------------------------
 
-function Dato({ label, children }) {
+
+function Dato({ label, children, wide = false }) {
   return (
-    <div>
+    <div className={wide ? 'col-span-2' : undefined}>
       <dt className="text-[9px] font-bold uppercase tracking-wider text-[#8a9290]">
         {label}
       </dt>
@@ -107,6 +111,21 @@ function Estadisticas({ items }) {
       ))}
     </div>
   );
+}
+
+/* Valor de una respuesta: texto, varias opciones, "No aplica" o "Sin responder" */
+function Respuesta({ valor }) {
+  if (valor === NO_APLICA) {
+    return <span className="font-normal italic text-[#8a9290]">No aplica</span>;
+  }
+
+  if (sinResponder(valor)) {
+    return <span className="text-[#b7891e]">Sin responder</span>;
+  }
+
+  if (Array.isArray(valor)) return valor.join(', ');
+
+  return valor;
 }
 
 /* Encabezado de sección, igual que el Word: "II: Situación económica y expectativas" */
@@ -179,44 +198,73 @@ function ResumenMasiva({ resumen }) {
 
 /*
  * Registro manual.
- * SPE -> respuestas: [{ seccion: 'I', items: [[pregunta, respuesta], ...] }]
- *        (el título de cada sección sale de SECCIONES_SPE)
- * ICA -> respuestas: [{ grupo: 'Perfil', items: [...] }]
+ * SPE -> respuestas: [{ grupo, items: [[pregunta, respuesta], ...] }]
+ *        (el título de cada sección sale de SECCIONES_SPE: "II: ...")
+ * ICA -> respuestas: [{ grupo: 'Perfil', items: [[pregunta, respuesta], ...] }]
+ *        (títulos planos, sin números romanos)
  */
-function RespuestasManual({ respuestas }) {
+function RespuestasManual({ respuestas, sistema }) {
+  const esSpe = sistema === 'spe';
+
   const lista = (respuestas ?? []).map((g) => ({
     ...g,
-    seccion: codigoSeccion(g),
+    seccion: esSpe ? codigoSeccion(g) : null,
   }));
-  const esSpe = lista.some((g) => g.seccion);
 
   if (esSpe) lista.sort(porOrdenDeSeccion);
 
-  return lista.map((g) => {
-    const codigo = g.seccion;
-    const titulo = codigo ? SECCIONES_SPE[codigo] ?? g.grupo : g.grupo;
+  // Preguntas que debieron responderse y están vacías (no cuenta "No aplica")
+  const pendientes = lista.flatMap((g) =>
+    (g.items ?? []).filter(([, r]) => sinResponder(r)).map(([p]) => p),
+  );
 
-    return (
-      <section key={codigo ?? g.grupo}>
-        <EncabezadoSeccion codigo={codigo} titulo={titulo} />
+  return (
+    <>
+      {pendientes.length > 0 && (
+        <div className="rounded-lg border border-[#f3dfb4] bg-[#fbf1de] p-3">
+          <p className="mb-1 text-xs font-bold text-[#b7891e]">
+            Revisar antes de aprobar
+          </p>
+          <p className="mb-1 text-xs text-[#8a6a16]">
+            {pendientes.length === 1
+              ? '1 pregunta sin responder:'
+              : `${pendientes.length} preguntas sin responder:`}
+          </p>
+          <ul className="list-disc space-y-0.5 pl-4 text-xs text-[#8a6a16]">
+            {pendientes.map((p) => (
+              <li key={p}>{p}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
-        <dl className="divide-y divide-[#f0f2f2] rounded-lg border border-[#e2e6e8]">
-          {g.items?.map(([pregunta, respuesta]) => (
-            <div key={pregunta} className="px-3 py-2">
-              <dt className="text-[11px] text-[#8a9290]">{pregunta}</dt>
-              <dd className="text-xs font-semibold text-[#252927]">
-                {respuesta}
-              </dd>
-            </div>
-          ))}
-        </dl>
-      </section>
-    );
-  });
+      {lista.map((g) => {
+        const codigo = g.seccion;
+        const titulo = codigo ? SECCIONES_SPE[codigo] ?? g.grupo : g.grupo;
+
+        return (
+          <section key={codigo ?? g.grupo}>
+            <EncabezadoSeccion codigo={codigo} titulo={titulo} />
+
+            <dl className="divide-y divide-[#f0f2f2] rounded-lg border border-[#e2e6e8]">
+              {g.items?.map(([pregunta, respuesta]) => (
+                <div key={pregunta} className="px-3 py-2">
+                  <dt className="text-[11px] text-[#8a9290]">{pregunta}</dt>
+                  <dd className="text-xs font-semibold text-[#252927]">
+                    <Respuesta valor={respuesta} />
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+        );
+      })}
+    </>
+  );
 }
 
 // ---------------------------------------------------------------------------
-// Botones del footer: Rechazar (secundario) / Aprobar (principal, maroon)
+// Botones del footer
 // ---------------------------------------------------------------------------
 
 const FOCO =
@@ -257,8 +305,10 @@ export default function PanelRevision({
   onClose,
   onAccion,
   procesando = false,
+  sistema = 'spe',
 }) {
   const masiva = r.tipo === 'masiva';
+  const zonas = r.zonas ?? [];
 
   return (
     <div
@@ -321,12 +371,17 @@ export default function PanelRevision({
             </Dato>
             <Dato label="Evento">{r.evento}</Dato>
             <Dato label="Encuestas">{r.registros}</Dato>
+            {sistema === 'ica' && (
+              <Dato label={zonas.length > 1 ? 'Comunas' : 'Comuna'} wide>
+                {zonas.length ? zonas.join(', ') : '-'}
+              </Dato>
+            )}
           </dl>
 
           {masiva ? (
             <ResumenMasiva resumen={r.resumen} />
           ) : (
-            <RespuestasManual respuestas={r.respuestas} />
+            <RespuestasManual respuestas={r.respuestas} sistema={sistema} />
           )}
         </div>
 

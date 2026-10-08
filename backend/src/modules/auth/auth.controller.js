@@ -4,6 +4,7 @@ const {
   verifyCodeSchema,
   resetPasswordSchema,
   changePasswordSchema,
+  primerPasswordSchema,
   updateProfileSchema,
 } = require('./auth.validation');
 const authService = require('./auth.service');
@@ -112,6 +113,27 @@ async function postChangePassword(req, res) {
   }
 }
 
+// Primer ingreso con la contraseña temporal: solo pide la nueva.
+async function postFirstPassword(req, res) {
+  if (!req.user.debeCambiarPassword) {
+    return res.status(403).json({ error: 'Esta acción solo está disponible en el primer ingreso' });
+  }
+  const parsed = primerPasswordSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Datos inválidos', detalles: parsed.error.flatten() });
+  }
+  try {
+    const token = await authService.establecerPasswordInicial(req.user, parsed.data.newPassword);
+    return res.json({ message: 'Contraseña actualizada correctamente', token });
+  } catch (err) {
+    if (err.message === 'USUARIO_NO_ENCONTRADO') {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+    console.error('Error al establecer la contraseña inicial:', err);
+    return res.status(500).json({ error: 'Error interno del servidor' });
+  }
+}
+
 async function putUpdateProfile(req, res) {
   const userId = req.user?.userId || req.user?.id;
   if (!userId) {
@@ -144,6 +166,7 @@ module.exports = {
   postVerifyCode,
   postResetPassword,
   postChangePassword,
+  postFirstPassword,
   putUpdateProfile,
 };
 

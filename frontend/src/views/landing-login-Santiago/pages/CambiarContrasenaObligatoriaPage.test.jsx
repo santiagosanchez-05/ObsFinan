@@ -7,7 +7,7 @@ import CambiarContrasenaObligatoriaPage from './CambiarContrasenaObligatoriaPage
 function loguearComo() {
   localStorage.setItem(
     'bfu_auth',
-    JSON.stringify({ token: 'fake-token', user: { id: 1, nombre: 'Test', role: 'encuestador', debeCambiarPassword: true } }),
+    JSON.stringify({ token: 'token-temporal', user: { id: 1, nombre: 'Test', role: 'encuestador', debeCambiarPassword: true } }),
   );
 }
 
@@ -21,8 +21,7 @@ function renderPagina() {
   );
 }
 
-async function llenar({ actual = 'UVL-a8K2p9', nueva = 'ContrasenaSegura1', confirmar = 'ContrasenaSegura1' }) {
-  fireEvent.change(screen.getByLabelText('Contraseña temporal'), { target: { value: actual } });
+function llenar({ nueva = 'ContrasenaSegura1', confirmar = 'ContrasenaSegura1' }) {
   fireEvent.change(screen.getByLabelText('Nueva contraseña'), { target: { value: nueva } });
   fireEvent.change(screen.getByLabelText('Confirmar nueva contraseña'), { target: { value: confirmar } });
 }
@@ -33,22 +32,34 @@ describe('CambiarContrasenaObligatoriaPage', () => {
     vi.restoreAllMocks();
   });
 
-  it('envía la contraseña actual y la nueva a /api/auth/change-password', async () => {
+  it('no pide la contraseña temporal: acaba de ingresarla', () => {
     loguearComo();
-    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ message: 'ok' }) });
+    renderPagina();
+    expect(screen.queryByLabelText('Contraseña temporal')).not.toBeInTheDocument();
+  });
+
+  it('envía solo la nueva a /api/auth/first-password y guarda el token nuevo', async () => {
+    loguearComo();
+    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ message: 'ok', token: 'token-limpio' }) });
 
     renderPagina();
-    await llenar({});
+    llenar({});
     fireEvent.click(screen.getByRole('button', { name: 'Guardar contraseña' }));
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
-        '/api/auth/change-password',
+        '/api/auth/first-password',
         expect.objectContaining({
           method: 'POST',
-          body: JSON.stringify({ currentPassword: 'UVL-a8K2p9', newPassword: 'ContrasenaSegura1' }),
+          headers: expect.objectContaining({ Authorization: 'Bearer token-temporal' }),
+          body: JSON.stringify({ newPassword: 'ContrasenaSegura1' }),
         }),
       );
+    });
+    await waitFor(() => {
+      const sesion = JSON.parse(localStorage.getItem('bfu_auth'));
+      expect(sesion.token).toBe('token-limpio');
+      expect(sesion.user.debeCambiarPassword).toBe(false);
     });
   });
 
@@ -57,22 +68,34 @@ describe('CambiarContrasenaObligatoriaPage', () => {
     global.fetch = vi.fn();
 
     renderPagina();
-    await llenar({ nueva: 'UVL-b9L3q0', confirmar: 'UVL-b9L3q0' });
+    llenar({ nueva: 'UVL-b9L3q0', confirmar: 'UVL-b9L3q0' });
     fireEvent.click(screen.getByRole('button', { name: 'Guardar contraseña' }));
 
     expect(await screen.findByText('No puede tener el formato de una contraseña temporal (UVL-XXXXXX)')).toBeInTheDocument();
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
-  it('muestra el error del servidor si la contraseña actual está mal', async () => {
+  it('avisa si las contraseñas no coinciden', async () => {
     loguearComo();
-    global.fetch = vi.fn().mockResolvedValue({ ok: false, json: async () => ({ error: 'La contraseña actual no es correcta' }) });
+    global.fetch = vi.fn();
 
     renderPagina();
-    await llenar({ actual: 'esta-mal' });
+    llenar({ confirmar: 'OtraDistinta1' });
     fireEvent.click(screen.getByRole('button', { name: 'Guardar contraseña' }));
 
-    expect(await screen.findByText('La contraseña actual no es correcta')).toBeInTheDocument();
+    expect(await screen.findByText('Las contraseñas no coinciden')).toBeInTheDocument();
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('muestra el error del servidor', async () => {
+    loguearComo();
+    global.fetch = vi.fn().mockResolvedValue({ ok: false, json: async () => ({ error: 'Datos inválidos' }) });
+
+    renderPagina();
+    llenar({});
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar contraseña' }));
+
+    expect(await screen.findByText('Datos inválidos')).toBeInTheDocument();
   });
 
   it('tiene un botón de Cerrar sesión por si no quiere cambiarla ahora', async () => {

@@ -1,5 +1,14 @@
 const { uploadIcaMetaSchema, registroIcaSchema, entrevistaIcaSchema } = require('./ica.validation');
 const icaService = require('./ica.service');
+const { sedeDeGestion } = require('../../middlewares/sede.middleware');
+
+// Gestión del ICA (US65): el Superadmin trabaja sobre cualquier sede
+// (campusId null = todas, o la que pida con ?campusId=) y el Admin solo
+// sobre la suya. `sinSede` = Admin sin sede asignada.
+function sedeDeGestionIca(req) {
+  const campusId = sedeDeGestion(req);
+  return { campusId, sinSede: req.user.role !== 'superadmin' && !campusId };
+}
 
 // Lectura de dashboards (endpoints públicos): el visitante y el Superadmin
 // eligen sede por query (sin campusId = todas); un usuario con rol de sede
@@ -57,13 +66,14 @@ async function getExploradorPreguntasIca(req, res) {
 async function postRegistroIca(req, res) {
   const parsed = registroIcaSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: 'Datos inválidos', detalles: parsed.error.flatten() });
-  if (!req.user.campusId) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
+  const { campusId, sinSede } = sedeDeGestionIca(req);
+  if (sinSede) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
 
   try {
     const resultado = await icaService.registrarRegistroIndividual({
       ...parsed.data,
       userId: req.user.userId,
-      campusId: req.user.campusId,
+      campusId,
       rol: req.user.role,
     });
     return res.status(201).json({ message: 'Registro ICA guardado correctamente', ...resultado });
@@ -79,7 +89,8 @@ async function postRegistroIca(req, res) {
 async function postEntrevistaIca(req, res) {
   const parsed = entrevistaIcaSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: 'Datos inválidos', detalles: parsed.error.flatten() });
-  if (!req.user.campusId) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
+  const { campusId, sinSede } = sedeDeGestionIca(req);
+  if (sinSede) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
   if (req.user.role === 'encuestador' && !parsed.data.eventId) {
     return res.status(400).json({ error: 'Falta indicar el evento asignado' });
   }
@@ -88,7 +99,7 @@ async function postEntrevistaIca(req, res) {
     const resultado = await icaService.registrarEntrevistaIndividual({
       ...parsed.data,
       userId: req.user.userId,
-      campusId: req.user.campusId,
+      campusId,
       rol: req.user.role,
     });
     return res.status(201).json({ message: 'Entrevista ICA guardada correctamente', ...resultado });
@@ -105,13 +116,18 @@ async function postEntrevistaIca(req, res) {
 }
 
 async function getComunidadesIca(req, res) {
-  const campusId = req.user.campusId;
-  if (!campusId) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
+  const { campusId, sinSede } = sedeDeGestionIca(req);
+  if (sinSede) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
 
   try {
     const comunidades = await icaService.obtenerComunidadesPorSede(campusId);
     return res.status(200).json({
-      comunidades: comunidades.map((c) => ({ id: c.community_id, nombre: c.community_name })),
+      comunidades: comunidades.map((c) => ({
+        id: c.community_id,
+        nombre: c.community_name,
+        campusId: c.campus_id,
+        sede: c.campus_name,
+      })),
     });
   } catch (err) {
     console.error('Error al obtener comunidades ICA:', err);
@@ -134,10 +150,8 @@ async function postUploadIca(req, res) {
   }
   const { communityId, quarter, year } = parsedMeta.data;
 
-  const campusId = req.user.campusId;
-  if (!campusId) {
-    return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
-  }
+  const { campusId, sinSede } = sedeDeGestionIca(req);
+  if (sinSede) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
 
   let datos;
   try {
@@ -191,13 +205,8 @@ async function postUploadIca(req, res) {
 }
 //Descarga de excel (subida masiva)
 async function downloadArchivoIca(req, res) {
-  const campusId = req.user.campusId;
-
-  if (!campusId) {
-    return res.status(400).json({
-      error: 'Tu usuario no tiene una sede asignada',
-    });
-  }
+  const { campusId, sinSede } = sedeDeGestionIca(req);
+  if (sinSede) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
 
   const dataLoadId = Number(req.params.id);
 
@@ -261,8 +270,8 @@ async function downloadPlantillaIca(req, res) {
 }
 
 async function getHistorialIca(req, res) {
-  const campusId = req.user.campusId;
-  if (!campusId) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
+  const { campusId, sinSede } = sedeDeGestionIca(req);
+  if (sinSede) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
 
   try {
     const resultado = await icaService.obtenerHistorialIca({
@@ -285,8 +294,8 @@ async function getHistorialIca(req, res) {
 }
 
 async function getDetalleArchivoIca(req, res) {
-  const campusId = req.user.campusId;
-  if (!campusId) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
+  const { campusId, sinSede } = sedeDeGestionIca(req);
+  if (sinSede) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
 
   const dataLoadId = Number(req.params.id);
   if (!Number.isInteger(dataLoadId) || dataLoadId <= 0) {
@@ -305,8 +314,8 @@ async function getDetalleArchivoIca(req, res) {
   }
 }
 async function deleteRegistroIca(req, res) {
-  const campusId = req.user.campusId;
-  if (!campusId) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
+  const { campusId, sinSede } = sedeDeGestionIca(req);
+  if (sinSede) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
 
   const dataLoadId = Number(req.params.id);
   if (!Number.isInteger(dataLoadId) || dataLoadId <= 0) {
@@ -326,13 +335,8 @@ async function deleteRegistroIca(req, res) {
 }
 
 async function deleteArchivoIca(req, res) {
-  const campusId = req.user.campusId;
-
-  if (!campusId) {
-    return res.status(400).json({
-      error: 'Tu usuario no tiene una sede asignada',
-    });
-  }
+  const { campusId, sinSede } = sedeDeGestionIca(req);
+  if (sinSede) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
 
   const dataLoadId = Number(req.params.id);
 
@@ -366,13 +370,8 @@ async function deleteArchivoIca(req, res) {
   }
 }
 async function deleteRespuestaIca(req, res) {
-  const campusId = req.user.campusId;
-
-  if (!campusId) {
-    return res.status(400).json({
-      error: 'Tu usuario no tiene una sede asignada',
-    });
-  }
+  const { campusId, sinSede } = sedeDeGestionIca(req);
+  if (sinSede) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
 
   const surveyResponseId = Number(req.params.id);
 
@@ -407,13 +406,8 @@ async function deleteRespuestaIca(req, res) {
 }
 // Función para verificar una encuesta ICA (ya sea de carga masiva o manual) (cambio de estado a 2)
 async function verifyCargaIca(req, res) {
-  const campusId = req.user.campusId;
-
-  if (!campusId) {
-    return res.status(400).json({
-      error: 'Tu usuario no tiene una sede asignada',
-    });
-  }
+  const { campusId, sinSede } = sedeDeGestionIca(req);
+  if (sinSede) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
 
   const dataLoadId = Number(req.params.id);
 
@@ -448,8 +442,8 @@ async function verifyCargaIca(req, res) {
 }
 
 async function downloadRegistroIca(req, res) {
-  const campusId = req.user.campusId;
-  if (!campusId) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
+  const { campusId, sinSede } = sedeDeGestionIca(req);
+  if (sinSede) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
 
   const dataLoadId = Number(req.params.id);
   if (!Number.isInteger(dataLoadId) || dataLoadId <= 0) {
@@ -480,8 +474,8 @@ async function downloadRegistroIca(req, res) {
 }
 
 async function getExportRespuestasIca(req, res) {
-  const campusId = req.user.campusId;
-  if (!campusId) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
+  const { campusId, sinSede } = sedeDeGestionIca(req);
+  if (sinSede) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
 
   const formato = String(req.query.formato || 'xlsx').toLowerCase();
   if (!['xlsx', 'csv', 'json'].includes(formato)) {

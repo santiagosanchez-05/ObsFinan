@@ -41,6 +41,12 @@ const PREGUNTAS = [
   ['q32MostImportantFactor', '¿Qué factor considera más importante al momento de decidir si contratar un seguro de vida?', ['Precio', 'Beneficios y coberturas', 'Confianza en la aseguradora', 'Experiencia previa con seguros', 'Recomendación de un familiar o amigo']],
 ];
 
+// Superadmin (US65): si hay comunas de varias sedes, se muestra la sede al lado.
+function etiquetaComuna(comuna, lista) {
+  const variasSedes = new Set(lista.map((c) => c.campusId)).size > 1;
+  return variasSedes && comuna.sede ? `${comuna.nombre} (${comuna.sede})` : comuna.nombre;
+}
+
 export default function ICARegisterPage({ eventId = null, encuestador = false }) {
   const [guardado, setGuardado] = useState(false);
   const [enviando, setEnviando] = useState(false);
@@ -146,7 +152,7 @@ export default function ICARegisterPage({ eventId = null, encuestador = false })
             <Campo label="Comuna" error={errors.communityId?.message}>
               <select {...register('communityId', { required: 'Seleccioná una comuna' })} defaultValue="" disabled={cargandoComunas || Boolean(errorComunas)} className={CAMPO_ICA}>
                 <option value="" disabled>{cargandoComunas ? 'Cargando comunas...' : 'Selecciona una comuna'}</option>
-                {comunas.map((comuna) => <option key={comuna.id} value={comuna.id}>{comuna.nombre}</option>)}
+                {comunas.map((comuna) => <option key={comuna.id} value={comuna.id}>{etiquetaComuna(comuna, comunas)}</option>)}
               </select>
               {errorComunas && <span className="mt-1 block text-[10px] text-[#a00046]">{errorComunas}</span>}
             </Campo>

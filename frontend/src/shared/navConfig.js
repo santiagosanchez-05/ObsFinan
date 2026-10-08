@@ -21,6 +21,7 @@ export const NAV_BY_ROLE = {
   ],
   [ROLES.ENCUESTADOR]: [
     { to: '/encuestador/eventos', label: 'Mis eventos' },
+    { to: '/eventos', label: 'Eventos' }, // agenda: ahí se anota en eventos con encuesta de su sede
     { to: '/encuestador/encuestas', label: 'Mis encuestas' },
     { to: '/ica', label: 'ICA' },
     { to: '/spe', label: 'SPE' },
