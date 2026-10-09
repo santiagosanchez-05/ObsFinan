@@ -82,19 +82,14 @@ function construirRespuesta(respuestas) {
   return { columnas, valores };
 }
 
-async function registrarRegistroIndividual({ userId, rol, ...respuestas }) {
-  const r = String(rol ?? '').toLowerCase().replace('_', '');
-  const estado =
-    r === 'admin' || r === 'superadmin'
-      ? ESTADO_CARGA.APROBADA
-      : ESTADO_CARGA.PENDIENTE;
+async function registrarRegistroIndividual({ userId, ...respuestas }) {
   const conexion = await pool.getConnection();
   try {
     await conexion.beginTransaction();
     const [carga] = await conexion.query(
       `INSERT INTO data_load (module, source_type, file_name, total_rows, status, created_modified_by)
        VALUES (?, ?, ?, 1, ?, ?)`,
-      [MODULO.SPE, TIPO_CARGA.INDIVIDUAL, 'Registro individual', estado, userId],
+      [MODULO.SPE, TIPO_CARGA.INDIVIDUAL, 'Registro individual', ESTADO_CARGA.APROBADA, userId],
     );
     const { columnas, valores } = construirRespuesta(respuestas);
     const [respuesta] = await conexion.query(
@@ -103,9 +98,9 @@ async function registrarRegistroIndividual({ userId, rol, ...respuestas }) {
        VALUES (?, ?, ?, ?, ?, ${columnas.map(() => '?').join(', ')}, 1)`,
       [carga.insertId, respuestas.year, respuestas.semester, userId, null, ...valores],
     );
-    if (estado === ESTADO_CARGA.APROBADA) {
+    
       await calcularIndicesSpe(carga.insertId, conexion);
-    }
+
     await conexion.commit();
     return { dataLoadId: carga.insertId, surveyResponseId: respuesta.insertId };
   } catch (err) {
