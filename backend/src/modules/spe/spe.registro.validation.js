@@ -47,7 +47,7 @@ const CHECKBOX_FIELDS = {
   regulations: ['Control de cambios', 'Restricciones a la exportación', 'Medidas no arancelarias', 'Impuestos a la exportación', 'Incertidumbre regulatoria', 'Trámites aduaneros complejos'],
 };
 
-const stringOptional = z.string().trim().max(1000).optional().nullable();
+const stringRequired = z.string().trim().min(1, 'Este campo es obligatorio').max(1000);
 const shape = {
   year: z.coerce.number().int().min(2000).max(2100),
   semester: z.coerce.number().int().min(1).max(2),
@@ -55,12 +55,12 @@ const shape = {
 };
 
 Object.entries(OPCIONES).forEach(([campo, opciones]) => {
-  shape[campo] = z.enum(opciones).optional().nullable();
+  shape[campo] = z.enum(opciones, { message: 'Selecciona una opción' });
 });
-RADIO_FIELDS.forEach((campo) => { shape[campo] = z.enum(['Sí', 'No']).optional().nullable(); });
-SCALE_FIELDS.forEach((campo) => { shape[campo] = z.coerce.number().int().min(1).max(5).optional().nullable(); });
-TEXT_FIELDS.forEach((campo) => { shape[campo] = stringOptional; });
-NUMBER_FIELDS.forEach((campo) => { shape[campo] = z.coerce.number().int().min(0).max(1000).optional().nullable(); });
+RADIO_FIELDS.forEach((campo) => { shape[campo] = z.enum(['Sí', 'No'], { message: 'Selecciona una opción' }); });
+SCALE_FIELDS.forEach((campo) => { shape[campo] = z.coerce.number().int().min(1).max(5, 'Selecciona un valor de 1 a 5'); });
+TEXT_FIELDS.forEach((campo) => { shape[campo] = stringRequired; });
+NUMBER_FIELDS.forEach((campo) => { shape[campo] = z.coerce.number().int().min(0).max(1000); });
 Object.keys(CHECKBOX_FIELDS).forEach((campo) => {
   shape[campo] = z.array(z.enum(CHECKBOX_FIELDS[campo])).optional().default([]);
 });

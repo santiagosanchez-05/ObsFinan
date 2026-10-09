@@ -1,5 +1,6 @@
 const pool = require('../../config/db');
 const { MODULO, ESTADO_CARGA } = require('../../config/estados');
+const { calcularIndicesSpe } = require('./spe.indices.service');
 
 const SOURCE_TYPE_ARCHIVO = 2; // data_load.source_type: 1 = individual, 2 = archivo
 
@@ -526,6 +527,10 @@ async function cambiarEstadoCargaSpe({
       [nuevoEstado, revisorId, nota, dataLoadId],
     );
 
+    if (estado === 'aprobada') {
+      await calcularIndicesSpe(dataLoadId, conexion);
+    }
+
     await conexion.commit();
   } catch (err) {
     await conexion.rollback();
@@ -533,11 +538,6 @@ async function cambiarEstadoCargaSpe({
   } finally {
     conexion.release();
   }
-
-  // TODO (US63):
-  // Al aprobar, llamar:
-  // await calcularIndicesSpe(dataLoadId)
-  //
 
   return {
     id: dataLoadId,

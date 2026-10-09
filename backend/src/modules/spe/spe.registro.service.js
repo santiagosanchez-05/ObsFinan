@@ -3,9 +3,39 @@ const { ESTADO_CARGA, MODULO, TIPO_CARGA } = require('../../config/estados');
 const { CHECKBOX_FIELDS } = require('./spe.registro.validation');
 
 function nombreColumna(campo, seccion, opcion) {
+  const sufijosCheckbox = {
+    certifications: {
+      ISO: 'cert_iso',
+      Orgánica: 'cert_organic',
+      'Comercio justo': 'cert_fair_trade',
+      HACCP: 'cert_haccp',
+      Otra: 'cert_other',
+    },
+    instruments: {
+      'Acuerdos comerciales': 'instr_trade_agreements',
+      SGP: 'instr_sgp',
+      'Devolución de aranceles': 'instr_tariff_refund',
+      'Trading companies': 'instr_trading_companies',
+      'Normativa regional': 'instr_regional_regulations',
+      Ninguno: 'instr_none',
+    },
+    regulations: {
+      'Control de cambios': 'reg_exchange_controls',
+      'Restricciones a la exportación': 'reg_export_restrictions',
+      'Medidas no arancelarias': 'reg_non_tariff_measures',
+      'Impuestos a la exportación': 'reg_export_taxes',
+      'Incertidumbre regulatoria': 'reg_regulatory_uncertainty',
+      'Trámites aduaneros complejos': 'reg_complex_customs',
+    },
+  };
+  const sufijosCampo = {
+    legalCertaintyInvestmentScore: 'legal_certainty_score',
+    investedLast12m: 'invested_last_12m',
+    willInvestNext12m: 'will_invest_next_12m',
+  };
   const sufijo = opcion
-    ? `${campo}_${opcion.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')}`
-    : campo;
+    ? sufijosCheckbox[campo][opcion]
+    : sufijosCampo[campo] || campo.replace(/[A-Z]/g, (letra) => `_${letra.toLowerCase()}`);
   return `s${seccion}_${sufijo}`;
 }
 
@@ -34,8 +64,8 @@ const CAMPOS = [
 ];
 
 function construirRespuesta(respuestas) {
-  const columnas = ['s1_company_name'];
-  const valores = [respuestas.companyName];
+  const columnas = [];
+  const valores = [];
   CAMPOS.forEach(([campo, seccion]) => {
     columnas.push(nombreColumna(campo, seccion));
     valores.push(respuestas[campo] ?? null);
@@ -65,7 +95,7 @@ async function registrarRegistroIndividual({ userId, ...respuestas }) {
       `INSERT INTO spe_survey_response
          (data_load_id, year, semester, surveyor_user_id, event_id, ${columnas.join(', ')}, status)
        VALUES (?, ?, ?, ?, ?, ${columnas.map(() => '?').join(', ')}, 1)`,
-      [carga.insertId, respuestas.year, respuestas.semester, null, null, ...valores],
+      [carga.insertId, respuestas.year, respuestas.semester, userId, null, ...valores],
     );
     await conexion.commit();
     return { dataLoadId: carga.insertId, surveyResponseId: respuesta.insertId };
