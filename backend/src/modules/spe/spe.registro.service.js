@@ -1,6 +1,7 @@
 const pool = require('../../config/db');
 const { ESTADO_CARGA, MODULO, TIPO_CARGA } = require('../../config/estados');
 const { CHECKBOX_FIELDS } = require('./spe.registro.validation');
+const { calcularIndicesSpe } = require('./spe.indices.service');
 
 function nombreColumna(campo, seccion, opcion) {
   const sufijosCheckbox = {
@@ -97,6 +98,7 @@ async function registrarRegistroIndividual({ userId, ...respuestas }) {
        VALUES (?, ?, ?, ?, ?, ${columnas.map(() => '?').join(', ')}, 1)`,
       [carga.insertId, respuestas.year, respuestas.semester, userId, null, ...valores],
     );
+    await calcularIndicesSpe(carga.insertId, conexion);
     await conexion.commit();
     return { dataLoadId: carga.insertId, surveyResponseId: respuesta.insertId };
   } catch (err) {

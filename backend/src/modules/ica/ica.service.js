@@ -708,7 +708,11 @@ async function registrarEntrevistaIndividual({ communityId, year, quarter, event
        VALUES (?, ?, ?, ?, ?, ?, ${columnas.map(() => '?').join(', ')}, 1)`,
       [carga.insertId, communityId, year, quarter, userId, eventId ?? null, ...valores],
     );
-   
+   if (estadoInicialCarga(rol) === ESTADO_CARGA.APROBADA) {
+  await recalcularAgregadoManual({
+    conexion, communityId, year, quarter, dataLoadId: carga.insertId,
+  });
+}
     await conexion.commit();
     return { dataLoadId: carga.insertId, surveyResponseId: respuesta.insertId };
   } catch (err) {
