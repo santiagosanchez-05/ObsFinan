@@ -12,6 +12,7 @@ module.exports = {
       const resultado = await speRegistroService.registrarRegistroIndividual({
         ...parsed.data,
         userId: req.user.userId,
+        rol: req.user.role,
       });
       return res.status(201).json({ message: 'Registro SPE guardado correctamente', ...resultado });
     } catch (err) {
