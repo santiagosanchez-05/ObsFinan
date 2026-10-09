@@ -27,4 +27,15 @@ const convocatoriaSchema = z
     path: ["end_date"],
   });
 
-module.exports = { convocatoriaSchema };
+// US53 — validación para aprobar/rechazar un postulante.
+const patchPostulanteSchema = z.object({
+  status: z.union(
+    [
+      z.literal(2), // APROBADO
+      z.literal(3), // RECHAZADO
+    ],
+    { message: "Status inválido (2 = aprobado, 3 = rechazado)" },
+  ),
+});
+
+module.exports = { convocatoriaSchema, patchPostulanteSchema };
