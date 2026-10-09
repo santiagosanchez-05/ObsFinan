@@ -7,6 +7,27 @@ import { useAuth } from '../../../shared/AuthContext';
 const INPUT_CLASS = 'w-full rounded-lg border border-[#dfe4e5] bg-white px-3 py-2.5 text-xs text-[#414845] outline-none placeholder:text-[#adb5b2] focus:border-[#a00046] focus:ring-2 focus:ring-[#f7eaf0]';
 const INITIAL_VALUES = { year: '2026', semester: '2' };
 
+const CAMPOS_GENERALES = {
+  year: 'Año',
+  semester: 'Semestre',
+};
+
+const CAMPOS_SPE = SPE_SECTIONS.reduce((campos, currentSection, index) => {
+  currentSection.fields.forEach((field) => {
+    campos[field.name] = { sectionIndex: index };
+  });
+  return campos;
+}, CAMPOS_GENERALES);
+
+function obtenerDetallesErrores(errores) {
+  return Object.entries(errores)
+    .map(([campo, mensajes]) => ({
+      campo,
+      sectionIndex: CAMPOS_SPE[campo]?.sectionIndex ?? 0,
+    }))
+    .filter(({ campo }) => campo !== '_errors');
+}
+
 export default function RegistrarSpePage() {
   const [sectionIndex, setSectionIndex] = useState(0);
   const [values, setValues] = useState(INITIAL_VALUES);
@@ -29,11 +50,6 @@ export default function RegistrarSpePage() {
 
   async function guardarRegistro(event) {
     event.preventDefault();
-    if (!values.companyName?.trim()) {
-      setError('Ingresa el nombre de la empresa antes de guardar.');
-      setSectionIndex(0);
-      return;
-    }
     setSaving(true);
     setError('');
     try {
@@ -45,8 +61,17 @@ export default function RegistrarSpePage() {
       const body = await response.json().catch(() => ({}));
       if (!response.ok) {
         const errores = body.detalles?.fieldErrors || {};
-        const primerError = Object.values(errores).flat()[0];
-        throw new Error(primerError || body.error || 'No se pudo guardar el registro SPE.');
+        const detallesErrores = obtenerDetallesErrores(errores);
+        if (detallesErrores.length) {
+          setSectionIndex(detallesErrores[0].sectionIndex);
+          const seccionesPendientes = [...new Set(
+            detallesErrores.map(({ sectionIndex }) => SPE_SECTIONS[sectionIndex].title),
+          )];
+          throw new Error(
+            `Completa los campos faltantes en: ${seccionesPendientes.join(', ')}.`,
+          );
+        }
+        throw new Error(body.error || 'No se pudo guardar el registro SPE.');
       }
       setSaved(true);
     } catch (requestError) {
@@ -68,7 +93,7 @@ export default function RegistrarSpePage() {
           <aside className="rounded-xl border border-[#e2e6e8] bg-white p-3 shadow-sm lg:sticky lg:top-5"><p className="px-2 pb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[#8a9290]">Secciones del instrumento</p><nav className="grid gap-1 sm:grid-cols-2 lg:grid-cols-1">{SPE_SECTIONS.map((item, index) => <button key={item.id} type="button" onClick={() => setSectionIndex(index)} className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-left transition ${sectionIndex === index ? 'bg-[#fff3f7] text-[#a00046]' : 'text-[#65706c] hover:bg-[#f6f8f9]'}`}><span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${sectionIndex === index ? 'bg-[#a00046] text-white' : 'bg-[#eef1f3] text-[#7c8682]'}`}>{item.number}</span><span className="text-xs font-semibold leading-tight">{item.title}</span></button>)}</nav><div className="mt-4 border-t border-[#edf0f1] pt-3 text-[10px] leading-relaxed text-[#8a9290]">Los campos se conservan mientras avanzas entre secciones.</div></aside>
           <form onSubmit={guardarRegistro} className="overflow-hidden rounded-xl border border-[#e2e6e8] bg-white shadow-sm">
             <div className="border-b border-[#edf0f1] px-5 py-4 sm:px-7"><div className="flex items-start justify-between gap-4"><div><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#a00046]">Sección {section.number} de {SPE_SECTIONS.length}</p><h2 className="mt-1 text-lg font-bold text-[#252927]">{section.title}</h2><p className="mt-1 text-xs text-[#737b78]">{section.description}</p></div><span className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#f7eaf0] text-[#a00046] sm:flex"><ClipboardCheck size={18} /></span></div><div className="mt-4 h-1 overflow-hidden rounded-full bg-[#edf0f1]"><div className="h-full rounded-full bg-[#a00046] transition-all" style={{ width: `${((sectionIndex + 1) / SPE_SECTIONS.length) * 100}%` }} /></div></div>
-            {sectionIndex === 0 && <div className="grid gap-4 border-b border-[#edf0f1] bg-[#fafbfc] px-5 py-4 sm:grid-cols-2 sm:px-7"><Field label="Periodo" required><div className="grid grid-cols-2 gap-2"><select value={values.semester} onChange={(event) => cambiarValor('semester', event.target.value)} className={INPUT_CLASS}><option value="1">Semestre 1</option><option value="2">Semestre 2</option></select><input value={values.year} onChange={(event) => cambiarValor('year', event.target.value)} type="number" className={INPUT_CLASS} aria-label="Año" /></div></Field><Field label="Nombre de la empresa" required><input value={values.companyName || ''} onChange={(event) => cambiarValor('companyName', event.target.value)} placeholder="Ej. TechExport S.A." className={INPUT_CLASS} /></Field></div>}
+            {sectionIndex === 0 && <div className="border-b border-[#edf0f1] bg-[#fafbfc] px-5 py-4 sm:px-7"><Field label="Periodo" required><div className="grid max-w-md grid-cols-2 gap-2"><select value={values.semester} onChange={(event) => cambiarValor('semester', event.target.value)} className={INPUT_CLASS}><option value="1">Semestre 1</option><option value="2">Semestre 2</option></select><input value={values.year} onChange={(event) => cambiarValor('year', event.target.value)} type="number" className={INPUT_CLASS} aria-label="Año" /></div></Field></div>}
             <div className="grid gap-5 px-5 py-6 sm:grid-cols-2 sm:px-7">{section.fields.map((field) => <Question key={field.name} field={field} value={values[field.name]} onChange={cambiarValor} onToggle={cambiarCheckbox} />)}</div>
             <footer className="flex flex-col-reverse gap-3 border-t border-[#edf0f1] bg-[#fafbfc] px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-7"><div>{saved && <p className="flex items-center gap-1.5 text-xs font-semibold text-[#32845d]"><Check size={15} /> Registro guardado correctamente.</p>}{error && <p className="text-xs font-semibold text-[#b42318]">{error}</p>}</div><div className="flex justify-end gap-2"><button type="button" disabled={sectionIndex === 0 || saving} onClick={() => setSectionIndex((index) => index - 1)} className="inline-flex items-center gap-1 rounded-lg border border-[#dfe4e5] bg-white px-3 py-2 text-xs font-semibold text-[#68716e] disabled:cursor-not-allowed disabled:opacity-40"><ChevronLeft size={14} /> Anterior</button>{sectionIndex < SPE_SECTIONS.length - 1 ? <button type="button" disabled={saving} onClick={() => setSectionIndex((index) => index + 1)} className="inline-flex items-center gap-1 rounded-lg bg-[#a00046] px-4 py-2 text-xs font-semibold text-white hover:bg-[#7d0035] disabled:opacity-50">Siguiente <ChevronRight size={14} /></button> : <button type="submit" disabled={saving} className="inline-flex items-center gap-2 rounded-lg bg-[#a00046] px-4 py-2 text-xs font-semibold text-white hover:bg-[#7d0035] disabled:opacity-50"><Save size={14} /> {saving ? 'Guardando...' : 'Guardar registro'}</button>}</div></footer>
           </form>

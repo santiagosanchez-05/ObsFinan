@@ -3,7 +3,6 @@ const { construirRespuesta } = require('./spe.registro.service');
 describe('construirRespuesta', () => {
   it('usa los nombres de columnas definidos para las respuestas SPE', () => {
     const { columnas } = construirRespuesta({
-      companyName: 'Empresa de prueba',
       certifications: ['ISO', 'Orgánica'],
       instruments: ['Acuerdos comerciales', 'SGP'],
       regulations: ['Control de cambios', 'Medidas no arancelarias'],
