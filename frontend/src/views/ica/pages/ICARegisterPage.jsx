@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { ArrowLeft, CheckCircle2, ChevronRight, Info } from 'lucide-react';
 import { useAuth } from '../../../shared/AuthContext';
+import { periodoDelEvento } from '../../encuestador/useEventoEncuesta';
 
 const CAMPO_ICA = 'w-full rounded-lg border border-[#dfe4e5] bg-white px-3 py-2 text-xs text-[#414845] outline-none focus:border-[#a00046]';
 
@@ -47,7 +48,9 @@ function etiquetaComuna(comuna, lista) {
   return variasSedes && comuna.sede ? `${comuna.nombre} (${comuna.sede})` : comuna.nombre;
 }
 
-export default function ICARegisterPage({ eventId = null, encuestador = false }) {
+export default function ICARegisterPage({ eventId = null, evento = null, encuestador = false }) {
+  // Desde "Mis eventos" el período lo da la fecha del evento (lo calcula el backend).
+  const periodoEvento = encuestador ? periodoDelEvento(evento?.fecha) : null;
   const [guardado, setGuardado] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [errorServidor, setErrorServidor] = useState('');
@@ -95,6 +98,9 @@ export default function ICARegisterPage({ eventId = null, encuestador = false })
   async function onSubmit(datos) {
     setErrorServidor('');
     setEnviando(true);
+    // El encuestador no manda el período: lo pone el backend con la fecha del evento.
+    const { year, quarter, ...respuestas } = datos;
+    const cuerpo = encuestador ? { ...respuestas, eventId: Number(eventId) } : { year, quarter, ...respuestas };
     try {
       const respuesta = await fetch('/api/ica/entrevistas', {
         method: 'POST',
@@ -102,7 +108,7 @@ export default function ICARegisterPage({ eventId = null, encuestador = false })
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ ...datos, ...(eventId ? { eventId: Number(eventId) } : {}) }),
+        body: JSON.stringify(cuerpo),
       });
       const resultado = await respuesta.json();
       if (!respuesta.ok) throw new Error(resultado.error || 'No se pudo guardar la entrevista');
@@ -133,37 +139,47 @@ export default function ICARegisterPage({ eventId = null, encuestador = false })
     <main className="min-h-[calc(100vh-4rem)] bg-[#f4f6f8] px-4 py-5 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-2xl">
         <Link to={encuestador ? '/encuestador/eventos' : '/ica'} className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#a00046] hover:underline">
-          <ArrowLeft size={13} /> Volver al Dashboard ICA
+          <ArrowLeft size={13} /> {encuestador ? 'Volver a mis eventos' : 'Volver al Dashboard ICA'}
         </Link>
 
         <div className="mb-5 mt-3">
           <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.18em] text-[#a00046]">{encuestador ? 'Encuesta de campo' : 'Registro individual'}</p>
           <h1 className="text-2xl font-bold tracking-tight text-[#202522] sm:text-[28px]">{encuestador ? 'Registrar encuesta ICA' : 'Registrar nuevo registro — ICA'}</h1>
-          <p className="mt-1 max-w-xl text-sm text-[#6d7673]">Aplicá el instrumento ICA a una persona. Las respuestas se organizan en 32 preguntas y la pregunta 22 define el bloque que corresponde completar.</p>
+          <p className="mt-1 max-w-xl text-sm text-[#6d7673]">Aplica el instrumento ICA a una persona. Las respuestas se organizan en 32 preguntas y la pregunta 22 define el bloque que corresponde completar.</p>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="rounded-xl border border-[#e2e6e8] bg-white p-5 shadow-sm sm:p-6">
           <div className="mb-5 flex items-center gap-3 rounded-lg bg-[#fff4f7] px-3 py-2.5 text-[11px] text-[#6d7673]">
             <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#a00046] text-xs font-bold text-white">32</span>
-            <span><strong className="text-[#252927]">Instrumento individual</strong><br />Completá una respuesta por pregunta.</span>
+            <span><strong className="text-[#252927]">Instrumento individual</strong><br />Completa una respuesta por pregunta.</span>
           </div>
 
           <div className="grid gap-4 border-b border-[#edf0f1] pb-5 sm:grid-cols-2">
             <Campo label="Comuna" error={errors.communityId?.message}>
-              <select {...register('communityId', { required: 'Seleccioná una comuna' })} defaultValue="" disabled={cargandoComunas || Boolean(errorComunas)} className={CAMPO_ICA}>
+              <select {...register('communityId', { required: 'Selecciona una comuna' })} defaultValue="" disabled={cargandoComunas || Boolean(errorComunas)} className={CAMPO_ICA}>
                 <option value="" disabled>{cargandoComunas ? 'Cargando comunas...' : 'Selecciona una comuna'}</option>
                 {comunas.map((comuna) => <option key={comuna.id} value={comuna.id}>{etiquetaComuna(comuna, comunas)}</option>)}
               </select>
               {errorComunas && <span className="mt-1 block text-[10px] text-[#a00046]">{errorComunas}</span>}
             </Campo>
-            <Campo label="Año" error={errors.year?.message}>
-              <input type="number" {...register('year', { required: 'Ingresá el año' })} className={CAMPO_ICA} />
-            </Campo>
-            <Campo label="Trimestre" error={errors.quarter?.message}>
-              <select {...register('quarter')} className={CAMPO_ICA}>
-                {[1, 2, 3, 4].map((quarter) => <option key={quarter} value={quarter}>Q{quarter}</option>)}
-              </select>
-            </Campo>
+            {periodoEvento ? (
+              <div className="rounded-lg border border-[#edf0f1] bg-[#fafbfc] px-3 py-2.5 text-xs text-[#6d7673]">
+                <span className="block text-[11px] font-bold text-[#414845]">Evento</span>
+                <span className="block font-semibold text-[#252927]">{evento.titulo}</span>
+                <span>Período: Q{periodoEvento.quarter} {periodoEvento.year} (según la fecha del evento)</span>
+              </div>
+            ) : (
+              <>
+                <Campo label="Año" error={errors.year?.message}>
+                  <input type="number" {...register('year', { required: 'Ingresa el año' })} className={CAMPO_ICA} />
+                </Campo>
+                <Campo label="Trimestre" error={errors.quarter?.message}>
+                  <select {...register('quarter')} className={CAMPO_ICA}>
+                    {[1, 2, 3, 4].map((quarter) => <option key={quarter} value={quarter}>Q{quarter}</option>)}
+                  </select>
+                </Campo>
+              </>
+            )}
           </div>
 
           <div className="mt-6 space-y-3">

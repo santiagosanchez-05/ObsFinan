@@ -26,11 +26,17 @@ async function postRegistrarEncuestador(req, res) {
   //    Superadmin: puede crear en cualquier sede
   const campusIdFinal =
     req.user.role === "superadmin" ? datos.campusId : req.user.campusId;
+  if (!campusIdFinal) {
+    return res.status(400).json({
+      error: "Datos inválidos",
+      detalles: { formErrors: [], fieldErrors: { campusId: ["La sede es obligatoria"] } },
+    });
+  }
 
   if (!puedeGestionarSede(req.user, campusIdFinal)) {
     return res
       .status(403)
-      .json({ error: "No podés registrar encuestadores en otra sede" });
+      .json({ error: "No puedes registrar encuestadores en otra sede" });
   }
 
   // 3. Registrar el usuario reutilizando la función existente

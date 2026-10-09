@@ -66,9 +66,9 @@ async function obtenerPostulantes(convocationId) {
        a.created_at,
        a.updated_at
      FROM applicant a
-     WHERE a.convocation_id = ?
+     WHERE a.convocation_id = ? AND a.status != ?
      ORDER BY a.created_at DESC`,
-    [convocationId],
+    [convocationId, ESTADO_POSTULANTE.ELIMINADO],
   );
 
   const pendientes = rows.filter(
@@ -108,49 +108,45 @@ async function obtenerPostulantes(convocationId) {
 // ============================================================================
 // US53 — Aprobar o rechazar un postulante
 // ============================================================================
-async function actualizarPostulante(applicantId, nuevoStatus, actorId) {
+// `puedeGestionar(campusId)` lo pasa el controlador: la sede se revisa ANTES de
+// crear la cuenta o tocar el postulante.
+async function actualizarPostulante(applicantId, nuevoStatus, actorId, puedeGestionar = () => true) {
   const [rows] = await pool.query(
-    `SELECT a.applicant_id, a.convocation_id, a.user_id, a.first_name, 
-            a.paternal_last_name, a.maternal_last_name, a.email, a.phone, 
-            a.status, c.campus_id
+    `SELECT a.applicant_id, a.user_id, a.first_name, a.paternal_last_name,
+            a.maternal_last_name, a.email, a.status, c.campus_id
      FROM applicant a
      JOIN convocation c ON c.convocation_id = a.convocation_id
-     WHERE a.applicant_id = ?`,
-    [applicantId],
+     WHERE a.applicant_id = ? AND a.status != ?`,
+    [applicantId, ESTADO_POSTULANTE.ELIMINADO],
   );
   if (!rows.length) throw new Error("POSTULANTE_NO_ENCONTRADO");
 
   const postulante = rows[0];
-
+  if (!puedeGestionar(postulante.campus_id)) throw new Error("SEDE_AJENA");
   if (postulante.status === ESTADO_POSTULANTE.APROBADO) {
     throw new Error("POSTULANTE_YA_APROBADO");
   }
 
   let userIdCreado = postulante.user_id;
 
+  // Aprobar = crear la cuenta de encuestador en la sede de la convocatoria
+  // (contraseña temporal + correo de bienvenida, igual que el registro normal).
   if (nuevoStatus === ESTADO_POSTULANTE.APROBADO) {
-    try {
-      const resultado = await registrarUsuario({
-        nombre: postulante.first_name,
-        apellidoPaterno: postulante.paternal_last_name,
-        apellidoMaterno: postulante.maternal_last_name || null,
-        correo: postulante.email,
-        rol: "encuestador",
-        campusId: postulante.campus_id,
-        creadoPor: actorId,
-        foto: null,
-      });
-      userIdCreado = resultado.userId;
-    } catch (err) {
-      if (err.message === "CORREO_YA_REGISTRADO") {
-        throw new Error("CORREO_YA_REGISTRADO");
-      }
-      throw err;
-    }
+    const resultado = await registrarUsuario({
+      nombre: postulante.first_name,
+      apellidoPaterno: postulante.paternal_last_name,
+      apellidoMaterno: postulante.maternal_last_name || null,
+      correo: postulante.email,
+      rol: "encuestador",
+      campusId: postulante.campus_id,
+      creadoPor: actorId,
+      foto: null,
+    });
+    userIdCreado = resultado.userId;
   }
 
   await pool.query(
-    `UPDATE applicant 
+    `UPDATE applicant
      SET status = ?, user_id = ?, created_modified_by = ?, updated_at = NOW()
      WHERE applicant_id = ?`,
     [nuevoStatus, userIdCreado, actorId, applicantId],

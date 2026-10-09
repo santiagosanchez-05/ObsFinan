@@ -81,10 +81,9 @@ const textoRazon = z.preprocess(
   z.string().trim().max(255, 'Máximo 255 caracteres').optional().nullable(),
 );
 
-const shape = {
-  year: z.coerce.number().int().min(2000).max(2100),
-  semester: z.coerce.number().int().min(1).max(2),
-};
+// Respuestas del instrumento (sin el período: el Superadmin lo elige y al
+// encuestador se lo da la fecha del evento).
+const shape = {};
 Object.entries(OPCIONES).forEach(([campo, opciones]) => {
   shape[campo] = z.enum(opciones, { message: 'Selecciona una opción' });
 });
@@ -110,33 +109,47 @@ const OTROS = [
   ['bestTradeAgreement', 'Otro', 'bestTradeAgreementOther'],
 ];
 
-const registroSpeSchema = z
-  .object(shape)
-  .strict()
-  .superRefine((d, ctx) => {
-    OTROS.forEach(([campo, opcion, texto]) => {
-      if (d[campo] === opcion && !d[texto]) {
-        ctx.addIssue({ code: 'custom', path: [texto], message: 'Especifica cuál' });
-      }
-    });
-    if (d.hasCertifications === 'Sí' && d.certifications.length === 0) {
-      ctx.addIssue({ code: 'custom', path: ['certifications'], message: 'Indica qué certificaciones tiene' });
-    }
-    if (d.certifications.includes('Otras') && !d.certificationsOther) {
-      ctx.addIssue({ code: 'custom', path: ['certificationsOther'], message: 'Especifica cuáles' });
-    }
-    ['instruments', 'regulations'].forEach((campo) => {
-      if (d[campo].length > 2) {
-        ctx.addIssue({ code: 'custom', path: [campo], message: 'Marca como máximo 2 opciones' });
-      }
-    });
-    if (d.instruments.includes('Ninguno') && d.instruments.length > 1) {
-      ctx.addIssue({ code: 'custom', path: ['instruments'], message: '"Ninguno" no se combina con otras opciones' });
+function reglasDelInstrumento(d, ctx) {
+  OTROS.forEach(([campo, opcion, texto]) => {
+    if (d[campo] === opcion && !d[texto]) {
+      ctx.addIssue({ code: 'custom', path: [texto], message: 'Especifica cuál' });
     }
   });
+  if (d.hasCertifications === 'Sí' && d.certifications.length === 0) {
+    ctx.addIssue({ code: 'custom', path: ['certifications'], message: 'Indica qué certificaciones tiene' });
+  }
+  if (d.certifications.includes('Otras') && !d.certificationsOther) {
+    ctx.addIssue({ code: 'custom', path: ['certificationsOther'], message: 'Especifica cuáles' });
+  }
+  ['instruments', 'regulations'].forEach((campo) => {
+    if (d[campo].length > 2) {
+      ctx.addIssue({ code: 'custom', path: [campo], message: 'Marca como máximo 2 opciones' });
+    }
+  });
+  if (d.instruments.includes('Ninguno') && d.instruments.length > 1) {
+    ctx.addIssue({ code: 'custom', path: ['instruments'], message: '"Ninguno" no se combina con otras opciones' });
+  }
+}
+
+// US37 — registro del Superadmin: elige el período.
+const registroSpeSchema = z
+  .object({
+    ...shape,
+    year: z.coerce.number().int().min(2000).max(2100),
+    semester: z.coerce.number().int().min(1).max(2),
+  })
+  .strict()
+  .superRefine(reglasDelInstrumento);
+
+// US66 — encuesta del encuestador: el período sale de la fecha del evento.
+const encuestaSpeSchema = z
+  .object({ ...shape, eventId: z.coerce.number().int().positive('Falta indicar el evento') })
+  .strict()
+  .superRefine(reglasDelInstrumento);
 
 module.exports = {
   registroSpeSchema,
+  encuestaSpeSchema,
   CHECKBOX_FIELDS,
   OPCIONES,
   RADIO_FIELDS,

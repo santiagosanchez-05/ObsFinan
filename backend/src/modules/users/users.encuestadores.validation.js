@@ -23,7 +23,8 @@ const encuestadorSchema = z.object({
     .trim()
     .email("Correo inválido")
     .max(150, "El correo es demasiado largo"),
-  campusId: z.coerce.number().int().positive("La sede es obligatoria"),
+  // Solo la usa el Superadmin: al Admin se le fuerza su sede en el controlador.
+  campusId: z.coerce.number().int().positive("La sede es obligatoria").optional(),
 });
 
 module.exports = { encuestadorSchema };

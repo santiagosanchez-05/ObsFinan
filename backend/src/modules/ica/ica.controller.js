@@ -94,6 +94,12 @@ async function postEntrevistaIca(req, res) {
   if (req.user.role === 'encuestador' && !parsed.data.eventId) {
     return res.status(400).json({ error: 'Falta indicar el evento asignado' });
   }
+  if (req.user.role !== 'encuestador' && (!parsed.data.year || !parsed.data.quarter)) {
+    const fieldErrors = {};
+    if (!parsed.data.year) fieldErrors.year = ['Falta el año'];
+    if (!parsed.data.quarter) fieldErrors.quarter = ['Falta el trimestre'];
+    return res.status(400).json({ error: 'Datos inválidos', detalles: { formErrors: [], fieldErrors } });
+  }
 
   try {
     const resultado = await icaService.registrarEntrevistaIndividual({

@@ -11,6 +11,7 @@ import {
   X,
 } from 'lucide-react';
 import { useAuth } from '../../../shared/AuthContext';
+import ConfirmDialog from '../../../shared/ConfirmDialog';
 
 // Estados (deben coincidir con el backend)
 const STATUS = {
@@ -158,7 +159,7 @@ function PostulanteModal({ postulante, onClose, onChangeStatus }) {
         <div className="flex items-start justify-between gap-4 px-6 pt-6">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-wider text-maroon">
-              Gestión de eventos
+              Convocatorias
             </p>
             <div className="mt-1 flex flex-wrap items-center gap-2">
               <h2 id="postulante-modal-title" className="text-xl font-semibold text-ink">
@@ -251,6 +252,8 @@ export default function PostulantesPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortBy, setSortBy] = useState('recent');
   const [selected, setSelected] = useState(null);
+  // Aceptar crea una cuenta y manda un correo: siempre se confirma antes.
+  const [confirmar, setConfirmar] = useState(null);
 
   const authHeaders = useMemo(
     () => (token ? { Authorization: `Bearer ${token}` } : {}),
@@ -267,7 +270,7 @@ export default function PostulantesPage() {
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
-          throw new Error(data?.message || 'No se pudo cargar el listado de postulantes.');
+          throw new Error(data?.error || 'No se pudo cargar el listado de postulantes.');
         }
         setConvocatoria(data.convocatoria ?? null);
         setStats(
@@ -306,7 +309,7 @@ export default function PostulantesPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(data?.message || 'No se pudo actualizar el postulante.');
+        throw new Error(data?.error || 'No se pudo actualizar el postulante.');
       }
       setFeedback({
         type: 'success',
@@ -327,9 +330,9 @@ export default function PostulantesPage() {
     }
   };
 
-  const handleModalAction = (postulante, newStatus) => {
+  const pedirConfirmacion = (postulante, newStatus) => {
     setSelected(null);
-    handleChangeStatus(postulante, newStatus);
+    setConfirmar({ postulante, status: newStatus });
   };
 
   const visible = useMemo(() => {
@@ -361,18 +364,18 @@ export default function PostulantesPage() {
       <div className="mx-auto max-w-6xl space-y-6">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-wider text-maroon">
-            Gestión de eventos
+            Convocatorias
           </p>
           <h1 className="mt-1 text-3xl font-semibold text-ink">Listado de postulantes</h1>
           <p className="mt-1.5 text-xs text-ink/60">
-            Revisa y gestiona las solicitudes de inscripción a los eventos.
+            Revisa las postulaciones. Al aceptar a alguien se le crea su cuenta de encuestador en la sede de la convocatoria.
           </p>
         </div>
 
         {convocatoria && (
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-ink/10 bg-white px-6 py-5 shadow-xs">
             <div className="min-w-0">
-              <p className="text-[10px] font-medium text-ink/50">Evento seleccionado</p>
+              <p className="text-[10px] font-medium text-ink/50">Convocatoria seleccionada</p>
               <p className="mt-0.5 truncate text-sm font-semibold text-ink">
                 {convocatoria.titulo || 'Sin título'}
               </p>
@@ -384,7 +387,7 @@ export default function PostulantesPage() {
               to="/convocatorias"
               className="inline-flex items-center gap-1.5 rounded-full border border-ink/10 bg-white px-4 py-1.5 text-[11px] font-semibold text-ink transition hover:border-maroon hover:text-maroon"
             >
-              Cambiar evento
+              Cambiar convocatoria
               <ChevronDown className="h-3.5 w-3.5" />
             </Link>
           </div>
@@ -528,7 +531,7 @@ export default function PostulantesPage() {
                                 <button
                                   type="button"
                                   disabled={isBusy}
-                                  onClick={() => handleChangeStatus(p, STATUS.APROBADO)}
+                                  onClick={() => pedirConfirmacion(p, STATUS.APROBADO)}
                                   className="inline-flex items-center gap-1 rounded-md border border-emerald-700 bg-white px-3 py-1 text-[11px] font-medium text-emerald-700 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                   {isBusy && <Loader2 className="h-3 w-3 animate-spin" />}
@@ -537,7 +540,7 @@ export default function PostulantesPage() {
                                 <button
                                   type="button"
                                   disabled={isBusy}
-                                  onClick={() => handleChangeStatus(p, STATUS.RECHAZADO)}
+                                  onClick={() => pedirConfirmacion(p, STATUS.RECHAZADO)}
                                   className="rounded-md border border-red-700 bg-white px-3 py-1 text-[11px] font-medium text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                   Rechazar
@@ -568,9 +571,25 @@ export default function PostulantesPage() {
         <PostulanteModal
           postulante={selected}
           onClose={closeModal}
-          onChangeStatus={handleModalAction}
+          onChangeStatus={pedirConfirmacion}
         />
       )}
+      <ConfirmDialog
+        open={Boolean(confirmar)}
+        titulo={confirmar?.status === STATUS.APROBADO ? 'Aceptar postulante' : 'Rechazar postulante'}
+        mensaje={
+          confirmar?.status === STATUS.APROBADO
+            ? `Se creará la cuenta de encuestador de ${confirmar.postulante.nombreCompleto} y se le enviará su contraseña temporal por correo.`
+            : `${confirmar?.postulante.nombreCompleto ?? 'El postulante'} quedará rechazado.`
+        }
+        textoConfirmar={confirmar?.status === STATUS.APROBADO ? 'Aceptar' : 'Rechazar'}
+        onCancel={() => setConfirmar(null)}
+        onConfirm={() => {
+          const { postulante, status } = confirmar;
+          setConfirmar(null);
+          handleChangeStatus(postulante, status);
+        }}
+      />
     </div>
   );
 }

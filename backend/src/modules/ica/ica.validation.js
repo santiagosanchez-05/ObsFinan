@@ -153,10 +153,12 @@ const registroIcaSchema = z.object({
   icaMujeres: z.coerce.number().min(0).max(100),
 });
 
+// Año y trimestre: los elige el Admin/Superadmin. Al encuestador se los da la
+// fecha del evento (el controlador exige el período solo a los demás roles).
 const entrevistaIcaSchema = z.object({
   communityId: z.coerce.number().int().positive('Falta seleccionar la comuna'),
-  quarter: z.coerce.number().int().min(1).max(4, { message: 'Trimestre inválido (1-4)' }),
-  year: z.coerce.number().int().min(2019).max(new Date().getFullYear()),
+  quarter: z.coerce.number().int().min(1).max(4, { message: 'Trimestre inválido (1-4)' }).optional(),
+  year: z.coerce.number().int().min(2019).max(new Date().getFullYear()).optional(),
   eventId: z.coerce.number().int().positive().optional(),
 }).and(z.preprocess((data) => ({ ...data, filaExcel: 0 }), filaEncuestaIcaSchema));
 

@@ -126,28 +126,41 @@ function construirRespuesta(respuestas) {
   return { columnas, valores };
 }
 
+// Guarda una encuesta (una carga individual + su respuesta) dentro de la
+// transacción que recibe. Lo usan el registro del Superadmin (US37) y la
+// encuesta del encuestador (US66, spe.encuestador.service.js).
+async function insertarEncuesta(conexion, { estado, nombreCarga, year, semester, userId, eventId = null, respuestas }) {
+  const [carga] = await conexion.query(
+    `INSERT INTO data_load (module, source_type, file_name, total_rows, status, created_modified_by)
+     VALUES (?, ?, ?, 1, ?, ?)`,
+    [MODULO.SPE, TIPO_CARGA.INDIVIDUAL, nombreCarga, estado, userId],
+  );
+  const { columnas, valores } = construirRespuesta(respuestas);
+  const [respuesta] = await conexion.query(
+    `INSERT INTO spe_survey_response
+       (data_load_id, year, semester, surveyor_user_id, event_id, ${columnas.join(', ')}, status)
+     VALUES (?, ?, ?, ?, ?, ${columnas.map(() => '?').join(', ')}, 1)`,
+    [carga.insertId, year, semester, userId, eventId, ...valores],
+  );
+  return { dataLoadId: carga.insertId, surveyResponseId: respuesta.insertId };
+}
+
 // US37: registro individual del Superadmin (entra APROBADO y calcula sus índices).
-async function registrarRegistroIndividual({ userId, ...respuestas }) {
+async function registrarRegistroIndividual({ userId, year, semester, ...respuestas }) {
   const conexion = await pool.getConnection();
   try {
     await conexion.beginTransaction();
-    const [carga] = await conexion.query(
-      `INSERT INTO data_load (module, source_type, file_name, total_rows, status, created_modified_by)
-       VALUES (?, ?, ?, 1, ?, ?)`,
-      [MODULO.SPE, TIPO_CARGA.INDIVIDUAL, 'Registro individual', ESTADO_CARGA.APROBADA, userId],
-    );
-    const { columnas, valores } = construirRespuesta(respuestas);
-    const [respuesta] = await conexion.query(
-      `INSERT INTO spe_survey_response
-         (data_load_id, year, semester, surveyor_user_id, event_id, ${columnas.join(', ')}, status)
-       VALUES (?, ?, ?, ?, ?, ${columnas.map(() => '?').join(', ')}, 1)`,
-      [carga.insertId, respuestas.year, respuestas.semester, userId, null, ...valores],
-    );
-
-    await calcularIndicesSpe(carga.insertId, conexion);
-
+    const resultado = await insertarEncuesta(conexion, {
+      estado: ESTADO_CARGA.APROBADA,
+      nombreCarga: 'Registro individual',
+      year,
+      semester,
+      userId,
+      respuestas,
+    });
+    await calcularIndicesSpe(resultado.dataLoadId, conexion);
     await conexion.commit();
-    return { dataLoadId: carga.insertId, surveyResponseId: respuesta.insertId };
+    return resultado;
   } catch (err) {
     await conexion.rollback();
     throw err;
@@ -156,4 +169,4 @@ async function registrarRegistroIndividual({ userId, ...respuestas }) {
   }
 }
 
-module.exports = { registrarRegistroIndividual, CAMPOS, CHECKBOX_COLUMNAS, construirRespuesta };
+module.exports = { registrarRegistroIndividual, insertarEncuesta, CAMPOS, CHECKBOX_COLUMNAS, construirRespuesta };

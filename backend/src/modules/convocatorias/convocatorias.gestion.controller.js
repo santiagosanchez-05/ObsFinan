@@ -63,7 +63,7 @@ async function getPostulantes(req, res) {
     if (!puedeGestionarSede(req.user, data.convocatoria.campus_id)) {
       return res
         .status(403)
-        .json({ error: "No podés ver postulantes de otra sede" });
+        .json({ error: "No puedes ver postulantes de otra sede" });
     }
 
     return res.json(data);
@@ -99,13 +99,8 @@ async function patchPostulante(req, res) {
       applicantId,
       parsed.data.status,
       req.user.userId,
+      (campusId) => puedeGestionarSede(req.user, campusId),
     );
-
-    if (!puedeGestionarSede(req.user, resultado.campus_id)) {
-      return res
-        .status(403)
-        .json({ error: "No podés gestionar postulantes de otra sede" });
-    }
 
     const mensajes = {
       [ESTADO_POSTULANTE.APROBADO]:
@@ -120,6 +115,11 @@ async function patchPostulante(req, res) {
   } catch (err) {
     if (err.message === "POSTULANTE_NO_ENCONTRADO") {
       return res.status(404).json({ error: "Postulante no encontrado" });
+    }
+    if (err.message === "SEDE_AJENA") {
+      return res
+        .status(403)
+        .json({ error: "No puedes gestionar postulantes de otra sede" });
     }
     if (err.message === "POSTULANTE_YA_APROBADO") {
       return res.status(409).json({ error: "Este postulante ya fue aprobado" });

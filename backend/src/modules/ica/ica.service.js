@@ -3,6 +3,7 @@ const pool = require('../../config/db');
 const { ESTADO_CARGA } = require('../../config/estados');
 const { ENCABEZADOS_ESPERADOS, OPCIONES } = require('./ica.validation');
 const { puntuarEncuesta, icaPonderado } = require('./ica.puntajes');
+const { periodoDelEventoAsignado } = require('../events/events.encuesta.service');
 
 // module: 1=ICA, 2=SPE; source_type: 1=individual (la carga por archivo se quitó: todo es individual)
 const MODULE_ICA = 1;
@@ -568,21 +569,10 @@ async function registrarEntrevistaIndividual({ communityId, year, quarter, event
   );
   if (!comunidades.length) throw new Error('COMUNIDAD_NO_ENCONTRADA');
 
+  // El encuestador carga desde "Mis eventos": el evento tiene que estar
+  // asignado y habilitar ICA, y el período sale de la fecha del evento.
   if (rol === 'encuestador') {
-    const [eventos] = await pool.query(
-      `SELECT e.event_id
-         FROM event e
-         INNER JOIN event_surveyor es
-           ON es.event_id = e.event_id
-          AND es.surveyor_user_id = ?
-          AND es.status = 1
-        WHERE e.event_id = ?
-          AND e.has_ica = 1
-          AND e.status = 1
-        LIMIT 1`,
-      [userId, eventId],
-    );
-    if (!eventos.length) throw new Error('EVENTO_ICA_NO_ASIGNADO');
+    ({ year, quarter } = await periodoDelEventoAsignado({ eventId, userId, encuesta: 'ica' }));
   }
 
   const conexion = await pool.getConnection();
@@ -601,13 +591,13 @@ async function registrarEntrevistaIndividual({ communityId, year, quarter, event
        VALUES (?, ?, ?, ?, ?, ?, ${columnas.map(() => '?').join(', ')}, 1)`,
       [carga.insertId, communityId, year, quarter, userId, eventId ?? null, ...valores],
     );
-   if (estadoInicialCarga(rol) === ESTADO_CARGA.APROBADA) {
-  await recalcularAgregadoManual({
-    conexion, communityId, year, quarter, dataLoadId: carga.insertId,
-  });
-}
+    if (estadoInicialCarga(rol) === ESTADO_CARGA.APROBADA) {
+      await recalcularAgregadoManual({
+        conexion, communityId, year, quarter, dataLoadId: carga.insertId,
+      });
+    }
     await conexion.commit();
-    return { dataLoadId: carga.insertId, surveyResponseId: respuesta.insertId };
+    return { dataLoadId: carga.insertId, surveyResponseId: respuesta.insertId, periodo: { year, quarter } };
   } catch (err) {
     await conexion.rollback();
     throw err;
@@ -615,11 +605,6 @@ async function registrarEntrevistaIndividual({ communityId, year, quarter, event
     conexion.release();
   }
 }
-
-
-
-
-
 
 const COLUMNAS_ORDEN = {
   comuna: ['comuna_nombre'],

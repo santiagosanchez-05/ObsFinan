@@ -113,6 +113,12 @@ export default function ConvocatoriasPage() {
 
           <div className="flex items-center gap-3">
             <Link
+              to="/encuestadores/nuevo"
+              className="inline-flex items-center gap-2 rounded-xl border border-ink/10 bg-white px-4 py-2.5 text-xs font-semibold text-ink shadow-xs hover:border-maroon hover:text-maroon transition-colors"
+            >
+              <span>Registrar encuestador</span>
+            </Link>
+            <Link
               to="/convocatorias/nueva"
               className="inline-flex items-center gap-2 rounded-xl bg-maroon px-4 py-2.5 text-xs font-semibold text-white shadow-xs hover:bg-maroon-light transition-colors"
             >
