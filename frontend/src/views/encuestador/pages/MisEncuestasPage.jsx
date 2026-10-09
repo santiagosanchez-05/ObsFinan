@@ -261,7 +261,7 @@ export default function MisEncuestasPage() {
                         </span>
 
                         <span className="text-[11px] font-medium text-ink/50">
-                          {enc.tipoCarga === 'archivo' ? 'Carga masiva' : 'Carga individual'}
+                          Carga individual
                         </span>
                       </div>
 

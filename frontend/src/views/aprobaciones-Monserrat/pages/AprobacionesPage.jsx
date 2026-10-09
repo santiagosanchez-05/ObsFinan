@@ -99,7 +99,7 @@ function extraerPendientes(data) {
 /*
  * La UI trabaja siempre con:
  * id, zonas, departamento, periodo, registros, encuestador,
- * sede, fecha, evento, resumen y respuestas.
+ * sede, fecha, evento y respuestas.
  */
 function normalizarRegistro(registro) {
   const zonasOrigen =
@@ -161,12 +161,6 @@ function normalizarRegistro(registro) {
       registro.eventName ??
       registro.event_name ??
       '-',
-
-    resumen: registro.resumen ?? {
-      estadisticas: [],
-      grupos: [],
-      alertas: [],
-    },
 
     respuestas: registro.respuestas ?? [],
   };

@@ -1,7 +1,5 @@
-// Monserrat — US38 (carga por dataset) y US39 (historial).
-// Crea tu spe.carga.service.js y spe.carga.validation.js al implementar.
-// Monserrat — US38 (carga por dataset) y US39 (historial).
-const pendiente = require('../../utils/pendiente');
+// Monserrat — US39 (historial). La carga por dataset se quitó: todos los
+// registros SPE son individuales.
 const { historialSpeQuerySchema } = require('./spe.carga.validation');
 const { obtenerHistorialSpe, obtenerResumenHistorialSpe } = require('./spe.carga.service');
 
@@ -28,6 +26,5 @@ async function getHistorialSpe(req, res) {
 }
 
 module.exports = {
-  postUploadSpe: pendiente('US38', 'Monserrat'), // pausado
   getHistorialSpe,
 };

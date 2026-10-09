@@ -2,7 +2,6 @@ const pool = require('../../config/db');
 const { MODULO, ESTADO_CARGA } = require('../../config/estados');
 const { calcularIndicesSpe } = require('./spe.indices.service');
 
-const SOURCE_TYPE_ARCHIVO = 2; // data_load.source_type: 1 = individual, 2 = archivo
 
 const ESTADO_DESTINO = {
   aprobada: ESTADO_CARGA.APROBADA,
@@ -206,97 +205,6 @@ function armarRespuestas(fila) {
   });
 }
 
-function contar(filas, columna) {
-  const conteo = new Map();
-
-  filas.forEach((fila) => {
-    const clave = vacio(fila[columna])
-      ? 'Sin dato'
-      : String(fila[columna]);
-
-    conteo.set(
-      clave,
-      (conteo.get(clave) || 0) + 1,
-    );
-  });
-
-  return [...conteo.entries()]
-    .sort((a, b) => b[1] - a[1]);
-}
-
-function armarResumen(filas) {
-  const total = filas.length;
-
-  const conCertificaciones = filas.filter(
-    (fila) => fila.s4_has_certifications === 'Sí',
-  ).length;
-
-  const planeanNuevosMercados = filas.filter(
-    (fila) => fila.s3_plans_new_markets === 'Sí',
-  ).length;
-
-  // Alertas por sección:
-  // encuestas con algún puntaje vacío o fuera del rango 1-5.
-  const alertas = [];
-
-  for (const { grupo, campos } of SECCIONES) {
-    const puntajes = campos
-      .map(([columna]) => columna)
-      .filter((columna) => columna.endsWith('_score'));
-
-    if (!puntajes.length) {
-      continue;
-    }
-
-    const malas = filas.filter((fila) =>
-      puntajes.some(
-        (columna) =>
-          vacio(fila[columna]) ||
-          Number(fila[columna]) < 1 ||
-          Number(fila[columna]) > 5,
-      ),
-    ).length;
-
-    if (malas > 0) {
-      alertas.push(
-        `${malas} ${
-          malas === 1 ? 'encuesta' : 'encuestas'
-        } con puntajes vacíos o fuera de 1-5 (sección ${grupo})`,
-      );
-    }
-  }
-
-  return {
-    estadisticas: [
-      [
-        'Con certificaciones',
-        `${conCertificaciones} de ${total}`,
-      ],
-      [
-        'Planean nuevos mercados',
-        `${planeanNuevosMercados} de ${total}`,
-      ],
-    ],
-
-    grupos: [
-      {
-        titulo: 'Encuestas por sector',
-        items: contar(filas, 's1_export_sector'),
-      },
-      {
-        titulo: 'Tamaño de empresa',
-        items: contar(filas, 's1_company_size'),
-      },
-      {
-        titulo: 'Departamento',
-        items: contar(filas, 's1_department'),
-      },
-    ],
-
-    alertas,
-  };
-}
-
 // ============================================================
 // US62 — Bandeja de aprobaciones SPE
 // ============================================================
@@ -304,9 +212,8 @@ function armarResumen(filas) {
 // Cargas SPE pendientes (data_load.status = PENDIENTE),
 // las más antiguas primero.
 //
-// Cada carga trae lo que pinta la tabla y el panel "Revisar":
-//   masiva  -> resumen
-//   manual  -> respuestas
+// Cada carga es UNA encuesta individual (la carga por archivo se quitó) y
+// trae sus respuestas para el panel "Revisar".
 async function obtenerPendientesSpe() {
   const [filas] = await pool.query(
     `SELECT dl.data_load_id,
@@ -390,22 +297,15 @@ async function obtenerPendientesSpe() {
   }
 
   const pendientes = filas.map((fila) => {
-    const masiva =
-      Number(fila.source_type) === SOURCE_TYPE_ARCHIVO;
-
     const detalle =
       respuestasPorCarga.get(fila.data_load_id) || [];
 
-    const base = {
+    return {
       id: fila.data_load_id,
 
-      tipo: masiva
-        ? 'masiva'
-        : 'manual',
+      tipo: 'manual',
 
-      origen: masiva
-        ? fila.file_name
-        : 'Registro individual',
+      origen: 'Registro individual',
 
       zonas: (
         fila.sectores
@@ -439,18 +339,8 @@ async function obtenerPendientesSpe() {
 
       fecha: fila.created_at,
 
-      evento: fila.evento || null,
-    };
+      evento: fila.evento || 'Sin evento (registro directo)',
 
-    if (masiva) {
-      return {
-        ...base,
-        resumen: armarResumen(detalle),
-      };
-    }
-
-    return {
-      ...base,
       respuestas: detalle.length
         ? armarRespuestas(detalle[0])
         : [],

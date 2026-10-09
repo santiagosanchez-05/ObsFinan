@@ -11,14 +11,11 @@ import {
   ChartNoAxesCombined,
   CircleDollarSign,
   FileCheck2,
-  FileSpreadsheet,
   Gauge,
   History,
   Plus,
   TrendingUp,
-  Upload,
   Users,
-  X,
 } from 'lucide-react';
 import {
   Bar,
@@ -61,8 +58,6 @@ export default function SPEPage() {
   const [filtros, setFiltros] = useState({});
   const [dashboard, setDashboard] = useState(null);
   const [errorDashboard, setErrorDashboard] = useState('');
-  const [mostrarCarga, setMostrarCarga] = useState(false);
-  const [archivo, setArchivo] = useState(null);
   const datos = dashboard ? {
     ...dashboard,
     indices: dashboard.indices || {},
@@ -110,41 +105,25 @@ export default function SPEPage() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-[#f7eaf0] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-maroon"><span className="h-1.5 w-1.5 rounded-full bg-maroon" /> Módulo sector privado exportador</div>
-            <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-[30px]">Confianza y expectativas del Sector Exportador</h1>
-            <p className="mt-1 text-sm text-ink/60">Encuesta semestral a empresas exportadoras bolivianas</p>
+            <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-[30px]">Sector Privado Exportador</h1>
+            <p className="mt-1 text-sm text-ink/60">Encuesta semestral SOCOMEX–SOCIFIN a empresas exportadoras bolivianas</p>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
             <span className="inline-flex items-center gap-1.5 rounded-lg border border-[#dfe4e5] bg-white px-3 py-2 text-[11px] font-semibold text-[#5e6763]"><FileCheck2 size={14} className="text-[#3d916b]" /> Datos aprobados</span>
             <RoleGate allow={[ROLES.SUPERADMIN]}>
               <Link to="/spe/historial" className="inline-flex items-center gap-2 rounded-lg border border-[#dfe4e5] bg-white px-3 py-2 text-xs font-semibold text-[#59615e] shadow-sm transition hover:border-[#961d4b] hover:text-[#961d4b]"><History size={14} /> Historial de registros</Link>
-              {/* <button type="button" onClick={() => setMostrarCarga((valor) => !valor)} className="inline-flex items-center gap-2 rounded-lg border border-[#d6a4b7] bg-white px-3 py-2 text-xs font-semibold text-[#961d4b] transition hover:bg-[#fff3f7]"><Upload size={14} /> Subir dataset</button> */}
               <Link to="/spe/registrar" className="inline-flex items-center gap-2 rounded-lg bg-[#961d4b] px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#780f39]"><Plus size={14} /> Registrar registro</Link>
             </RoleGate>
           </div>
         </div>
 <ExportarSpe filtros={filtros} />
-        {/* {mostrarCarga && (
-          <section className="relative ml-auto max-w-md rounded-xl border border-[#e2e6e8] bg-white p-4 shadow-lg">
-            <div className="flex items-center justify-between">
-              <div><h2 className="text-sm font-bold text-[#252927]">Subir dataset SPE</h2><p className="mt-1 text-[11px] text-[#8a9290]">Carga un archivo Excel con encuestas aprobadas.</p></div>
-              <button type="button" onClick={() => setMostrarCarga(false)} className="rounded-md p-1 text-[#8a9290] hover:bg-[#fff3f7] hover:text-[#961d4b]" aria-label="Cerrar carga"><X size={16} /></button>
-            </div>
-            <label className="mt-4 flex cursor-pointer items-center gap-3 rounded-lg border border-dashed border-[#d6a4b7] bg-[#fff8fa] p-3 transition hover:border-[#961d4b]">
-              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-white text-[#961d4b]"><FileSpreadsheet size={18} /></span>
-              <span className="min-w-0 flex-1"><span className="block text-xs font-semibold text-[#59615e]">{archivo?.name || 'Seleccionar archivo Excel'}</span><span className="mt-1 block text-[10px] text-[#8a9290]">Formatos permitidos: .xlsx y .xls</span></span>
-              <input type="file" accept=".xlsx,.xls" onChange={(event) => setArchivo(event.target.files?.[0] || null)} className="hidden" />
-            </label>
-            <div className="mt-4 flex justify-end gap-2"><button type="button" onClick={() => { setArchivo(null); setMostrarCarga(false); }} className="rounded-lg bg-[#e8ecf2] px-4 py-2 text-xs font-semibold text-[#687487]">Cancelar</button><button type="button" disabled={!archivo} className="rounded-lg bg-[#961d4b] px-4 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">Cargar</button></div>
-          </section>
-        )} */}
-
         <FiltrosSpe filtros={filtros} onAplicar={setFiltros} opciones={datos?.opcionesFiltros} />
 
         {errorDashboard && <p className="rounded-lg border border-[#f2c7d4] bg-[#fff4f7] px-3 py-2 text-xs text-[#961d4b]">{errorDashboard}</p>}
 
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard label="Empresas encuestadas" value={datos.totalEmpresas} detail="Respuestas aprobadas" icon={<Users size={19} />} />
-          <StatCard label="ICE promedio" value={`${datos.indices.ice} pts`} detail="Índice de confianza empresarial" icon={<Gauge size={19} />} variation={variacion(datos.indices.ice, datos.indicesAnterior.ice)} />
+          <StatCard label="ICE promedio" value={`${datos.indices.ice} pts`} detail="Índice de competitividad exportadora" icon={<Gauge size={19} />} variation={variacion(datos.indices.ice, datos.indicesAnterior.ice)} />
           <StatCard label="Propensión a invertir" value={`${propensionSi}% Sí`} detail="En los próximos 12 meses" icon={<TrendingUp size={19} />} />
           <StatCard label="Período actual" value={etiquetaPeriodo(datos.periodo)} detail="Última medición disponible" icon={<Building2 size={19} />} />
           </div>
@@ -167,10 +146,10 @@ export default function SPEPage() {
         </Panel>
 
         <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <IndexCard label="IEE" name="Índice de expectativas" value={datos.indices.iee} previous={datos.indicesAnterior.iee} />
-          <IndexCard label="ICE" name="Índice de confianza" value={datos.indices.ice} previous={datos.indicesAnterior.ice} active />
-          <IndexCard label="IIE" name="Índice de inversión" value={datos.indices.iie} previous={datos.indicesAnterior.iie} />
-          <IndexCard label="ICIE" name="Índice de competitividad" value={datos.indices.icie} previous={datos.indicesAnterior.icie} />
+          <IndexCard label="IEE" name="Expectativas empresariales exportadoras" value={datos.indices.iee} previous={datos.indicesAnterior.iee} />
+          <IndexCard label="ICE" name="Competitividad exportadora" value={datos.indices.ice} previous={datos.indicesAnterior.ice} active />
+          <IndexCard label="IIE" name="Internacionalización empresarial" value={datos.indices.iie} previous={datos.indicesAnterior.iie} />
+          <IndexCard label="ICIE" name="Clima para la inversión exportadora" value={datos.indices.icie} previous={datos.indicesAnterior.icie} />
         </section>
         <InsightsSpe insights={datos?.insights ?? []} />
         <CitaAcademica recurso="spe" />

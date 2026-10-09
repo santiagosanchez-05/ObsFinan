@@ -51,7 +51,7 @@ const ARCHIVO_MOCK = {
   ],
 };
 
-describe('DetalleArchivoSpePage (US41 — Detalle de archivo SPE y US42 — Eliminación)', () => {
+describe('DetalleArchivoSpePage (US41 — Detalle de un registro SPE y US42 — Eliminación)', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     mockNavigate.mockReset();
@@ -83,7 +83,7 @@ describe('DetalleArchivoSpePage (US41 — Detalle de archivo SPE y US42 — Elim
     });
   });
 
-  it('maneja archivo no encontrado (404)', async () => {
+  it('maneja registro no encontrado (404)', async () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: false,
       status: 404,
@@ -101,11 +101,11 @@ describe('DetalleArchivoSpePage (US41 — Detalle de archivo SPE y US42 — Elim
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/el archivo solicitado no existe o fue eliminado/i)).toBeInTheDocument();
+      expect(screen.getByText(/el registro solicitado no existe o fue eliminado/i)).toBeInTheDocument();
     });
   });
 
-  it('permite abrir el modal y eliminar el archivo (US42)', async () => {
+  it('permite abrir el modal y eliminar el registro (US42)', async () => {
     global.fetch = vi.fn().mockImplementation((url, opts) => {
       if (opts?.method === 'DELETE') {
         return Promise.resolve({
@@ -133,10 +133,10 @@ describe('DetalleArchivoSpePage (US41 — Detalle de archivo SPE y US42 — Elim
       expect(screen.getByText('censo_empresas_2026.xlsx')).toBeInTheDocument();
     });
 
-    const botonEliminar = screen.getByRole('button', { name: /eliminar archivo/i });
+    const botonEliminar = screen.getByRole('button', { name: /eliminar registro/i });
     fireEvent.click(botonEliminar);
 
-    expect(screen.getByText('¿Eliminar este archivo SPE?')).toBeInTheDocument();
+    expect(screen.getByText('¿Eliminar este registro SPE?')).toBeInTheDocument();
 
     const botonConfirmar = screen.getByRole('button', { name: /^eliminar$/i });
     fireEvent.click(botonConfirmar);
@@ -144,5 +144,8 @@ describe('DetalleArchivoSpePage (US41 — Detalle de archivo SPE y US42 — Elim
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith('/spe/historial');
     });
+    const borrado = global.fetch.mock.calls.find(([, opts]) => opts?.method === 'DELETE');
+    expect(borrado[0]).toBe('/api/spe/10');
+    expect(global.fetch.mock.calls[0][0]).toBe('/api/spe/registros/10');
   });
 });

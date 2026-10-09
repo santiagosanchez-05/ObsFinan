@@ -19,6 +19,25 @@ const CAMPOS_SPE = SPE_SECTIONS.reduce((campos, currentSection, index) => {
   return campos;
 }, CAMPOS_GENERALES);
 
+const CAMPO_POR_NOMBRE = Object.fromEntries(
+  SPE_SECTIONS.flatMap((seccion) => seccion.fields.map((field) => [field.name, field])),
+);
+
+// Un campo con showIf (ej. "¿Qué otro sector?") solo aparece si se cumple.
+const esVisible = (field, valores) => !field.showIf || field.showIf(valores);
+
+// Solo se envían los campos visibles: si cambió "Otro" por otra opción, el
+// texto que había escrito no viaja al backend.
+function armarPayload(valores) {
+  const payload = { year: valores.year, semester: valores.semester };
+  SPE_SECTIONS.forEach((seccion) => {
+    seccion.fields.forEach((field) => {
+      if (esVisible(field, valores) && valores[field.name] !== undefined) payload[field.name] = valores[field.name];
+    });
+  });
+  return payload;
+}
+
 function obtenerDetallesErrores(errores) {
   return Object.entries(errores)
     .map(([campo, mensajes]) => ({
@@ -43,9 +62,21 @@ export default function RegistrarSpePage() {
     setValues((current) => ({ ...current, [name]: value }));
   }
 
+  // "Ninguno" excluye a las demás opciones y `max` limita cuántas se marcan.
   function cambiarCheckbox(name, option) {
     const current = values[name] || [];
-    cambiarValor(name, current.includes(option) ? current.filter((item) => item !== option) : [...current, option]);
+    if (current.includes(option)) {
+      cambiarValor(name, current.filter((item) => item !== option));
+      return;
+    }
+    if (option === 'Ninguno') {
+      cambiarValor(name, ['Ninguno']);
+      return;
+    }
+    const sinNinguno = current.filter((item) => item !== 'Ninguno');
+    const max = CAMPO_POR_NOMBRE[name]?.max;
+    if (max && sinNinguno.length >= max) return;
+    cambiarValor(name, [...sinNinguno, option]);
   }
 
   async function guardarRegistro(event) {
@@ -56,7 +87,7 @@ export default function RegistrarSpePage() {
       const response = await fetch('/api/spe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(values),
+        body: JSON.stringify(armarPayload(values)),
       });
       const body = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -94,7 +125,7 @@ export default function RegistrarSpePage() {
           <form onSubmit={guardarRegistro} className="overflow-hidden rounded-xl border border-[#e2e6e8] bg-white shadow-sm">
             <div className="border-b border-[#edf0f1] px-5 py-4 sm:px-7"><div className="flex items-start justify-between gap-4"><div><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#a00046]">Sección {section.number} de {SPE_SECTIONS.length}</p><h2 className="mt-1 text-lg font-bold text-[#252927]">{section.title}</h2><p className="mt-1 text-xs text-[#737b78]">{section.description}</p></div><span className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#f7eaf0] text-[#a00046] sm:flex"><ClipboardCheck size={18} /></span></div><div className="mt-4 h-1 overflow-hidden rounded-full bg-[#edf0f1]"><div className="h-full rounded-full bg-[#a00046] transition-all" style={{ width: `${((sectionIndex + 1) / SPE_SECTIONS.length) * 100}%` }} /></div></div>
             {sectionIndex === 0 && <div className="border-b border-[#edf0f1] bg-[#fafbfc] px-5 py-4 sm:px-7"><Field label="Periodo" required><div className="grid max-w-md grid-cols-2 gap-2"><select value={values.semester} onChange={(event) => cambiarValor('semester', event.target.value)} className={INPUT_CLASS}><option value="1">Semestre 1</option><option value="2">Semestre 2</option></select><input value={values.year} onChange={(event) => cambiarValor('year', event.target.value)} type="number" className={INPUT_CLASS} aria-label="Año" /></div></Field></div>}
-            <div className="grid gap-5 px-5 py-6 sm:grid-cols-2 sm:px-7">{section.fields.map((field) => <Question key={field.name} field={field} value={values[field.name]} onChange={cambiarValor} onToggle={cambiarCheckbox} />)}</div>
+            <div className="grid gap-5 px-5 py-6 sm:grid-cols-2 sm:px-7">{section.fields.filter((field) => esVisible(field, values)).map((field) => <Question key={field.name} field={field} value={values[field.name]} onChange={cambiarValor} onToggle={cambiarCheckbox} />)}</div>
             <footer className="flex flex-col-reverse gap-3 border-t border-[#edf0f1] bg-[#fafbfc] px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-7"><div>{saved && <p className="flex items-center gap-1.5 text-xs font-semibold text-[#32845d]"><Check size={15} /> Registro guardado correctamente.</p>}{error && <p className="text-xs font-semibold text-[#b42318]">{error}</p>}</div><div className="flex justify-end gap-2"><button type="button" disabled={sectionIndex === 0 || saving} onClick={() => setSectionIndex((index) => index - 1)} className="inline-flex items-center gap-1 rounded-lg border border-[#dfe4e5] bg-white px-3 py-2 text-xs font-semibold text-[#68716e] disabled:cursor-not-allowed disabled:opacity-40"><ChevronLeft size={14} /> Anterior</button>{sectionIndex < SPE_SECTIONS.length - 1 ? <button type="button" disabled={saving} onClick={() => setSectionIndex((index) => index + 1)} className="inline-flex items-center gap-1 rounded-lg bg-[#a00046] px-4 py-2 text-xs font-semibold text-white hover:bg-[#7d0035] disabled:opacity-50">Siguiente <ChevronRight size={14} /></button> : <button type="submit" disabled={saving} className="inline-flex items-center gap-2 rounded-lg bg-[#a00046] px-4 py-2 text-xs font-semibold text-white hover:bg-[#7d0035] disabled:opacity-50"><Save size={14} /> {saving ? 'Guardando...' : 'Guardar registro'}</button>}</div></footer>
           </form>
         </div>
@@ -108,7 +139,7 @@ function Field({ label, required, children }) { return <label className="block">
 function Question({ field, value, onChange, onToggle }) {
   if (field.type === 'scale') return <fieldset><legend className="mb-2 text-[11px] font-bold text-[#414845]">{field.label}</legend><div className="grid grid-cols-5 gap-1.5">{[1, 2, 3, 4, 5].map((option) => <label key={option} className={`flex cursor-pointer flex-col items-center gap-1 rounded-lg border px-2 py-2 text-[10px] transition ${String(value) === String(option) ? 'border-[#a00046] bg-[#fff3f7] text-[#a00046]' : 'border-[#e5e9ea] text-[#7a8581] hover:border-[#d6a4b7]'}`}><input type="radio" name={field.name} value={option} checked={String(value) === String(option)} onChange={(event) => onChange(field.name, event.target.value)} className="sr-only" />{option}<span className="text-[9px]">{option === 1 ? 'Bajo' : option === 5 ? 'Alto' : ''}</span></label>)}</div></fieldset>;
   if (field.type === 'radio') return <fieldset><legend className="mb-2 text-[11px] font-bold text-[#414845]">{field.label}</legend><div className="flex flex-wrap gap-2">{field.options.map((option) => <label key={option} className={`inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-xs ${value === option ? 'border-[#a00046] bg-[#fff3f7] font-semibold text-[#a00046]' : 'border-[#e5e9ea] text-[#65706c]'}`}><input type="radio" name={field.name} value={option} checked={value === option} onChange={() => onChange(field.name, option)} className="accent-[#a00046]" />{option}</label>)}</div></fieldset>;
-  if (field.type === 'checkbox') return <fieldset className="sm:col-span-2"><legend className="mb-2 text-[11px] font-bold text-[#414845]">{field.label}</legend><div className="grid gap-2 sm:grid-cols-2">{field.options.map((option) => <label key={option} className="flex cursor-pointer items-center gap-2 rounded-lg border border-[#e5e9ea] px-3 py-2.5 text-xs text-[#65706c] hover:border-[#d6a4b7]"><input type="checkbox" checked={(value || []).includes(option)} onChange={() => onToggle(field.name, option)} className="accent-[#a00046]" />{option}</label>)}</div></fieldset>;
+  if (field.type === 'checkbox') return <fieldset className="sm:col-span-2"><legend className="mb-2 text-[11px] font-bold text-[#414845]">{field.label}</legend><div className="grid gap-2 sm:grid-cols-2">{field.options.map((option) => { const marcadas = (value || []).filter((item) => item !== 'Ninguno'); const bloqueada = Boolean(field.max) && !(value || []).includes(option) && option !== 'Ninguno' && marcadas.length >= field.max; return <label key={option} className={`flex items-center gap-2 rounded-lg border border-[#e5e9ea] px-3 py-2.5 text-xs text-[#65706c] ${bloqueada ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:border-[#d6a4b7]'}`}><input type="checkbox" checked={(value || []).includes(option)} disabled={bloqueada} onChange={() => onToggle(field.name, option)} className="accent-[#a00046]" />{option}</label>; })}</div></fieldset>;
   if (field.type === 'select') return <Field label={field.label}><select value={value || ''} onChange={(event) => onChange(field.name, event.target.value)} className={INPUT_CLASS}><option value="">Seleccione una opción</option>{field.options.map((option) => <option key={option} value={option}>{option}</option>)}</select></Field>;
   return <Field label={field.label}><input type={field.type} value={value || ''} onChange={(event) => onChange(field.name, event.target.value)} placeholder={field.placeholder} className={INPUT_CLASS} /></Field>;
 }

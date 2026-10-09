@@ -33,7 +33,7 @@ describe('obtenerHistorialIca', () => {
     await icaService.obtenerHistorialIca({ campusId: null });
     const [sql, params] = pool.query.mock.calls[0];
     expect(sql).not.toContain('c.campus_id = ?');
-    expect(params).toEqual([1]);
+    expect(params).toEqual([1, 1]); // módulo ICA + solo registros individuales
   });
 
   it('con sede filtra por campus', async () => {
@@ -41,23 +41,24 @@ describe('obtenerHistorialIca', () => {
     await icaService.obtenerHistorialIca({ campusId: 2 });
     const [sql, params] = pool.query.mock.calls[0];
     expect(sql).toContain('c.campus_id = ?');
-    expect(params).toEqual([1, 2]);
+    expect(params).toEqual([1, 1, 2]);
   });
 });
 
-describe('obtenerDetalleArchivoIca', () => {
-  const carga = [[{ data_load_id: 5, source_type: 2, file_name: 'a.xlsx', status: 2, created_at: new Date(), first_name: 'Ana', paternal_last_name: 'Paz' }]];
+describe('obtenerDetalleRegistroIca', () => {
+  const carga = [[{ data_load_id: 5, source_type: 1, file_name: 'Registro individual', status: 2, created_at: new Date(), first_name: 'Ana', paternal_last_name: 'Paz' }]];
   const respuestas = [[{ survey_response_id: 1, community_id: 9, community_name: 'Sopocachi', campus_id: 2, year: 2026, quarter: 1 }]];
 
   it('el Admin de otra sede no lo encuentra', async () => {
     pool.query.mockResolvedValueOnce(carga).mockResolvedValueOnce(respuestas);
-    await expect(icaService.obtenerDetalleArchivoIca({ campusId: 1, dataLoadId: 5 })).rejects.toThrow('ARCHIVO_NO_ENCONTRADO');
+    await expect(icaService.obtenerDetalleRegistroIca({ campusId: 1, dataLoadId: 5 })).rejects.toThrow('REGISTRO_NO_ENCONTRADO');
   });
 
   it('el Superadmin lo ve aunque sea de otra sede', async () => {
     pool.query.mockResolvedValueOnce(carga).mockResolvedValueOnce(respuestas);
-    const detalle = await icaService.obtenerDetalleArchivoIca({ campusId: null, dataLoadId: 5 });
+    const detalle = await icaService.obtenerDetalleRegistroIca({ campusId: null, dataLoadId: 5 });
     expect(detalle.archivo.comunidad).toBe('Sopocachi');
+    expect(detalle.puntaje).toEqual(expect.objectContaining({ ica: null }));
   });
 });
 

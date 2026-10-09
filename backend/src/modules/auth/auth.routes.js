@@ -13,24 +13,25 @@ const {
 const { requireAuth } = require('../../middlewares/auth.middleware');
 
 
-// TODO(Santiago): volver a windowMs: 15 * 60 * 1000 antes de entregar —
-// bajado a 1 minuto temporalmente para poder probar seguido durante el desarrollo.
-// Máximo 10 intentos de login por IP cada 15 minutos — evita fuerza bruta.
+// En los tests se desactiva: varias pruebas inician sesión seguidas.
+const enTests = () => process.env.NODE_ENV === 'test';
+
+// Máximo 5 intentos de login por IP cada 15 minutos — evita fuerza bruta.
 const loginLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000,
-  limit: 10,
-  message: { error: 'Demasiados intentos. Probá de nuevo en unos minutos.' },
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  skip: enTests,
+  message: { error: 'Demasiados intentos. Intenta de nuevo en unos minutos.' },
   standardHeaders: true,
   legacyHeaders: false,
 });
 
-// TODO(Santiago): volver a windowMs: 15 * 60 * 1000 antes de entregar —
-// bajado a 1 minuto temporalmente para poder probar seguido durante el desarrollo.
 // Máximo 3 pedidos de código por IP cada 15 minutos — evita spamear correos.
 const forgotPasswordLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000,
+  windowMs: 15 * 60 * 1000,
   limit: 3,
-  message: { error: 'Demasiados intentos. Probá de nuevo en unos minutos.' },
+  skip: enTests,
+  message: { error: 'Demasiados intentos. Intenta de nuevo en unos minutos.' },
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -40,7 +41,7 @@ const forgotPasswordLimiter = rateLimit({
 const verifyCodeLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 10,
-  message: { error: 'Demasiados intentos. Probá de nuevo en unos minutos.' },
+  message: { error: 'Demasiados intentos. Intenta de nuevo en unos minutos.' },
   standardHeaders: true,
   legacyHeaders: false,
 });

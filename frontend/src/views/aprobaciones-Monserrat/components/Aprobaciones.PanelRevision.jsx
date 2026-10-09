@@ -1,4 +1,4 @@
-import { Folder, SquarePen, X, Check, CheckCircle2 } from 'lucide-react';
+import { SquarePen, X, Check } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
 // Secciones de la Encuesta Única Integrada SOCOMEX – SOCIFIN
@@ -60,59 +60,6 @@ function Dato({ label, children, wide = false }) {
   );
 }
 
-function Barras({ titulo, items }) {
-  if (!items || items.length === 0) return null;
-
-  const max = Math.max(...items.map(([, n]) => Number(n) || 0), 1);
-
-  return (
-    <div>
-      <p className="mb-2 text-xs font-bold text-[#252927]">{titulo}</p>
-
-      <ul className="space-y-1.5">
-        {items.map(([label, n]) => (
-          <li
-            key={label}
-            className="flex items-center gap-2 text-xs text-[#48504d]"
-          >
-            <span className="w-32 shrink-0 truncate" title={label}>
-              {label}
-            </span>
-
-            <span className="h-2 flex-1 rounded-full bg-[#f1f3f3]">
-              <span
-                className="block h-2 rounded-full bg-[#a00046]"
-                style={{ width: `${((Number(n) || 0) / max) * 100}%` }}
-              />
-            </span>
-
-            <span className="w-8 text-right font-semibold text-[#252927]">
-              {n}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-function Estadisticas({ items }) {
-  if (!items || items.length === 0) return null;
-
-  return (
-    <div className="flex flex-wrap gap-2">
-      {items.map(([label, valor]) => (
-        <div key={label} className="rounded-lg bg-[#f4f6f8] px-3 py-2">
-          <p className="text-[9px] font-bold uppercase tracking-wider text-[#8a9290]">
-            {label}
-          </p>
-          <p className="text-sm font-bold text-[#202522]">{valor}</p>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 /* Valor de una respuesta: texto, varias opciones, "No aplica" o "Sin responder" */
 function Respuesta({ valor }) {
   if (valor === NO_APLICA) {
@@ -141,60 +88,6 @@ function EncabezadoSeccion({ codigo, titulo }) {
 // ---------------------------------------------------------------------------
 // Contenido según tipo de registro
 // ---------------------------------------------------------------------------
-
-/*
- * Carga masiva.
- * SPE  -> resumen.secciones: [{ seccion: 'I', estadisticas, grupos }]
- * ICA  -> resumen.estadisticas + resumen.grupos (sin secciones)
- */
-function ResumenMasiva({ resumen }) {
-  const secciones = [...(resumen?.secciones ?? [])].sort(porOrdenDeSeccion);
-
-  return (
-    <>
-      {secciones.map((s) => (
-        <section key={s.seccion} className="space-y-4">
-          <EncabezadoSeccion
-            codigo={s.seccion}
-            titulo={SECCIONES_SPE[s.seccion] ?? s.titulo ?? 'Sección'}
-          />
-          <Estadisticas items={s.estadisticas} />
-          {s.grupos?.map((g) => (
-            <Barras key={g.titulo} titulo={g.titulo} items={g.items} />
-          ))}
-        </section>
-      ))}
-
-      {/* Formato plano (ICA o resúmenes sin secciones) */}
-      {secciones.length === 0 && (
-        <>
-          <Estadisticas items={resumen?.estadisticas} />
-          {resumen?.grupos?.map((g) => (
-            <Barras key={g.titulo} titulo={g.titulo} items={g.items} />
-          ))}
-        </>
-      )}
-
-      {resumen?.alertas?.length > 0 ? (
-        <div className="rounded-lg border border-[#f3dfb4] bg-[#fbf1de] p-3">
-          <p className="mb-1 text-xs font-bold text-[#b7891e]">
-            Revisar antes de aprobar
-          </p>
-          <ul className="list-disc space-y-0.5 pl-4 text-xs text-[#8a6a16]">
-            {resumen.alertas.map((a) => (
-              <li key={a}>{a}</li>
-            ))}
-          </ul>
-        </div>
-      ) : (
-        <p className="flex items-center gap-2 rounded-lg bg-[#eaf6ef] px-3 py-2 text-xs text-[#2f9e58]">
-          <CheckCircle2 size={14} />
-          No se detectaron respuestas vacías ni valores raros.
-        </p>
-      )}
-    </>
-  );
-}
 
 /*
  * Registro manual.
@@ -307,7 +200,6 @@ export default function PanelRevision({
   procesando = false,
   sistema = 'spe',
 }) {
-  const masiva = r.tipo === 'masiva';
   const zonas = r.zonas ?? [];
 
   return (
@@ -324,25 +216,13 @@ export default function PanelRevision({
       >
         <header className="flex items-start justify-between gap-3 border-b border-[#edf0f1] px-5 py-4">
           <div className="flex items-center gap-2.5">
-            <span
-              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
-                masiva
-                  ? 'bg-[#e8f1fb] text-[#2f6fb0]'
-                  : 'bg-[#f3ecfb] text-[#7c4dbd]'
-              }`}
-            >
-              {masiva ? <Folder size={15} /> : <SquarePen size={15} />}
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#f3ecfb] text-[#7c4dbd]">
+              <SquarePen size={15} />
             </span>
 
             <div>
               <h2 className="text-sm font-bold text-[#202522]">{r.origen}</h2>
-              <p
-                className={`text-[9px] font-bold uppercase tracking-wider ${
-                  masiva ? 'text-[#2f6fb0]' : 'text-[#7c4dbd]'
-                }`}
-              >
-                {masiva ? 'Carga masiva' : 'Manual'}
-              </p>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-[#7c4dbd]">Manual</p>
             </div>
           </div>
 
@@ -385,11 +265,7 @@ export default function PanelRevision({
             )}
           </dl>
 
-          {masiva ? (
-            <ResumenMasiva resumen={r.resumen} />
-          ) : (
-            <RespuestasManual respuestas={r.respuestas} sistema={sistema} />
-          )}
+          <RespuestasManual respuestas={r.respuestas} sistema={sistema} />
         </div>
 
         <footer className="border-t border-[#edf0f1] px-5 py-3">

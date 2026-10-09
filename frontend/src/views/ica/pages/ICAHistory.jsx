@@ -9,7 +9,6 @@ import {
   ChevronsUpDown,
   Search,
   Plus,
-  Folder,
   SquarePen,
   Eye,
   Trash2,
@@ -35,11 +34,9 @@ function formatearFecha(valor) {
   return fecha.toLocaleDateString('es-BO', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
-// US24: la ruta de borrado depende del tipo de registro — cada uno vive
-// en su propio endpoint (DELETE /api/ica/:id para manuales, DELETE
-// /api/ica/files/:id para archivos).
+// US24: todos los registros son individuales (la carga por archivo se quitó).
 function rutaEliminar(registro) {
-  return registro.tipo === 'masiva' ? `/api/ica/files/${registro.id}` : `/api/ica/${registro.id}`;
+  return `/api/ica/${registro.id}`;
 }
 
 export default function ICAHistory() {
@@ -180,12 +177,8 @@ export default function ICAHistory() {
     <main className="min-h-[calc(100vh-4rem)] bg-[#f4f6f8] px-4 py-5 sm:px-6 lg:px-8">
       <ConfirmDialog
         open={Boolean(registroAEliminar)}
-        titulo={registroAEliminar?.tipo === 'masiva' ? '¿Eliminar este archivo?' : '¿Eliminar este registro?'}
-        mensaje={
-          registroAEliminar?.tipo === 'masiva'
-            ? `Se eliminará "${registroAEliminar?.origen}" y todas sus entrevistas asociadas. Esta acción no se puede deshacer.`
-            : 'Este registro individual dejará de contar para los dashboards. Esta acción no se puede deshacer.'
-        }
+        titulo="¿Eliminar este registro?"
+        mensaje="Este registro individual dejará de contar para los dashboards. Esta acción no se puede deshacer."
         textoConfirmar={eliminando ? 'Eliminando...' : 'Eliminar'}
         onConfirm={confirmarEliminacion}
         onCancel={() => setRegistroAEliminar(null)}
@@ -206,7 +199,7 @@ export default function ICAHistory() {
             Historial de registros — ICA
           </h1>
           <p className="mt-1 text-sm text-[#6d7673]">
-            Todos los registros ingresados manualmente o cargados por archivo para el Índice de Calidad Aseguradora.
+            Todos los registros individuales del Índice de Calidad Aseguradora.
           </p>
         </div>
 
@@ -253,7 +246,7 @@ export default function ICAHistory() {
                 type="text"
                 value={busquedaInput}
                 onChange={(e) => setBusquedaInput(e.target.value)}
-                placeholder="Buscar por archivo o comuna..."
+                placeholder="Buscar por comuna..."
                 className="w-64 rounded-lg border border-[#dfe4e5] bg-white py-2 pl-8 pr-3 text-xs text-[#414845] outline-none focus:border-[#a00046]"
               />
             </label>
@@ -317,20 +310,12 @@ export default function ICAHistory() {
                     <tr key={r.id} className="border-t border-[#f0f2f2] text-[#48504d] hover:bg-[#fff8fa]">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2.5">
-                          <span
-                            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${r.tipo === 'masiva' ? 'bg-[#e8f1fb] text-[#2f6fb0]' : 'bg-[#f3ecfb] text-[#7c4dbd]'
-                              }`}
-                          >
-                            {r.tipo === 'masiva' ? <Folder size={14} /> : <SquarePen size={14} />}
+                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#f3ecfb] text-[#7c4dbd]">
+                            <SquarePen size={14} />
                           </span>
                           <div>
                             <p className="font-semibold text-[#252927]">{r.origen}</p>
-                            <p
-                              className={`text-[9px] font-bold uppercase tracking-wider ${r.tipo === 'masiva' ? 'text-[#2f6fb0]' : 'text-[#7c4dbd]'
-                                }`}
-                            >
-                              {r.tipo === 'masiva' ? 'Carga masiva' : 'Manual'}
-                            </p>
+                            <p className="text-[9px] font-bold uppercase tracking-wider text-[#7c4dbd]">Manual</p>
                           </div>
                         </div>
                       </td>

@@ -57,18 +57,18 @@ export default function DetalleArchivoSpePage() {
         setCargando(true);
         setError(null);
 
-        const res = await fetch(`/api/spe/files/${id}`, {
+        const res = await fetch(`/api/spe/registros/${id}`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
 
         if (!res.ok) {
           if (res.status === 404) {
-            throw new Error('El archivo solicitado no existe o fue eliminado.');
+            throw new Error('El registro solicitado no existe o fue eliminado.');
           }
           if (res.status === 400) {
-            throw new Error('El identificador de archivo proporcionado es inválido.');
+            throw new Error('El identificador del registro es inválido.');
           }
-          throw new Error('Error al consultar el detalle del archivo.');
+          throw new Error('Error al consultar el detalle del registro.');
         }
 
         const json = await res.json();
@@ -77,7 +77,7 @@ export default function DetalleArchivoSpePage() {
         }
       } catch (err) {
         if (activo) {
-          setError(err.message || 'Error inesperado al cargar archivo.');
+          setError(err.message || 'Error inesperado al cargar el registro.');
         }
       } finally {
         if (activo) {
@@ -115,20 +115,20 @@ export default function DetalleArchivoSpePage() {
       setEliminando(true);
       setErrorEliminacion(null);
 
-      const res = await fetch(`/api/spe/files/${id}`, {
+      const res = await fetch(`/api/spe/${id}`, {
         method: 'DELETE',
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
 
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({}));
-        throw new Error(errJson.error || 'No se pudo eliminar el archivo.');
+        throw new Error(errJson.error || 'No se pudo eliminar el registro.');
       }
 
       setModalEliminarAbierto(false);
       navigate('/spe/historial');
     } catch (err) {
-      console.error('Error eliminando archivo SPE:', err);
+      console.error('Error eliminando registro SPE:', err);
       setErrorEliminacion(err.message || 'Error al eliminar');
     } finally {
       setEliminando(false);
@@ -140,7 +140,7 @@ export default function DetalleArchivoSpePage() {
       <main className="min-h-[calc(100vh-4rem)] bg-surface px-4 py-8 sm:px-6 lg:px-8">
         <div className="mx-auto flex max-w-5xl flex-col items-center justify-center py-24 text-ink/70">
           <Loader2 className="h-8 w-8 animate-spin text-maroon" />
-          <p className="mt-3 text-sm font-medium">Cargando detalle del archivo SPE...</p>
+          <p className="mt-3 text-sm font-medium">Cargando detalle del registro SPE...</p>
         </div>
       </main>
     );
@@ -160,7 +160,7 @@ export default function DetalleArchivoSpePage() {
 
           <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-center text-rose-900 shadow-xs">
             <AlertTriangle className="mx-auto h-8 w-8 text-rose-500" />
-            <h2 className="mt-2 text-base font-semibold">No se pudo cargar el archivo</h2>
+            <h2 className="mt-2 text-base font-semibold">No se pudo cargar el registro</h2>
             <p className="mt-1 text-sm text-rose-700">{error}</p>
             <div className="mt-4">
               <Link
@@ -206,7 +206,7 @@ export default function DetalleArchivoSpePage() {
               className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-white px-3.5 py-2 text-xs font-semibold text-rose-600 shadow-xs hover:bg-rose-50 hover:border-rose-300 transition-colors"
             >
               <Trash2 className="h-4 w-4" />
-              <span>Eliminar archivo</span>
+              <span>Eliminar registro</span>
             </button>
           </div>
         </div>
@@ -397,8 +397,8 @@ export default function DetalleArchivoSpePage() {
 
       <ConfirmDialog
         open={modalEliminarAbierto}
-        titulo="¿Eliminar este archivo SPE?"
-        mensaje={`Esta acción dará de baja lógica el archivo "${archivo.nombre}" y todos sus ${archivo.totalRegistros} registros asociados.`}
+        titulo="¿Eliminar este registro SPE?"
+        mensaje="Esta acción dará de baja lógica este registro individual y dejará de contar en el dashboard SPE."
         textoConfirmar={eliminando ? 'Eliminando...' : 'Eliminar'}
         textoCancelar="Cancelar"
         onConfirm={confirmarEliminar}

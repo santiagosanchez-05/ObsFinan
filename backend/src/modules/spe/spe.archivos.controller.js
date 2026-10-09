@@ -1,11 +1,12 @@
-// Kevin Prieto — US40 (descarga CSV/JSON), US41 (detalle de archivo), US42 (baja).
+// Kevin Prieto — US40 (descarga CSV/JSON), US41 (detalle de un registro), US42 (baja).
+// La carga por archivo/dataset se quitó: todos los registros son individuales.
 // La descarga es pública y solo incluye cargas APROBADAS.
 const speArchivosService = require('./spe.archivos.service');
 
 async function getExportSpe(req, res) {
   const formato = String(req.query.formato || 'json').toLowerCase();
   if (!['csv', 'json'].includes(formato)) {
-    return res.status(400).json({ error: 'Formato inválido. Usá "csv" o "json".' });
+    return res.status(400).json({ error: 'Formato inválido. Usa "csv" o "json".' });
   }
 
   try {
@@ -33,39 +34,21 @@ async function getExportSpe(req, res) {
   }
 }
 
-async function getDetalleArchivoSpe(req, res) {
+async function getDetalleRegistroSpe(req, res) {
   const dataLoadId = Number(req.params.id);
   if (!Number.isInteger(dataLoadId) || dataLoadId <= 0) {
-    return res.status(400).json({ error: 'Id de archivo inválido' });
+    return res.status(400).json({ error: 'Id de registro inválido' });
   }
 
   try {
-    const detalle = await speArchivosService.obtenerDetalleArchivoSpe(dataLoadId);
+    const detalle = await speArchivosService.obtenerDetalleRegistroSpe(dataLoadId);
     return res.status(200).json(detalle);
   } catch (err) {
-    if (err.message === 'ARCHIVO_NO_ENCONTRADO') {
-      return res.status(404).json({ error: 'No se encontró el archivo especificado' });
+    if (err.message === 'REGISTRO_NO_ENCONTRADO') {
+      return res.status(404).json({ error: 'No se encontró el registro especificado' });
     }
-    console.error('Error al obtener detalle de archivo SPE:', err);
-    return res.status(500).json({ error: 'No se pudo cargar el detalle del archivo SPE' });
-  }
-}
-
-async function deleteArchivoSpe(req, res) {
-  const dataLoadId = Number(req.params.id);
-  if (!Number.isInteger(dataLoadId) || dataLoadId <= 0) {
-    return res.status(400).json({ error: 'Id de archivo inválido' });
-  }
-
-  try {
-    await speArchivosService.eliminarArchivoSpe(dataLoadId);
-    return res.status(200).json({ message: 'Archivo eliminado correctamente' });
-  } catch (err) {
-    if (err.message === 'ARCHIVO_NO_ENCONTRADO') {
-      return res.status(404).json({ error: 'No se encontró el archivo a eliminar' });
-    }
-    console.error('Error al eliminar archivo SPE:', err);
-    return res.status(500).json({ error: 'No se pudo eliminar el archivo SPE' });
+    console.error('Error al obtener detalle del registro SPE:', err);
+    return res.status(500).json({ error: 'No se pudo cargar el detalle del registro SPE' });
   }
 }
 
@@ -89,7 +72,6 @@ async function deleteRegistroSpe(req, res) {
 
 module.exports = {
   getExportSpe,
-  getDetalleArchivoSpe,
-  deleteArchivoSpe,
+  getDetalleRegistroSpe,
   deleteRegistroSpe,
 };

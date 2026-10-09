@@ -1,11 +1,5 @@
 const { z } = require('zod');
 
-const uploadIcaMetaSchema = z.object({
-  communityId: z.coerce.number().int().positive('Falta seleccionar la comuna'),
-  quarter: z.coerce.number().int().min(1).max(4, { message: 'Trimestre inválido (1-4)' }),
-  year: z.coerce.number().int().min(2019).max(new Date().getFullYear()),
-});
-
 // Encabezados esperados en la fila 2 del Excel: las 32 preguntas del
 // instrumento ICA, texto exacto, mismo orden que INSTRUMENTO ICA.docx.
 // Ya NO incluye "Comuna" como columna — el archivo entero es de UNA sola
@@ -167,7 +161,6 @@ const entrevistaIcaSchema = z.object({
 }).and(z.preprocess((data) => ({ ...data, filaExcel: 0 }), filaEncuestaIcaSchema));
 
 module.exports = {
-  uploadIcaMetaSchema,
   ENCABEZADOS_ESPERADOS,
   filaEncuestaIcaSchema,
   registroIcaSchema,

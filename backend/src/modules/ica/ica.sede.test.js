@@ -49,10 +49,9 @@ describe('Superadmin: gestión del ICA de todas las sedes', () => {
   });
 
   it.each([
-    ['get', '/api/ica/files/5', 'obtenerDetalleArchivoIca', { detalle: true }],
+    ['get', '/api/ica/registros/5', 'obtenerDetalleRegistroIca', { detalle: true }],
     ['delete', '/api/ica/5', 'eliminarRegistroIndividual', undefined],
-    ['delete', '/api/ica/files/5', 'eliminarArchivoIca', undefined],
-    ['put', '/api/ica/files/5/verify', 'verificarCargaIca', undefined],
+    ['put', '/api/ica/registros/5/verify', 'verificarCargaIca', undefined],
   ])('%s %s no se limita a su sede', async (metodo, ruta, funcion, resultado) => {
     icaService[funcion].mockResolvedValue(resultado);
     const res = await request(app)[metodo](ruta).set('Authorization', `Bearer ${token('superadmin', 1)}`);
@@ -86,7 +85,7 @@ describe('Superadmin: gestión del ICA de todas las sedes', () => {
 
 describe('Admin: solo su sede', () => {
   it.each([
-    ['get', '/api/ica/files/5?campusId=2', 'obtenerDetalleArchivoIca', { detalle: true }],
+    ['get', '/api/ica/registros/5?campusId=2', 'obtenerDetalleRegistroIca', { detalle: true }],
     ['delete', '/api/ica/5?campusId=2', 'eliminarRegistroIndividual', undefined],
   ])('%s %s usa siempre su sede aunque pida otra', async (metodo, ruta, funcion, resultado) => {
     icaService[funcion].mockResolvedValue(resultado);
@@ -100,9 +99,9 @@ describe('Admin: solo su sede', () => {
     expect(icaService.obtenerHistorialIca).not.toHaveBeenCalled();
   });
 
-  it('un archivo de otra sede no existe para el Admin (404)', async () => {
-    icaService.obtenerDetalleArchivoIca.mockRejectedValue(new Error('ARCHIVO_NO_ENCONTRADO'));
-    const res = await request(app).get('/api/ica/files/5').set('Authorization', `Bearer ${token('admin', 1)}`);
+  it('un registro de otra sede no existe para el Admin (404)', async () => {
+    icaService.obtenerDetalleRegistroIca.mockRejectedValue(new Error('REGISTRO_NO_ENCONTRADO'));
+    const res = await request(app).get('/api/ica/registros/5').set('Authorization', `Bearer ${token('admin', 1)}`);
     expect(res.status).toBe(404);
   });
 });

@@ -148,8 +148,9 @@ describe('ICAPage — Admin/Superadmin logueado', () => {
     await screen.findAllByText('Tunari');
 
     expect(screen.getByText('Historial de registros')).toBeInTheDocument();
-    expect(screen.getByText('Subir dataset')).toBeInTheDocument();
     expect(screen.getByText('Registrar registro')).toBeInTheDocument();
+    // La carga por dataset se quitó: todos los registros son individuales.
+    expect(screen.queryByText('Subir dataset')).not.toBeInTheDocument();
     const llamadaDashboard = global.fetch.mock.calls.find(([url]) => String(url).startsWith('/api/ica'));
     expect(llamadaDashboard[1].headers).toEqual({ Authorization: 'Bearer tok' });
   });

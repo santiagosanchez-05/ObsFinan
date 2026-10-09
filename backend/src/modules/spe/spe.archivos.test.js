@@ -106,32 +106,32 @@ describe('US40 — Descarga de datos SPE pública (GET /api/spe/export)', () => 
   });
 });
 
-describe('US41 — Detalle de archivo SPE (GET /api/spe/files/:id)', () => {
+describe('US41 — Detalle de un registro SPE (GET /api/spe/registros/:id)', () => {
   it('retorna 400 si el ID es inválido', async () => {
     const res = await request(app)
-      .get('/api/spe/files/abc')
+      .get('/api/spe/registros/abc')
       .set('Authorization', `Bearer ${token('superadmin')}`);
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/inválido/i);
   });
 
-  it('retorna 404 si el archivo no existe o fue eliminado', async () => {
+  it('retorna 404 si el registro no existe o fue eliminado', async () => {
     pool.query.mockResolvedValueOnce([[]]); // sin cargas encontradas
 
     const res = await request(app)
-      .get('/api/spe/files/999')
+      .get('/api/spe/registros/999')
       .set('Authorization', `Bearer ${token('superadmin')}`);
 
     expect(res.status).toBe(404);
     expect(res.body.error).toMatch(/no se encontró/i);
   });
 
-  it('retorna metadatos y registros del archivo para superadmin', async () => {
+  it('retorna metadatos y respuestas del registro para superadmin', async () => {
     const mockCarga = {
       data_load_id: 10,
-      source_type: 2,
-      file_name: 'spe_censo_2026.xlsx',
-      total_rows: 2,
+      source_type: 1,
+      file_name: 'Registro individual',
+      total_rows: 1,
       status: 2,
       created_at: '2026-03-01T12:00:00.000Z',
       first_name: 'Santiago',
@@ -139,7 +139,6 @@ describe('US41 — Detalle de archivo SPE (GET /api/spe/files/:id)', () => {
     };
     const mockRespuestas = [
       { spe_survey_response_id: 101, s1_department: 'Santa Cruz', s1_export_sector: 'Agroindustria' },
-      { spe_survey_response_id: 102, s1_department: 'La Paz', s1_export_sector: 'Textiles' },
     ];
 
     pool.query
@@ -147,56 +146,28 @@ describe('US41 — Detalle de archivo SPE (GET /api/spe/files/:id)', () => {
       .mockResolvedValueOnce([mockRespuestas]);
 
     const res = await request(app)
-      .get('/api/spe/files/10')
+      .get('/api/spe/registros/10')
       .set('Authorization', `Bearer ${token('superadmin')}`);
 
     expect(res.status).toBe(200);
     expect(res.body.archivo).toEqual(
       expect.objectContaining({
         id: 10,
-        nombre: 'spe_censo_2026.xlsx',
+        nombre: 'Registro individual',
         subidoPor: 'Santiago Admin',
-        totalRegistros: 2,
+        totalRegistros: 1,
         estado: 'aprobada',
       })
     );
-    expect(res.body.registros).toHaveLength(2);
+    expect(res.body.registros).toHaveLength(1);
   });
 });
 
-describe('US42 — Eliminación SPE (DELETE /api/spe/files/:id y DELETE /api/spe/:id)', () => {
-  it('elimina un archivo SPE lógicamente con éxito', async () => {
-    const conexion = mockConexion();
-    conexion.query
-      .mockResolvedValueOnce([[{ data_load_id: 10 }]]) // SELECT carga
-      .mockResolvedValueOnce([{ affectedRows: 2 }]) // UPDATE spe_survey_response
-      .mockResolvedValueOnce([{ affectedRows: 1 }]); // UPDATE data_load
-
-    const res = await request(app)
-      .delete('/api/spe/files/10')
-      .set('Authorization', `Bearer ${token('superadmin')}`);
-
-    expect(res.status).toBe(200);
-    expect(res.body.message).toMatch(/eliminado correctamente/i);
-    expect(conexion.commit).toHaveBeenCalled();
-  });
-
-  it('retorna 404 al intentar eliminar un archivo inexistente', async () => {
-    const conexion = mockConexion();
-    conexion.query.mockResolvedValueOnce([[]]); // no encontrado
-
-    const res = await request(app)
-      .delete('/api/spe/files/999')
-      .set('Authorization', `Bearer ${token('superadmin')}`);
-
-    expect(res.status).toBe(404);
-    expect(conexion.rollback).toHaveBeenCalled();
-  });
-
+describe('US42 — Eliminación de un registro SPE (DELETE /api/spe/:id)', () => {
   it('elimina un registro individual SPE con éxito', async () => {
     const conexion = mockConexion();
     conexion.query
-      .mockResolvedValueOnce([[{ data_load_id: 50, source_type: 1 }]]) // SELECT data_load
+      .mockResolvedValueOnce([[{ data_load_id: 50 }]]) // SELECT data_load
       .mockResolvedValueOnce([{ affectedRows: 1 }]) // UPDATE spe_survey_response
       .mockResolvedValueOnce([{ affectedRows: 1 }]); // UPDATE data_load
 
@@ -211,9 +182,7 @@ describe('US42 — Eliminación SPE (DELETE /api/spe/files/:id y DELETE /api/spe
 
   it('retorna 404 al intentar eliminar un registro inexistente', async () => {
     const conexion = mockConexion();
-    conexion.query
-      .mockResolvedValueOnce([[]]) // no encontrado en data_load
-      .mockResolvedValueOnce([[]]); // no encontrado en spe_survey_response
+    conexion.query.mockResolvedValueOnce([[]]); // no existe la carga individual
 
     const res = await request(app)
       .delete('/api/spe/9999')

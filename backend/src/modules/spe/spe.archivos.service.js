@@ -97,18 +97,19 @@ async function exportarDatasetSpe(filtros = {}) {
   return filas;
 }
 
-async function obtenerDetalleArchivoSpe(dataLoadId) {
+// Detalle de UN registro individual (la carga por archivo se quitó).
+async function obtenerDetalleRegistroSpe(dataLoadId) {
   const [cargas] = await pool.query(
     `SELECT dl.data_load_id, dl.source_type, dl.file_name, dl.total_rows, dl.status, dl.created_at,
             u.first_name, u.paternal_last_name
      FROM data_load dl
      LEFT JOIN user u ON u.user_id = dl.created_modified_by
-     WHERE dl.data_load_id = ? AND dl.module = ? AND dl.status != ?`,
-    [dataLoadId, MODULO.SPE, ESTADO_CARGA.ELIMINADA]
+     WHERE dl.data_load_id = ? AND dl.module = ? AND dl.source_type = ? AND dl.status != ?`,
+    [dataLoadId, MODULO.SPE, TIPO_CARGA.INDIVIDUAL, ESTADO_CARGA.ELIMINADA]
   );
 
   if (!cargas.length) {
-    throw new Error('ARCHIVO_NO_ENCONTRADO');
+    throw new Error('REGISTRO_NO_ENCONTRADO');
   }
 
   const carga = cargas[0];
@@ -132,9 +133,9 @@ async function obtenerDetalleArchivoSpe(dataLoadId) {
   return {
     archivo: {
       id: carga.data_load_id,
-      nombre: carga.file_name || 'Archivo SPE',
-      tipoCarga: Number(carga.source_type),
-      tipoCargaTexto: Number(carga.source_type) === TIPO_CARGA.ARCHIVO ? 'Archivo masivo' : 'Registro individual',
+      nombre: carga.file_name || 'Registro individual',
+      tipoCarga: TIPO_CARGA.INDIVIDUAL,
+      tipoCargaTexto: 'Registro individual',
       fechaCarga: carga.created_at,
       subidoPor,
       totalRegistros: registros.length,
@@ -145,106 +146,33 @@ async function obtenerDetalleArchivoSpe(dataLoadId) {
   };
 }
 
-async function eliminarArchivoSpe(dataLoadId) {
+// Baja lógica de un registro individual (id = data_load_id).
+async function eliminarRegistroIndividualSpe(id) {
   const conexion = await pool.getConnection();
   try {
     await conexion.beginTransaction();
 
     const [cargas] = await conexion.query(
       `SELECT data_load_id FROM data_load
-       WHERE data_load_id = ? AND module = ? AND status != ?`,
-      [dataLoadId, MODULO.SPE, ESTADO_CARGA.ELIMINADA]
+       WHERE data_load_id = ? AND module = ? AND source_type = ? AND status != ?`,
+      [id, MODULO.SPE, TIPO_CARGA.INDIVIDUAL, ESTADO_CARGA.ELIMINADA]
     );
-
     if (!cargas.length) {
-      throw new Error('ARCHIVO_NO_ENCONTRADO');
-    }
-
-    await conexion.query(
-      `UPDATE spe_survey_response
-       SET status = ?
-       WHERE data_load_id = ? AND status = ?`,
-      [ESTADO.INACTIVO, dataLoadId, ESTADO.ACTIVO]
-    );
-
-    await conexion.query(
-      `UPDATE data_load
-       SET status = ?
-       WHERE data_load_id = ?`,
-      [ESTADO_CARGA.ELIMINADA, dataLoadId]
-    );
-
-    await conexion.commit();
-    return true;
-  } catch (err) {
-    await conexion.rollback();
-    throw err;
-  } finally {
-    conexion.release();
-  }
-}
-
-async function eliminarRegistroIndividualSpe(id) {
-  const conexion = await pool.getConnection();
-  try {
-    await conexion.beginTransaction();
-
-    // 1. Intentar buscar por data_load_id (carga individual)
-    const [cargas] = await conexion.query(
-      `SELECT data_load_id, source_type FROM data_load
-       WHERE data_load_id = ? AND module = ? AND status != ?`,
-      [id, MODULO.SPE, ESTADO_CARGA.ELIMINADA]
-    );
-
-    if (cargas.length > 0) {
-      const dataLoadId = cargas[0].data_load_id;
-      await conexion.query(
-        `UPDATE spe_survey_response
-         SET status = ?
-         WHERE data_load_id = ?`,
-        [ESTADO.INACTIVO, dataLoadId]
-      );
-      await conexion.query(
-        `UPDATE data_load
-         SET status = ?
-         WHERE data_load_id = ?`,
-        [ESTADO_CARGA.ELIMINADA, dataLoadId]
-      );
-      await conexion.commit();
-      return true;
-    }
-
-    // 2. Si no es data_load_id, buscar por spe_survey_response_id
-    const [respuestas] = await conexion.query(
-      `SELECT sr.spe_survey_response_id, sr.data_load_id
-       FROM spe_survey_response sr
-       INNER JOIN data_load dl ON dl.data_load_id = sr.data_load_id
-       WHERE sr.spe_survey_response_id = ? AND dl.module = ? AND sr.status = ?`,
-      [id, MODULO.SPE, ESTADO.ACTIVO]
-    );
-
-    if (!respuestas.length) {
       throw new Error('REGISTRO_NO_ENCONTRADO');
     }
 
-    const { spe_survey_response_id, data_load_id } = respuestas[0];
     await conexion.query(
       `UPDATE spe_survey_response
        SET status = ?
-       WHERE spe_survey_response_id = ?`,
-      [ESTADO.INACTIVO, spe_survey_response_id]
+       WHERE data_load_id = ?`,
+      [ESTADO.INACTIVO, id]
     );
-
     await conexion.query(
       `UPDATE data_load
-       SET total_rows = (
-         SELECT COUNT(*) FROM spe_survey_response
-         WHERE data_load_id = ? AND status = ?
-       )
+       SET status = ?
        WHERE data_load_id = ?`,
-      [data_load_id, ESTADO.ACTIVO, data_load_id]
+      [ESTADO_CARGA.ELIMINADA, id]
     );
-
     await conexion.commit();
     return true;
   } catch (err) {
@@ -258,7 +186,6 @@ async function eliminarRegistroIndividualSpe(id) {
 module.exports = {
   exportarDatasetSpe,
   generarCsv,
-  obtenerDetalleArchivoSpe,
-  eliminarArchivoSpe,
+  obtenerDetalleRegistroSpe,
   eliminarRegistroIndividualSpe,
 };

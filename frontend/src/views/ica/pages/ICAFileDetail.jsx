@@ -74,8 +74,7 @@ export default function ICAFileDetail() {
 
   const [archivo, setArchivo] = useState(null);
   const [registros, setRegistros] = useState([]);
-  const [porcentajeActual, setPorcentajeActual] = useState(null);
-  const [brechaGenero, setBrechaGenero] = useState(null);
+  const [puntaje, setPuntaje] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
 
@@ -88,10 +87,6 @@ export default function ICAFileDetail() {
   const [filtroSexo, setFiltroSexo] = useState('');
   const [filtroEducacion, setFiltroEducacion] = useState('');
   const [filtroSeguroVida, setFiltroSeguroVida] = useState('');
-
-  // Modal y eliminación de entrevista
-  const [registroAEliminar, setRegistroAEliminar] = useState(null);
-  const [eliminando, setEliminando] = useState(false);
 
   // Modal y eliminación de archivo
   const [mostrarModalArchivo, setMostrarModalArchivo] = useState(false);
@@ -115,7 +110,7 @@ export default function ICAFileDetail() {
       setError('');
 
       try {
-        const res = await fetch(`/api/ica/files/${id}`, {
+        const res = await fetch(`/api/ica/registros/${id}`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -125,15 +120,14 @@ export default function ICAFileDetail() {
 
         if (!res.ok) {
           throw new Error(
-            data.error || 'No se pudo cargar el detalle del archivo'
+            data.error || 'No se pudo cargar el detalle del registro'
           );
         }
 
         if (!cancelado) {
           setArchivo(data.archivo);
           setRegistros(data.registros || []);
-          setPorcentajeActual(data.porcentajeActual ?? null);
-          setBrechaGenero(data.brechaGenero ?? null);
+          setPuntaje(data.puntaje ?? null);
           setPaginaActual(1);
         }
       } catch (err) {
@@ -260,7 +254,7 @@ export default function ICAFileDetail() {
     setFiltroSeguroVida('');
   }
 
-  // Descargar archivo según el tipo de carga
+  // Descargar el registro individual (se genera al vuelo en el backend).
   async function descargarArchivo(formatoDescarga = 'xlsx') {
     if (!archivo) return;
 
@@ -268,67 +262,32 @@ export default function ICAFileDetail() {
     setError('');
 
     try {
-      // Carga masiva: descargar el Excel original
-      if (Number(archivo.tipoCarga) === 2) {
-        const res = await fetch(`/api/ica/files/${id}/download`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+      const res = await fetch(`/api/ica/${id}/download?formato=${formatoDescarga}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-        if (!res.ok) {
-          let mensaje = 'No se pudo descargar el archivo';
-          try {
-            const data = await res.json();
-            if (data.error) mensaje = data.error;
-          } catch {
-            // La respuesta no era JSON.
-          }
-          throw new Error(mensaje);
+      if (!res.ok) {
+        let mensaje = 'No se pudo descargar el registro';
+        try {
+          const data = await res.json();
+          if (data.error) mensaje = data.error;
+        } catch {
+          // La respuesta no era JSON.
         }
-
-        const blob = await res.blob();
-        const url = window.URL.createObjectURL(blob);
-        const enlace = document.createElement('a');
-        enlace.href = url;
-        enlace.download = archivo.nombre || 'archivo_ica.xlsx';
-        document.body.appendChild(enlace);
-        enlace.click();
-        enlace.remove();
-        window.URL.revokeObjectURL(url);
-        return;
+        throw new Error(mensaje);
       }
 
-      // Carga manual: se genera al vuelo en el backend (no hay Excel original guardado)
-      if (Number(archivo.tipoCarga) === 1) {
-        const res = await fetch(`/api/ica/${id}/download?formato=${formatoDescarga}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (!res.ok) {
-          let mensaje = 'No se pudo descargar el registro';
-          try {
-            const data = await res.json();
-            if (data.error) mensaje = data.error;
-          } catch {
-            // La respuesta no era JSON.
-          }
-          throw new Error(mensaje);
-        }
-
-        const blob = await res.blob();
-        const url = window.URL.createObjectURL(blob);
-        const enlace = document.createElement('a');
-        const disposicion = res.headers.get('Content-Disposition') || '';
-        const coincidencia = disposicion.match(/filename="(.+)"/);
-        enlace.download = coincidencia ? coincidencia[1] : `registro_individual.${formatoDescarga}`;
-        enlace.href = url;
-        document.body.appendChild(enlace);
-        enlace.click();
-        enlace.remove();
-        window.URL.revokeObjectURL(url);
-        return;
-      }
-
-      setError('Tipo de carga no válido');
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const enlace = document.createElement('a');
+      const disposicion = res.headers.get('Content-Disposition') || '';
+      const coincidencia = disposicion.match(/filename="(.+)"/);
+      enlace.download = coincidencia ? coincidencia[1] : `registro_individual.${formatoDescarga}`;
+      enlace.href = url;
+      document.body.appendChild(enlace);
+      enlace.click();
+      enlace.remove();
+      window.URL.revokeObjectURL(url);
     } catch (err) {
       setError(err.message || 'No se pudo descargar el registro');
     } finally {
@@ -343,7 +302,7 @@ export default function ICAFileDetail() {
     setError('');
 
     try {
-      const res = await fetch(`/api/ica/files/${id}/verify`, {
+      const res = await fetch(`/api/ica/registros/${id}/verify`, {
         method: 'PUT',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -354,7 +313,7 @@ export default function ICAFileDetail() {
 
       if (!res.ok) {
         throw new Error(
-          data.error || 'No se pudo verificar el archivo'
+          data.error || 'No se pudo verificar el registro'
         );
       }
 
@@ -364,71 +323,21 @@ export default function ICAFileDetail() {
       }));
     } catch (err) {
       setError(
-        err.message || 'No se pudo verificar el archivo'
+        err.message || 'No se pudo verificar el registro'
       );
     } finally {
       setVerificandoArchivo(false);
     }
   }
 
-  // Eliminar una entrevista individual
-  async function confirmarEliminacion() {
-    if (!registroAEliminar) return;
-
-    setEliminando(true);
-    setError('');
-
-    try {
-      const res = await fetch(
-        `/api/ica/responses/${registroAEliminar.id}`,
-        {
-          method: 'DELETE',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(
-          data.error || 'No se pudo eliminar la entrevista'
-        );
-      }
-
-      // Quitamos la entrevista de la tabla
-      const nuevosRegistros = registros.filter(
-        (registro) => registro.id !== registroAEliminar.id
-      );
-
-      setRegistros(nuevosRegistros);
-
-      // Actualizamos el total mostrado arriba
-      setArchivo((actual) => ({
-        ...actual,
-        totalRegistros: nuevosRegistros.length,
-      }));
-
-      setRegistroAEliminar(null);
-    } catch (err) {
-      setError(
-        err.message || 'No se pudo eliminar la entrevista'
-      );
-      setRegistroAEliminar(null);
-    } finally {
-      setEliminando(false);
-    }
-  }
-
-  // Elimina archivo completo o registro manual, según corresponda
+  // Elimina el registro individual (baja lógica).
   async function confirmarEliminacionArchivo() {
     if (!archivo) return;
 
     setEliminandoArchivo(true);
     setError('');
 
-    const ruta = Number(archivo.tipoCarga) === 2 ? `/api/ica/files/${id}` : `/api/ica/${id}`;
+    const ruta = `/api/ica/${id}`;
 
     try {
       const res = await fetch(ruta, {
@@ -471,7 +380,7 @@ export default function ICAFileDetail() {
         {/* Encabezado */}
         <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="text-2xl font-bold tracking-tight text-[#202522] sm:text-[28px]">
-            Detalle de archivo
+            Detalle del registro
           </h1>
 
           <div className="flex items-center gap-2">
@@ -482,7 +391,7 @@ export default function ICAFileDetail() {
               className="inline-flex items-center gap-2 self-start rounded-lg border border-[#f0b9c7] bg-[#fff5f7] px-4 py-2 text-xs font-semibold text-[#a00046] transition hover:bg-[#fde8ee] sm:self-auto"
             >
               <Trash2 size={14} />
-              {Number(archivo?.tipoCarga) === 2 ? 'Eliminar archivo' : 'Eliminar registro'}
+              Eliminar registro
             </button>
 
           </div>
@@ -497,7 +406,7 @@ export default function ICAFileDetail() {
         {cargando ? (
           <div className="flex items-center justify-center gap-2 rounded-xl border border-[#e2e6e8] bg-white p-10 text-sm text-[#8a9290] shadow-sm">
             <Loader2 size={16} className="animate-spin" />
-            Cargando detalle del archivo...
+            Cargando detalle del registro...
           </div>
         ) : archivo ? (
           <>
@@ -568,7 +477,7 @@ export default function ICAFileDetail() {
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
 
                   <h2 className="text-sm font-bold text-[#252927]">
-                    Contenido del archivo
+                    Respuestas de la encuesta
                   </h2>
 
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -621,17 +530,6 @@ export default function ICAFileDetail() {
                     </button>
 
                     {/* Descargar */}
-                    {Number(archivo?.tipoCarga) === 2 ? (
-                      <button
-                        onClick={() => descargarArchivo()}
-                        disabled={descargando}
-                        className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#e1e5e5] bg-white px-3 py-2 text-xs font-semibold text-[#59615e] transition hover:bg-[#f7f8f8] hover:text-[#a00046] disabled:cursor-not-allowed disabled:opacity-60"
-                        title="Descargar"
-                      >
-                        {descargando ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
-                        <span className="sm:hidden">Descargar</span>
-                      </button>
-                    ) : (
                       <div className="flex gap-2">
                         <button
                           onClick={() => descargarArchivo('xlsx')}
@@ -648,7 +546,6 @@ export default function ICAFileDetail() {
                           {descargando ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} JSON
                         </button>
                       </div>
-                    )}
 
                   </div>
                 </div>
@@ -754,12 +651,6 @@ export default function ICAFileDetail() {
                         )
                       )}
 
-                      {registros.length > 1 && (
-                        <th className="sticky right-0 z-20 w-[80px] min-w-[80px] bg-[#fafbfb] px-4 py-3 text-center">
-                          Acciones
-                        </th>
-                      )}
-
                     </tr>
                   </thead>
 
@@ -767,7 +658,7 @@ export default function ICAFileDetail() {
                     {registrosFiltrados.length === 0 ? (
                       <tr>
                         <td
-                          colSpan={registros.length > 1 ? PREGUNTAS.length + 2 : PREGUNTAS.length + 1}
+                          colSpan={PREGUNTAS.length + 1}
                           className="px-4 py-8 text-center text-[#8a9290]"
                         >
                           No se encontraron entrevistas con los criterios seleccionados.
@@ -792,18 +683,6 @@ export default function ICAFileDetail() {
                               {r[campo] || '—'}
                             </td>
                           ))}
-
-                          {registros.length > 1 && (
-                            <td className="sticky right-0 z-10 bg-white px-4 py-3 text-center">
-                              <button
-                                onClick={() => setRegistroAEliminar(r)}
-                                className="rounded-lg p-1.5 text-[#a00046] transition hover:bg-[#fff0f4]"
-                                title="Eliminar entrevista"
-                              >
-                                <Trash2 size={15} />
-                              </button>
-                            </td>
-                          )}
 
                         </tr>
                       ))
@@ -883,19 +762,22 @@ export default function ICAFileDetail() {
               <SummaryCard
                 icon={<BarChart3 size={16} />}
                 iconClass="bg-[#eaf1fb] text-[#2f6fb0]"
-                label="ICA general"
-                value={porcentajeActual != null ? porcentajeActual.toFixed(1) : '—'}
+                label="ICA de esta encuesta"
+                value={puntaje?.ica != null ? puntaje.ica.toFixed(1) : '—'}
                 suffix="pts"
-                description="Índice general del último período."
+                description="Calculado con la metodología del ICA (4 dimensiones ponderadas)."
               />
 
               <SummaryCard
                 icon={<Users size={16} />}
                 iconClass="bg-[#f6ecfb] text-[#a34fc4]"
-                label="Brecha de género"
-                value={brechaGenero != null ? brechaGenero.toFixed(1) : '—'}
-                suffix="pts"
-                description="Mayor diferencia entre hombres y mujeres entre comunas."
+                label="Dimensiones"
+                value={
+                  puntaje
+                    ? `${puntaje.conocimiento ?? '—'} · ${puntaje.educacion ?? '—'} · ${puntaje.prevision ?? '—'} · ${puntaje.uso ?? '—'}`
+                    : '—'
+                }
+                description="Conocimiento · Educación · Previsión · Uso y confianza (0 a 100)."
               />
 
               <article className="flex items-start gap-3 rounded-xl border border-[#e4e8e9] bg-white p-4 shadow-sm">
@@ -909,7 +791,7 @@ export default function ICAFileDetail() {
                   </p>
 
                   <p className="mt-1 text-[11px] leading-relaxed text-[#8a9290]">
-                    Este es un reporte consolidado. Los cambios realizados aquí se verán reflejados en los tableros generales del ICA.
+                    Las encuestas aprobadas cuentan en los tableros del ICA. Si eliminas este registro, se recalcula el ICA de su comuna y trimestre.
                   </p>
                 </div>
               </article>
@@ -918,56 +800,6 @@ export default function ICAFileDetail() {
           </>
         ) : null}
       </div>
-
-      {/* Modal: eliminar entrevista */}
-      {registroAEliminar && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-xl">
-
-            <div className="flex items-start gap-3">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#fff0f4] text-[#a00046]">
-                <Trash2 size={17} />
-              </span>
-
-              <div>
-                <h3 className="text-sm font-bold text-[#252927]">
-                  Eliminar entrevista
-                </h3>
-
-                <p className="mt-1 text-xs leading-relaxed text-[#747d79]">
-                  Esta entrevista dejará de estar activa y ya no contará para los datos del archivo.
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-5 flex justify-end gap-2">
-              <button
-                onClick={() => setRegistroAEliminar(null)}
-                disabled={eliminando}
-                className="rounded-lg border border-[#e1e5e5] px-4 py-2 text-xs font-semibold text-[#59615e] hover:bg-[#f5f6f6] disabled:opacity-60"
-              >
-                Cancelar
-              </button>
-
-              <button
-                onClick={confirmarEliminacion}
-                disabled={eliminando}
-                className="inline-flex items-center gap-2 rounded-lg bg-[#a00046] px-4 py-2 text-xs font-semibold text-white hover:bg-[#86003a] disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {eliminando && (
-                  <Loader2
-                    size={13}
-                    className="animate-spin"
-                  />
-                )}
-
-                Eliminar
-              </button>
-            </div>
-
-          </div>
-        </div>
-      )}
 
       {/* Modal: eliminar archivo */}
       {mostrarModalArchivo && (
@@ -981,13 +813,11 @@ export default function ICAFileDetail() {
 
               <div>
                 <h3 className="text-sm font-bold text-[#252927]">
-                  {Number(archivo?.tipoCarga) === 2 ? 'Eliminar archivo' : 'Eliminar registro'}
+                  Eliminar registro
                 </h3>
 
                 <p className="mt-1 text-xs leading-relaxed text-[#747d79]">
-                  {Number(archivo?.tipoCarga) === 2
-                    ? 'Se eliminará el archivo y todas las entrevistas asociadas. Esta acción hará que dejen de contar para los datos del ICA.'
-                    : 'Se eliminará este registro individual. Esta acción hará que deje de contar para los datos del ICA.'}
+                  Se eliminará este registro individual. Esta acción hará que deje de contar para los datos del ICA.
                 </p>
               </div>
             </div>
@@ -1013,7 +843,7 @@ export default function ICAFileDetail() {
                 ) : (
                   <Trash2 size={13} />
                 )}
-                {Number(archivo?.tipoCarga) === 2 ? 'Eliminar archivo' : 'Eliminar registro'}
+                Eliminar registro
               </button>
             </div>
 

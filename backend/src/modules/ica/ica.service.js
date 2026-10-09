@@ -1,13 +1,11 @@
-const fs = require('fs');
-const path = require('path');
 const xlsx = require('xlsx');
 const pool = require('../../config/db');
 const { ESTADO_CARGA } = require('../../config/estados');
-const { filaEncuestaIcaSchema, ENCABEZADOS_ESPERADOS, OPCIONES } = require('./ica.validation');
+const { ENCABEZADOS_ESPERADOS, OPCIONES } = require('./ica.validation');
+const { puntuarEncuesta, icaPonderado } = require('./ica.puntajes');
 
-// module: 1=ICA, 2=SPE; source_type: 1=individual, 2=archivo
+// module: 1=ICA, 2=SPE; source_type: 1=individual (la carga por archivo se quitó: todo es individual)
 const MODULE_ICA = 1;
-const SOURCE_TYPE_ARCHIVO = 2;
 const SOURCE_TYPE_INDIVIDUAL = 1;
 
 // data_load.status: 0 = eliminado, 1 = pendiente de verificación, 2 = verificado.
@@ -20,12 +18,6 @@ const ESTADO_CARGA_VERIFICADA = 2;
 function estadoInicialCarga(rol) {
   return rol === 'admin' || rol === 'superadmin' ? ESTADO_CARGA_VERIFICADA : ESTADO_CARGA_PENDIENTE;
 }
-
-const UPLOAD_DIR = path.join(__dirname, '../../../uploads/ica');
-const TEMPLATE_ICA = path.join(
-  __dirname,
-  '../../../templates/ica/plantilla_diccionario_ICA.xlsx'
-);
 
 // Mapeo columna del Excel (en orden) -> campo del objeto en JS -> columna de ica_survey_response.
 // El orden DEBE coincidir exactamente con ENCABEZADOS_ESPERADOS.
@@ -69,80 +61,7 @@ function limpiar(valor) {
   const texto = String(valor).trim();
   return texto === '' ? null : texto;
 }
-function obtenerPlantillaIca() {
-  if (!fs.existsSync(TEMPLATE_ICA)) {
-    throw new Error('PLANTILLA_NO_ENCONTRADA');
-  }
 
-  return {
-    ruta: TEMPLATE_ICA,
-    nombreArchivo: 'plantilla_diccionario_ica.xlsx',
-  };
-}
-// Parsea un Excel de UNA sola comuna: cada fila es una entrevista completa
-// de 32 respuestas. Ya no lee "comuna" de ninguna columna — eso viene del
-// formulario de carga (communityId), no del archivo.
-function parsearArchivoIca(buffer) {
-  const libro = xlsx.read(buffer, { type: 'buffer' });
-  const hoja = libro.Sheets[libro.SheetNames[0]];
-  const filas = xlsx.utils.sheet_to_json(hoja, { header: 1, defval: null });
-
-  const encabezados = (filas[0] || []).slice(0, ENCABEZADOS_ESPERADOS.length).map((h) => String(h || '').trim());
-  const encabezadosOk = ENCABEZADOS_ESPERADOS.every((esperado, i) => encabezados[i] === esperado);
-  if (!encabezadosOk) {
-    const err = new Error('ENCABEZADOS_INVALIDOS');
-    err.detalle = { esperado: ENCABEZADOS_ESPERADOS, recibido: encabezados };
-    throw err;
-  }
-
-  const datos = [];
-  for (let i = 1; i < filas.length; i++) {
-    const fila = filas[i] || [];
-
-    // Fin de la tabla de datos: la primera pregunta (q01) vacía marca que
-    // la hoja siguió con texto suelto (notas, hallazgos) después de los datos.
-    const primeraRespuesta = limpiar(fila[0]);
-    if (primeraRespuesta === null) {
-      break;
-    }
-
-    const objetoFila = { filaExcel: i + 1 };
-    CAMPOS_ENCUESTA.forEach(([campoJs], index) => {
-      const valor = limpiar(fila[index]);
-
-      if (valor && valor.toUpperCase().startsWith('N/A')) {
-        objetoFila[campoJs] = null;
-      } else {
-        objetoFila[campoJs] = valor;
-      }
-    });
-
-    datos.push(objetoFila);
-  }
-
-  if (datos.length === 0) {
-    throw new Error('ARCHIVO_SIN_FILAS');
-  }
-
-  return datos;
-}
-
-function validarFilas(datos) {
-  const errores = [];
-  const filasValidas = [];
-
-  for (const fila of datos) {
-    const parsed = filaEncuestaIcaSchema.safeParse(fila);
-    if (!parsed.success) {
-      errores.push({ fila: fila.filaExcel, errores: parsed.error.flatten().fieldErrors });
-    } else {
-      filasValidas.push(parsed.data);
-    }
-  }
-
-
-  return { filasValidas, errores };
-}
 
 // campusId null = Superadmin: comunas de todas las sedes (US65).
 async function obtenerComunidadesPorSede(campusId) {
@@ -164,9 +83,10 @@ function promedio(valores) {
 }
 
 function transformarMedicion(row, genero = null) {
-  const dimensiones = [row.conocimiento, row.uso, row.educacion, row.prevision];
+  // ICA general = promedio PONDERADO de las dimensiones (pesos en ica.puntajes.js).
+  const general = icaPonderado({ conocimiento: row.conocimiento, uso: row.uso, educacion: row.educacion, prevision: row.prevision });
   const valorPorGenero = genero === 'hombres' ? Number(row.ica_hombres) : Number(row.ica_mujeres);
-  const valor = genero ? (valorPorGenero > 0 ? valorPorGenero : null) : Number(promedio(dimensiones).toFixed(1));
+  const valor = genero ? (valorPorGenero > 0 ? valorPorGenero : null) : general === null ? null : Number(general.toFixed(1));
   return {
     id: row.ica_measurement_id,
     communityId: row.community_id,
@@ -562,46 +482,12 @@ async function registrarRegistroIndividual({ communityId, year, quarter, conocim
   }
 }
 
-function puntajeOrdinal(valor, opciones) {
-  if (valor === null || valor === undefined || !opciones?.length) return null;
-  const indice = opciones.indexOf(valor);
-  return indice < 0 ? null : (indice / Math.max(opciones.length - 1, 1)) * 100;
-}
-
-function puntajeDimension(respuestas, campos) {
-  const valores = campos.map(([campo, opciones]) => puntajeOrdinal(respuestas[campo], opciones));
-  return Number(promedio(valores).toFixed(2));
-}
-
+// Puntaje de una entrevista con la metodología del ICA (ica.puntajes.js):
+// 4 dimensiones de 0 a 100 + ICA ponderado (25/15/20/40).
 function medirEntrevista(respuestas) {
-  const opciones = (nombre) => OPCIONES[nombre];
-  return {
-    conocimiento: puntajeDimension(respuestas, [
-      ['q01ContributesFinancially', opciones('siNo')], ['q04EducationLevel', opciones('educacion')],
-      ['q05InsurancePurpose', opciones('q05')], ['q06MandatoryInsuranceActivity', opciones('q06')],
-      ['q07MeaningPolicyholder', opciones('q07')], ['q08MeaningClaim', opciones('q08')],
-      ['q09MeaningPremium', opciones('q09')], ['q10MeaningDeductible', opciones('q10')],
-      ['q11MeaningExclusions', opciones('q11')], ['q12WhoSellsInsurance', opciones('q12')],
-      ['q13WhoIsHarmedByFraud', opciones('q13')], ['q14WhereToFileClaim', opciones('q14')],
-    ]),
-    uso: puntajeDimension(respuestas, [
-      ['q18HowToProtectYourself', opciones('q18')], ['q19AnnualInsuranceSpend', opciones('q19')],
-      ['q22HasLifeInsurance', opciones('siNo')], ['q23LifeInsuranceDuration', opciones('q23')],
-      ['q28LikelihoodFuturePurchase', opciones('q28')],
-    ]),
-    educacion: puntajeDimension(respuestas, [
-      ['q15HowAcquiredKnowledge', opciones('q15')], ['q16BestMethodToImprove', opciones('q16')],
-      ['q17WhoImprovesEducation', opciones('q17')],
-    ]),
-    prevision: puntajeDimension(respuestas, [
-      ['q20RetirementPreparation', opciones('q20')], ['q21InsuranceCultureLevel', opciones('q21')],
-      ['q24ReasonAcquired', opciones('q24')], ['q25PolicyReviewFrequency', opciones('q25')],
-      ['q26WouldSwitchProvider', opciones('q26')], ['q27SatisfactionCurrentPolicy', opciones('q27')],
-      ['q29BarriersToPurchase', opciones('q29')], ['q30TrustInInsurers', opciones('q30')],
-      ['q31IncomePercentageWilling', opciones('q31')], ['q32MostImportantFactor', opciones('q32')],
-    ]),
-  };
+  return puntuarEncuesta(respuestas);
 }
+
 function filaSqlARespuestas(filaSql) {
   const objeto = {};
   CAMPOS_ENCUESTA.forEach(([campoJs, col]) => {
@@ -610,48 +496,54 @@ function filaSqlARespuestas(filaSql) {
   return objeto;
 }
 
-// Promedio general (conocimiento+uso+educacion+prevision combinadas) de un
-// grupo de entrevistas — usado para separar el puntaje por sexo. Devuelve
-// null si el grupo está vacío (todavía no hay entrevistas de ese sexo en
-// este período).
+// ICA promedio de un grupo de entrevistas (se usa para hombres / mujeres).
+// null si el grupo está vacío (no hay entrevistas de ese sexo en el período).
 function promedioGeneralGrupo(filasGrupo) {
   if (!filasGrupo.length) return null;
-  const mediciones = filasGrupo.map((fila) => medirEntrevista(filaSqlARespuestas(fila)));
-  const promediosPorEntrevista = mediciones.map((m) => promedio([m.conocimiento, m.uso, m.educacion, m.prevision]));
-  return Number(promedio(promediosPorEntrevista).toFixed(2));
+  const icas = filasGrupo.map((fila) => medirEntrevista(filaSqlARespuestas(fila)).ica);
+  const valor = promedio(icas);
+  return valor === null ? null : Number(valor.toFixed(2));
 }
 
+const dosDecimales = (valor) => (valor === null ? null : Number(valor.toFixed(2)));
+
 // Recalcula el agregado de ica_measurement para una comuna+período, tomando
-// TODAS las entrevistas activas de ica_survey_response de esa combinación
+// TODAS las entrevistas APROBADAS de ica_survey_response de esa combinación
 // (no solo la que se acaba de insertar). Esto es lo que evita el error de
 // uq_measurement_period: en vez de insertar una fila nueva por entrevista,
 // se actualiza siempre la misma fila con el promedio acumulado.
 async function recalcularAgregadoManual({ conexion, communityId, year, quarter, dataLoadId }) {
   const [filas] = await conexion.query(
-  `SELECT sr.*
-     FROM ica_survey_response sr
-     INNER JOIN data_load dl ON dl.data_load_id = sr.data_load_id
-    WHERE sr.community_id = ?
-      AND sr.year = ?
-      AND sr.quarter = ?
-      AND sr.status = 1
-      AND dl.status = ?`,
-  [communityId, year, quarter, ESTADO_CARGA.APROBADA],
-);
+    `SELECT sr.*
+       FROM ica_survey_response sr
+       INNER JOIN data_load dl ON dl.data_load_id = sr.data_load_id
+      WHERE sr.community_id = ?
+        AND sr.year = ?
+        AND sr.quarter = ?
+        AND sr.status = 1
+        AND dl.status = ?`,
+    [communityId, year, quarter, ESTADO_CARGA.APROBADA],
+  );
+
+  // Sin encuestas aprobadas (por ejemplo, después de dar de baja la última):
+  // la fila del agregado deja de contar.
+  if (!filas.length) {
+    await conexion.query(
+      'UPDATE ica_measurement SET status = 0 WHERE community_id = ? AND year = ? AND quarter = ?',
+      [communityId, year, quarter],
+    );
+    return;
+  }
 
   const mediciones = filas.map((fila) => medirEntrevista(filaSqlARespuestas(fila)));
-  const knowledgeIndex = Number(promedio(mediciones.map((m) => m.conocimiento)).toFixed(2));
-  const usageIndex = Number(promedio(mediciones.map((m) => m.uso)).toFixed(2));
-  const educationIndex = Number(promedio(mediciones.map((m) => m.educacion)).toFixed(2));
-  const foresightIndex = Number(promedio(mediciones.map((m) => m.prevision)).toFixed(2));
+  const knowledgeIndex = dosDecimales(promedio(mediciones.map((m) => m.conocimiento)));
+  const usageIndex = dosDecimales(promedio(mediciones.map((m) => m.uso)));
+  const educationIndex = dosDecimales(promedio(mediciones.map((m) => m.educacion)));
+  const foresightIndex = dosDecimales(promedio(mediciones.map((m) => m.prevision)));
 
-  const filasHombres = filas.filter((f) => f.q03_sex === 'Hombre');
-  const filasMujeres = filas.filter((f) => f.q03_sex === 'Mujer');
-
-  // 0 explícito = "todavía no hay entrevistas de ese sexo en este período",
-  // no un puntaje real de cero. Provisional hasta que llegue el scoring oficial.
-  const icaMale = promedioGeneralGrupo(filasHombres) ?? 0;
-  const icaFemale = promedioGeneralGrupo(filasMujeres) ?? 0;
+  // NULL = todavía no hay entrevistas de ese sexo en este período.
+  const icaMale = promedioGeneralGrupo(filas.filter((f) => f.q03_sex === 'Hombre'));
+  const icaFemale = promedioGeneralGrupo(filas.filter((f) => f.q03_sex === 'Mujer'));
 
   await conexion.query(
     `INSERT INTO ica_measurement
@@ -664,7 +556,8 @@ async function recalcularAgregadoManual({ conexion, communityId, year, quarter, 
        education_index = VALUES(education_index),
        foresight_index = VALUES(foresight_index),
        ica_male = VALUES(ica_male),
-       ica_female = VALUES(ica_female)`,
+       ica_female = VALUES(ica_female),
+       status = 1`,
     [communityId, dataLoadId, year, quarter, knowledgeIndex, usageIndex, educationIndex, foresightIndex, icaMale, icaFemale],
   );
 }
@@ -723,130 +616,10 @@ async function registrarEntrevistaIndividual({ communityId, year, quarter, event
   }
 }
 
-function rutaArchivo(dataLoadId, nombreOriginal) {
-  const extension = path.extname(nombreOriginal) || '.xlsx';
-  return path.join(UPLOAD_DIR, `${dataLoadId}${extension}`);
-}
 
-function guardarArchivoEnDisco(buffer, dataLoadId, nombreOriginal) {
-  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-  fs.writeFileSync(rutaArchivo(dataLoadId, nombreOriginal), buffer);
-}
 
-async function obtenerArchivoParaDescarga({ campusId, dataLoadId }) {
-  const [filas] = await pool.query(
-    `SELECT dl.data_load_id, dl.file_name
-       FROM data_load dl
-       INNER JOIN ica_survey_response sr
-         ON sr.data_load_id = dl.data_load_id
-        AND sr.status = 1
-       INNER JOIN community c
-         ON c.community_id = sr.community_id
-      WHERE dl.data_load_id = ?
-        AND dl.module = ?
-        AND dl.source_type = ?
-        AND dl.status != 0
-        ${campusId ? 'AND c.campus_id = ?' : ''}
-      LIMIT 1`,
-    [
-      dataLoadId,
-      MODULE_ICA,
-      SOURCE_TYPE_ARCHIVO,
-      ...(campusId ? [campusId] : []),
-    ],
-  );
 
-  if (!filas.length) {
-    throw new Error('ARCHIVO_NO_ENCONTRADO');
-  }
 
-  const archivo = filas[0];
-
-  const ruta = rutaArchivo(
-    archivo.data_load_id,
-    archivo.file_name
-  );
-
-  if (!fs.existsSync(ruta)) {
-    throw new Error('ARCHIVO_NO_DISPONIBLE');
-  }
-
-  return {
-    ruta,
-    nombreArchivo: archivo.file_name,
-  };
-}
-
-function borrarArchivoSiExiste(dataLoadId, nombreOriginal) {
-  try {
-    const ruta = rutaArchivo(dataLoadId, nombreOriginal);
-    if (fs.existsSync(ruta)) {
-      fs.unlinkSync(ruta);
-    }
-  } catch (err) {
-    console.error('No se pudo limpiar el archivo huérfano:', err);
-  }
-}
-
-// Inserta las entrevistas de UN archivo (todas de la misma comuna+trimestre)
-// en ica_survey_response. Ya NO toca ica_measurement — eso queda para
-// cuando el motor de scoring esté listo (recalcularAgregado, bloqueado).
-async function registrarCargaPorArchivo({ filasValidas, communityId, campusId, quarter, year, userId, rol, nombreArchivo, buffer }) {
-  const [comunidades] = await pool.query(
-    `SELECT community_id FROM community WHERE community_id = ? AND status = 1${campusId ? ' AND campus_id = ?' : ''}`,
-    campusId ? [communityId, campusId] : [communityId],
-  );
-  if (!comunidades.length) {
-    throw new Error('COMUNIDAD_NO_ENCONTRADA');
-  }
-
-  const conexion = await pool.getConnection();
-  let dataLoadId;
-
-  try {
-    await conexion.beginTransaction();
-
-    const [resultCarga] = await conexion.query(
-      `INSERT INTO data_load (module, source_type, file_name, total_rows, status, created_modified_by)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [MODULE_ICA, SOURCE_TYPE_ARCHIVO, nombreArchivo, filasValidas.length, estadoInicialCarga(rol), userId],
-    );
-    dataLoadId = resultCarga.insertId;
-
-    try {
-      guardarArchivoEnDisco(buffer, dataLoadId, nombreArchivo);
-    } catch (errArchivo) {
-      console.error('No se pudo guardar el archivo en disco:', errArchivo);
-      throw new Error('ARCHIVO_NO_GUARDADO');
-    }
-
-    const columnas = CAMPOS_ENCUESTA.map(([, col]) => col);
-    for (const fila of filasValidas) {
-      const valores = CAMPOS_ENCUESTA.map(([campoJs]) => fila[campoJs] ?? null);
-      await conexion.query(
-        `INSERT INTO ica_survey_response
-           (data_load_id, community_id, year, quarter, surveyor_user_id, ${columnas.join(', ')}, status)
-         VALUES (?, ?, ?, ?, ?, ${columnas.map(() => '?').join(', ')}, 1)`,
-        [dataLoadId, communityId, year, quarter, userId, ...valores],
-      );
-    }
-
-    // El cálculo de ica_measurement NO ocurre acá — se dispara cuando el
-// Superadmin verifica esta carga (ver verificarCargaIca), usando el mismo
-// scoring ordinal provisional que se aplica a los registros manuales.
-
-    await conexion.commit();
-    return { dataLoadId, totalInsertados: filasValidas.length };
-  } catch (err) {
-    await conexion.rollback();
-    if (dataLoadId && err.message !== 'ARCHIVO_NO_GUARDADO') {
-      borrarArchivoSiExiste(dataLoadId, nombreArchivo);
-    }
-    throw err;
-  } finally {
-    conexion.release();
-  }
-}
 
 const COLUMNAS_ORDEN = {
   comuna: ['comuna_nombre'],
@@ -854,22 +627,15 @@ const COLUMNAS_ORDEN = {
   fecha: ['dl.created_at'],
 };
 
-async function obtenerHistorialIca({ campusId, page = 1, pageSize = 10, tipo, communityId, busqueda, estado, sortBy, sortDir }) {
+// Todos los registros son individuales (la carga por archivo se quitó).
+async function obtenerHistorialIca({ campusId, page = 1, pageSize = 10, communityId, busqueda, estado, sortBy, sortDir }) {
   const offset = (page - 1) * pageSize;
 
-  const condiciones = ['dl.module = ?', 'dl.status != 0'];
-  const parametros = [MODULE_ICA];
+  const condiciones = ['dl.module = ?', 'dl.status != 0', 'dl.source_type = ?'];
+  const parametros = [MODULE_ICA, SOURCE_TYPE_INDIVIDUAL];
   if (campusId) {
     condiciones.push('c.campus_id = ?');
     parametros.push(campusId);
-  }
-
-  if (tipo === 'individuales') {
-    condiciones.push('dl.source_type = ?');
-    parametros.push(SOURCE_TYPE_INDIVIDUAL);
-  } else if (tipo === 'archivos') {
-    condiciones.push('dl.source_type = ?');
-    parametros.push(SOURCE_TYPE_ARCHIVO);
   }
 
   if (communityId) {
@@ -928,8 +694,8 @@ if (estado === 'verificado') {
 
   const registros = filas.map((fila) => ({
     id: fila.data_load_id,
-    tipo: Number(fila.source_type) === SOURCE_TYPE_ARCHIVO ? 'masiva' : 'manual',
-    origen: Number(fila.source_type) === SOURCE_TYPE_ARCHIVO ? fila.file_name : 'Registro individual',
+    tipo: 'manual',
+    origen: 'Registro individual',
     comuna: Number(fila.num_comunidades) === 1 ? fila.comuna_nombre : `${fila.num_comunidades} comunas`,
     periodo: Number(fila.num_periodos) === 1 ? `Q${fila.quarter} ${fila.year}` : 'Varios períodos',
     registros: Number(fila.total_registros),
@@ -962,7 +728,7 @@ async function eliminarRegistroIndividual({ campusId, dataLoadId }) {
     if (!cargas.length) throw new Error('REGISTRO_NO_ENCONTRADO');
 
     const [pertenencia] = await conexion.query(
-      `SELECT 1 FROM ica_survey_response sr
+      `SELECT sr.community_id, sr.year, sr.quarter FROM ica_survey_response sr
          INNER JOIN community c ON c.community_id = sr.community_id
         WHERE sr.data_load_id = ? AND sr.status = 1${campusId ? ' AND c.campus_id = ?' : ''}
         LIMIT 1`,
@@ -976,136 +742,10 @@ async function eliminarRegistroIndividual({ campusId, dataLoadId }) {
     );
     await conexion.query('UPDATE data_load SET status = 0 WHERE data_load_id = ?', [dataLoadId]);
 
-    await conexion.commit();
-  } catch (err) {
-    await conexion.rollback();
-    throw err;
-  } finally {
-    conexion.release();
-  }
-}
-// Eliminar archivo (0) y cambio de estado de carga masiva a eliminado (0)
-async function eliminarArchivoIca({ campusId, dataLoadId }) {
-  const conexion = await pool.getConnection();
-
-  try {
-    await conexion.beginTransaction();
-
-    const [cargas] = await conexion.query(
-      `SELECT dl.data_load_id
-         FROM data_load dl
-        WHERE dl.data_load_id = ?
-          AND dl.module = ?
-          AND dl.source_type = ?
-          AND dl.status != 0`,
-      [
-        dataLoadId,
-        MODULE_ICA,
-        SOURCE_TYPE_ARCHIVO,
-      ],
-    );
-
-    if (!cargas.length) {
-      throw new Error('ARCHIVO_NO_ENCONTRADO');
-    }
-
-    const [pertenencia] = await conexion.query(
-      `SELECT 1
-         FROM ica_survey_response sr
-         INNER JOIN community c
-           ON c.community_id = sr.community_id
-        WHERE sr.data_load_id = ?
-          AND sr.status = 1
-          ${campusId ? 'AND c.campus_id = ?' : ''}
-        LIMIT 1`,
-      campusId ? [dataLoadId, campusId] : [dataLoadId],
-    );
-
-    if (!pertenencia.length) {
-      throw new Error('ARCHIVO_NO_ENCONTRADO');
-    }
-
-    // Eliminar lógicamente todas las respuestas del archivo
-    await conexion.query(
-      `UPDATE ica_survey_response
-          SET status = 0
-        WHERE data_load_id = ?
-          AND status = 1`,
-      [dataLoadId],
-    );
-
-    // Eliminar lógicamente el archivo
-    await conexion.query(
-      `UPDATE data_load
-          SET status = 0
-        WHERE data_load_id = ?`,
-      [dataLoadId],
-    );
-
-    await conexion.commit();
-  } catch (err) {
-    await conexion.rollback();
-    throw err;
-  } finally {
-    conexion.release();
-  }
-}
-// Eliminar respuesta individual (0) y actualización de total_rows del archivo
-async function eliminarRespuestaIca({ campusId, surveyResponseId }) {
-  const conexion = await pool.getConnection();
-
-  try {
-    await conexion.beginTransaction();
-
-    const [respuestas] = await conexion.query(
-      `SELECT sr.survey_response_id,
-              sr.data_load_id
-         FROM ica_survey_response sr
-         INNER JOIN data_load dl
-           ON dl.data_load_id = sr.data_load_id
-         INNER JOIN community c
-           ON c.community_id = sr.community_id
-        WHERE sr.survey_response_id = ?
-          AND sr.status = 1
-          AND dl.module = ?
-          AND dl.source_type = ?
-          AND dl.status != 0
-          ${campusId ? 'AND c.campus_id = ?' : ''}
-        LIMIT 1`,
-      [
-        surveyResponseId,
-        MODULE_ICA,
-        SOURCE_TYPE_ARCHIVO,
-        ...(campusId ? [campusId] : []),
-      ],
-    );
-
-    if (!respuestas.length) {
-      throw new Error('RESPUESTA_NO_ENCONTRADA');
-    }
-
-    const dataLoadId = respuestas[0].data_load_id;
-
-    // Eliminar solamente esta entrevista
-    await conexion.query(
-      `UPDATE ica_survey_response
-          SET status = 0
-        WHERE survey_response_id = ?`,
-      [surveyResponseId],
-    );
-
-    // Actualizar cantidad de registros activos del archivo
-    await conexion.query(
-      `UPDATE data_load
-          SET total_rows = (
-            SELECT COUNT(*)
-              FROM ica_survey_response
-             WHERE data_load_id = ?
-               AND status = 1
-          )
-        WHERE data_load_id = ?`,
-      [dataLoadId, dataLoadId],
-    );
+    // Si la encuesta estaba aprobada, ya contaba en el dashboard: se recalcula
+    // el agregado de su comuna y trimestre sin ella.
+    const { community_id: communityId, year, quarter } = pertenencia[0];
+    await recalcularAgregadoManual({ conexion, communityId, year, quarter, dataLoadId });
 
     await conexion.commit();
   } catch (err) {
@@ -1160,16 +800,17 @@ async function verificarCargaIca({ campusId, dataLoadId }) {
   }
 }
 
-async function obtenerDetalleArchivoIca({ campusId, dataLoadId }) {
+// Detalle de UN registro individual (la carga por archivo se quitó).
+async function obtenerDetalleRegistroIca({ campusId, dataLoadId }) {
   const [cargas] = await pool.query(
     `SELECT dl.data_load_id, dl.source_type, dl.file_name, dl.status, dl.created_at,
             u.first_name, u.paternal_last_name
        FROM data_load dl
        LEFT JOIN user u ON u.user_id = dl.created_modified_by
-      WHERE dl.data_load_id = ? AND dl.module = ? AND dl.status != 0`,
-    [dataLoadId, MODULE_ICA],
+      WHERE dl.data_load_id = ? AND dl.module = ? AND dl.source_type = ? AND dl.status != 0`,
+    [dataLoadId, MODULE_ICA, SOURCE_TYPE_INDIVIDUAL],
   );
-  if (!cargas.length) throw new Error('ARCHIVO_NO_ENCONTRADO');
+  if (!cargas.length) throw new Error('REGISTRO_NO_ENCONTRADO');
   const carga = cargas[0];
 
   const columnas = CAMPOS_ENCUESTA.map(([, col]) => col);
@@ -1182,11 +823,10 @@ async function obtenerDetalleArchivoIca({ campusId, dataLoadId }) {
     [dataLoadId],
   );
 
-  // El archivo es de UNA sola comuna, así que si no hay filas, o la comuna
-  // no pertenece a la sede del usuario, no existe para él (el Superadmin,
-  // con campusId null, ve todas las sedes).
+  // Si no hay respuesta, o la comuna no es de la sede del usuario, no existe
+  // para él (el Superadmin, con campusId null, ve todas las sedes).
   if (!respuestas.length || (campusId && respuestas[0].campus_id !== campusId)) {
-    throw new Error('ARCHIVO_NO_ENCONTRADO');
+    throw new Error('REGISTRO_NO_ENCONTRADO');
   }
 
   const registros = respuestas.map((fila) => {
@@ -1198,10 +838,8 @@ async function obtenerDetalleArchivoIca({ campusId, dataLoadId }) {
   });
 
   const nombreUsuario = [carga.first_name, carga.paternal_last_name].filter(Boolean).join(' ') || 'Usuario del sistema';
-  const dashboard = await obtenerDashboard({ campusId });
-
-  const porcentajeActual = dashboard.metricas?.general ?? null;
-  const brechaGenero = dashboard.metricas?.brechaGenero?.valor ?? null;
+  // Puntaje de ESTA encuesta con la metodología del ICA.
+  const puntaje = medirEntrevista(registros[0]);
   return {
     archivo: {
       id: carga.data_load_id,
@@ -1219,8 +857,7 @@ async function obtenerDetalleArchivoIca({ campusId, dataLoadId }) {
       periodo: `Q${respuestas[0].quarter} ${respuestas[0].year}`,
     },
     registros,
-    porcentajeActual,
-    brechaGenero,
+    puntaje,
   };
 }
 
@@ -1386,7 +1023,7 @@ async function obtenerDatasetIcaExport({ campusId, year, quarter, communityId })
   );
 
   return filas.map((fila) => {
-    const dimensiones = [fila.conocimiento, fila.uso, fila.educacion, fila.prevision].map(Number);
+    const general = icaPonderado({ conocimiento: fila.conocimiento, uso: fila.uso, educacion: fila.educacion, prevision: fila.prevision });
     return {
       comuna: fila.comuna,
       year: Number(fila.year),
@@ -1397,16 +1034,13 @@ async function obtenerDatasetIcaExport({ campusId, year, quarter, communityId })
       prevision: Number(Number(fila.prevision).toFixed(1)),
       icaHombres: Number(Number(fila.ica_hombres).toFixed(1)),
       icaMujeres: Number(Number(fila.ica_mujeres).toFixed(1)),
-      icaGeneral: Number(promedio(dimensiones).toFixed(1)),
+      icaGeneral: general === null ? null : Number(general.toFixed(1)),
     };
   });
 }
 
 
 module.exports = {
-  parsearArchivoIca,
-  validarFilas,
-  registrarCargaPorArchivo,
   obtenerComunidadesPorSede,
   obtenerDashboard,
   obtenerExploradorPreguntas,
@@ -1414,15 +1048,11 @@ module.exports = {
   registrarEntrevistaIndividual,
   obtenerHistorialIca,
   eliminarRegistroIndividual,
-  eliminarArchivoIca,
-  eliminarRespuestaIca,
-  obtenerDetalleArchivoIca,
+  obtenerDetalleRegistroIca,
   verificarCargaIca,
   generarDescargaRegistroIndividual,
-  obtenerArchivoParaDescarga,
   generarExportacionRespuestasIca,
   obtenerDatasetIcaExport,
-  obtenerPlantillaIca,
   estadoInicialCarga,
   CAMPOS_ENCUESTA,
   recalcularAgregadoManual,

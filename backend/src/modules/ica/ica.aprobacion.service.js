@@ -4,7 +4,6 @@ const { ENCABEZADOS_ESPERADOS } = require('./ica.validation');
 const { CAMPOS_ENCUESTA } = require('./ica.service');
 const { recalcularAgregadoIca } = require('./ica.scoring.service');
 
-const SOURCE_TYPE_ARCHIVO = 2;
 
 // Mismo valor que NO_APLICA en Aprobaciones.PanelRevision.jsx
 const NO_APLICA = '__no_aplica__';
@@ -42,8 +41,6 @@ function filaANumeradas(fila) {
   return r;
 }
 
-// DESPUÉS
-const tieneSeguro = (r) => r[22] === 'Sí';
 
 // ¿Le tocaba responder la pregunta n?
 function aplica(n, r) {
@@ -52,7 +49,6 @@ function aplica(n, r) {
   return true;
 }
 
-// DESPUÉS
 function armarRespuestas(fila) {
   const r = filaANumeradas(fila);
 
@@ -78,87 +74,6 @@ function armarRespuestas(fila) {
     }),
   }));
 }
-function contar(valores) {
-  const conteo = new Map();
-  valores.forEach((v) => {
-    const clave = vacio(v) ? 'Sin dato' : String(v);
-    conteo.set(clave, (conteo.get(clave) || 0) + 1);
-  });
-  return [...conteo.entries()].sort((a, b) => b[1] - a[1]);
-}
-
-function armarResumen(filas, comunaPorFila) {
-  const rs = filas.map(filaANumeradas);
-  const total = rs.length;
-
-  const edades = rs.map((r) => Number(r[2])).filter((n) => Number.isFinite(n));
-  const conSeguro = rs.filter(tieneSeguro);
-  const sinSeguro = rs.filter((r) => r[22] === 'No');
-  const cultura = contar(rs.map((r) => r[21]).filter((v) => !vacio(v)));
-
-  const estadisticas = [
-    ['Edad mínima', edades.length ? String(Math.min(...edades)) : '-'],
-    ['Edad máxima', edades.length ? String(Math.max(...edades)) : '-'],
-    [
-      'Edad promedio',
-      edades.length
-        ? String(Math.round(edades.reduce((a, b) => a + b, 0) / edades.length))
-        : '-',
-    ],
-    ['Con seguro de vida', `${conSeguro.length} de ${total}`],
-    ['Cultura aseguradora más frecuente', cultura[0]?.[0] ?? '-'],
-  ];
-
-  const grupos = [
-    { titulo: 'Encuestas por comuna', items: contar(comunaPorFila) },
-    { titulo: 'Sexo', items: contar(rs.map((r) => r[3])) },
-    { titulo: 'Nivel de instrucción', items: contar(rs.map((r) => r[4])) },
-    { titulo: 'Nivel de cultura aseguradora', items: contar(rs.map((r) => r[21])) },
-    {
-      titulo: `Satisfacción con el seguro de vida (${conSeguro.length} con seguro)`,
-      items: contar(conSeguro.map((r) => r[27])),
-    },
-    {
-      titulo: `Principal barrera (${sinSeguro.length} sin seguro de vida)`,
-      items: contar(sinSeguro.map((r) => r[29])),
-    },
-  ];
-
-  // ---- Alertas ----
-  const alertas = [];
-
-  for (let n = 1; n <= 32; n += 1) {
-    const vacias = rs.filter((r) => aplica(n, r) && vacio(r[n])).length;
-    if (vacias > 0) {
-      alertas.push(
-        `${vacias} ${vacias === 1 ? 'encuesta' : 'encuestas'} con la pregunta ${n} vacía`,
-      );
-    }
-  }
-
-  const edadInvalida = rs.filter((r) => !vacio(r[2]) && !Number.isFinite(Number(r[2]))).length;
-  if (edadInvalida > 0) {
-    alertas.push(
-      `${edadInvalida} ${edadInvalida === 1 ? 'encuesta' : 'encuestas'} con edad no numérica en la pregunta 2`,
-    );
-  }
-
-  // DESPUÉS
-const incoherentes =
-  sinSeguro.filter((r) => SOLO_CON_SEGURO.some((n) => !vacio(r[n]))).length +
-  conSeguro.filter((r) => SOLO_SIN_SEGURO.some((n) => !vacio(r[n]))).length;
-
-if (incoherentes > 0) {
-  alertas.push(
-    `${incoherentes} ${
-      incoherentes === 1 ? 'encuesta tiene' : 'encuestas tienen'
-    } respuestas que no corresponden a su respuesta sobre el seguro de vida`,
-  );
-}
-
-  return { estadisticas, grupos, alertas };
-}
-
 // ============================================================
 // US58 — Bandeja de pendientes ICA
 // ============================================================
@@ -180,6 +95,7 @@ async function obtenerPendientesIca({ campusId = null } = {}) {
             GROUP_CONCAT(DISTINCT c.community_name SEPARATOR '||') AS comunas,
             MIN(sr.year) AS year,
             MIN(sr.quarter) AS quarter,
+            MIN(ev.title) AS evento,
             COUNT(DISTINCT CONCAT(sr.year, '-', sr.quarter)) AS num_periodos,
             COUNT(sr.survey_response_id) AS total_registros
        FROM data_load dl
@@ -188,6 +104,7 @@ async function obtenerPendientesIca({ campusId = null } = {}) {
         AND sr.status = 1
        INNER JOIN community c ON c.community_id = sr.community_id
        INNER JOIN campus camp ON camp.campus_id = c.campus_id
+       LEFT JOIN event ev ON ev.event_id = sr.event_id
        LEFT JOIN user u ON u.user_id = dl.created_modified_by
       WHERE dl.module = ?
         AND dl.status = ?
@@ -217,14 +134,14 @@ async function obtenerPendientesIca({ campusId = null } = {}) {
     });
   }
 
+  // Todas las encuestas son individuales (la carga por archivo se quitó).
   const pendientes = filas.map((fila) => {
-    const masiva = Number(fila.source_type) === SOURCE_TYPE_ARCHIVO;
     const detalle = respuestasPorCarga.get(fila.data_load_id) || [];
 
-    const base = {
+    return {
       id: fila.data_load_id,
-      tipo: masiva ? 'masiva' : 'manual',
-      origen: masiva ? fila.file_name : 'Registro individual',
+      tipo: 'manual',
+      origen: 'Registro individual',
       zonas: (fila.comunas ? fila.comunas.split('||') : []).sort(),
       periodo:
         Number(fila.num_periodos) === 1
@@ -237,18 +154,7 @@ async function obtenerPendientesIca({ campusId = null } = {}) {
           .join(' ') || 'Usuario del sistema',
       sede: fila.sede || '-',
       fecha: fila.created_at,
-      evento: null,
-    };
-
-    if (masiva) {
-      return {
-        ...base,
-        resumen: armarResumen(detalle, detalle.map((d) => d.community_name)),
-      };
-    }
-
-    return {
-      ...base,
+      evento: fila.evento || 'Sin evento (registro directo)',
       respuestas: detalle.length ? armarRespuestas(detalle[0]) : [],
     };
   });

@@ -123,3 +123,11 @@ El diagrama ya está aplicado en la BD real. Santiago le pasa a Monserrat el scr
 - Tabla de puntajes por pregunta del ICA (US60 y marcar la opción correcta en el explorador).
 - Fórmulas de IEE, ICE, IIE e ICIE (US63).
 - Encuesta SPE: opciones de inflación y tipo de cambio (el Word no las trae; por ahora usan las del PIB), si "Departamento" lleva solo Santa Cruz, La Paz y Cochabamba, si "Principal barrera" es una sola respuesta y las opciones de "Razón para invertir / no invertir".
+
+## Cambios del 09/10 (cierre del Sprint 2)
+
+- **Se quitó la carga por dataset (Excel) en ICA y SPE.** Todos los registros son individuales: ya no existen `POST /api/ica/upload`, `GET /api/ica/template`, `/api/ica/files/*`, `DELETE /api/ica/responses/:id`, `POST /api/spe/upload` ni `/api/spe/files/*`. El detalle de un registro ahora es `GET /api/ica/registros/:id` (y `PUT /api/ica/registros/:id/verify`) y `GET /api/spe/registros/:id`. La baja sigue siendo `DELETE /api/ica/:id` y `DELETE /api/spe/:id`.
+- **Cálculo del ICA** según la metodología del equipo: `modules/ica/ica.puntajes.js` (4 dimensiones, pesos 25/15/20/40). Al eliminar un registro aprobado se recalcula el ICA de su comuna y trimestre.
+- **Índices SPE** (IEE, ICE, IIE, ICIE) según la misma metodología: `modules/spe/spe.indices.service.js`.
+- **Formulario SPE** con las opciones exactas del Word y de la BD (`views/spe/spe.questions.js` y `modules/spe/spe.registro.validation.js` deben coincidir). Ojo: la BD no está en modo estricto y guarda vacío cualquier valor que no esté en el ENUM.
+- Login: máximo 5 intentos cada 15 minutos.

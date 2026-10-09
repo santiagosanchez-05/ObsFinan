@@ -156,12 +156,11 @@ describe('Endpoints de gestión ICA siguen protegidos', () => {
   it.each([
     ['get', '/api/ica/comunidades'],
     ['get', '/api/ica/historial'],
-    ['get', '/api/ica/files/1'],
+    ['get', '/api/ica/registros/1'],
     ['get', '/api/ica/survey-export'],
     ['post', '/api/ica'],
-    ['post', '/api/ica/upload'],
     ['delete', '/api/ica/1'],
-    ['put', '/api/ica/files/1/verify'],
+    ['put', '/api/ica/registros/1/verify'],
   ])('%s %s sin sesión responde 401', async (metodo, ruta) => {
     const res = await request(app)[metodo](ruta);
     expect(res.status).toBe(401);
@@ -173,7 +172,7 @@ describe('Endpoints de gestión ICA siguen protegidos', () => {
   });
 
   it('un Admin no puede verificar cargas (solo Superadmin)', async () => {
-    const res = await request(app).put('/api/ica/files/1/verify').set('Authorization', `Bearer ${token('admin')}`);
+    const res = await request(app).put('/api/ica/registros/1/verify').set('Authorization', `Bearer ${token('admin')}`);
     expect(res.status).toBe(403);
   });
 
@@ -220,55 +219,6 @@ describe('POST /api/ica (registro individual — US18)', () => {
       .send(REGISTRO_VALIDO);
 
     expect(res.status).toBe(400);
-  });
-});
-
-describe('POST /api/ica/upload (US19/US20)', () => {
-  it('sin archivo responde 400', async () => {
-    const res = await request(app)
-      .post('/api/ica/upload')
-      .set('Authorization', `Bearer ${token('admin')}`)
-      .field('communityId', '1')
-      .field('quarter', '1')
-      .field('year', '2025');
-
-    expect(res.status).toBe(400);
-  });
-
-  it('con encabezados incorrectos responde 400 marcando formato inválido', async () => {
-    const err = new Error('ENCABEZADOS_INVALIDOS');
-    icaService.parsearArchivoIca.mockImplementation(() => { throw err; });
-
-    const res = await request(app)
-      .post('/api/ica/upload')
-      .set('Authorization', `Bearer ${token('admin')}`)
-      .field('communityId', '1')
-      .field('quarter', '1')
-      .field('year', '2025')
-      .attach('archivo', Buffer.from('xx'), 'encuestas.xlsx');
-
-    expect(res.status).toBe(400);
-    expect(res.body.tipo).toBe('formato_invalido');
-  });
-
-  it('carga las filas válidas pasando el rol de quien sube el archivo', async () => {
-    icaService.parsearArchivoIca.mockReturnValue([{ fila: 1 }]);
-    icaService.validarFilas.mockReturnValue({ filasValidas: [{ fila: 1 }], errores: [] });
-    icaService.registrarCargaPorArchivo.mockResolvedValue({ dataLoadId: 20, totalInsertados: 1 });
-
-    const res = await request(app)
-      .post('/api/ica/upload')
-      .set('Authorization', `Bearer ${token('superadmin', 1)}`)
-      .field('communityId', '1')
-      .field('quarter', '1')
-      .field('year', '2025')
-      .attach('archivo', Buffer.from('xx'), 'encuestas.xlsx');
-
-    expect(res.status).toBe(201);
-    expect(res.body.filasInsertadas).toBe(1);
-    expect(icaService.registrarCargaPorArchivo).toHaveBeenCalledWith(
-      expect.objectContaining({ rol: 'superadmin', communityId: 1, quarter: 1, year: 2025 }),
-    );
   });
 });
 

@@ -8,6 +8,10 @@ const loadRoutes = require('./config/loadRoutes');
 
 const app = express();
 
+// Detrás de un proxy (Render, Vercel): así el límite de intentos usa la IP real
+// del usuario y no la del proxy (si no, bloquearía a todos juntos).
+app.set('trust proxy', 1);
+
 app.use(helmet());
 app.use(cors());
 app.use(express.json());

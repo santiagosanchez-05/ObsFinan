@@ -15,11 +15,6 @@ import {
   Medal,
   Plus,
   Users,
-  Upload,
-  X,
-  Loader2,
-  CheckCircle2,
-  AlertCircle,
 } from 'lucide-react';
 import {
   Bar,
@@ -48,19 +43,8 @@ function headersDe(token) {
 }
 
 export default function ICAPage() {
-  const [mostrarUpload, setMostrarUpload] = useState(false);
-  const [archivo, setArchivo] = useState(null);
-  const fechaActual = new Date();
-  const trimestreActual = Math.floor(fechaActual.getMonth() / 3) + 1;
-  const [comunidades, setComunidades] = useState([]);
-  const [communityId, setCommunityId] = useState('');
-  const [cargandoComunidades, setCargandoComunidades] = useState(false);
   const [mostrarExportar, setMostrarExportar] = useState(false);
-  const [quarter, setQuarter] = useState(trimestreActual);
-  const [year, setYear] = useState(fechaActual.getFullYear());
-  const [estado, setEstado] = useState({ cargando: false, resultado: null, error: null });
   const { user, token } = useAuth();
-  const [modalUpload, setModalUpload] = useState(null);
   const [dashboard, setDashboard] = useState(null);
   const [errorDashboard, setErrorDashboard] = useState('');
   const [filtros, setFiltros] = useState({ year: '', quarter: '', campusId: '', communityId: '', dimension: '', gender: '' });
@@ -120,48 +104,6 @@ export default function ICAPage() {
     cargarExplorador();
     return () => { cancelado = true; };
   }, [token, filtrosAplicados]);
-  useEffect(() => {
-    let cancelado = false;
-
-    async function cargarComunidades() {
-      setCargandoComunidades(true);
-
-      try {
-        const res = await fetch('/api/ica/comunidades', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          throw new Error(data.error || 'No se pudieron cargar las comunas');
-        }
-
-        if (!cancelado) {
-          setComunidades(data.comunidades || []);
-        }
-      } catch (err) {
-        if (!cancelado) {
-          setEstado((prev) => ({
-            ...prev,
-            error: err.message
-          }));
-        }
-      } finally {
-        if (!cancelado) {
-          setCargandoComunidades(false);
-        }
-      }
-    }
-
-    if (token) {
-      cargarComunidades();
-    }
-
-    return () => {
-      cancelado = true;
-    };
-  }, [token]);
   const periodo = dashboard?.periodo;
   const periodoLabel = periodo ? `${periodo.year} - Trimestre ${periodo.quarter}` : 'Cargando...';
   const comunas = dashboard?.comunas ?? [];
@@ -259,15 +201,6 @@ export default function ICAPage() {
     } catch (err) {
       console.error('Error al exportar ICA:', err);
     }
-  }
-  function handleCancelar() {
-    setMostrarUpload(false);
-    setArchivo(null);
-    setCommunityId('');
-    setQuarter(trimestreActual);
-    setYear(fechaActual.getFullYear());
-    setModalUpload(null);
-    setEstado({ cargando: false, resultado: null, error: null });
   }
   return (
     <>

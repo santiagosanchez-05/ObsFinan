@@ -22,12 +22,10 @@ describe('Rutas SPE — acceso', () => {
 
   it.each([
     ['post', '/api/spe'],
-    ['post', '/api/spe/upload'],
     ['get', '/api/spe/historial'],
     ['get', '/api/spe/pendientes'],
     ['patch', '/api/spe/cargas/1/estado'],
-    ['get', '/api/spe/files/1'],
-    ['delete', '/api/spe/files/1'],
+    ['get', '/api/spe/registros/1'],
     ['delete', '/api/spe/1'],
     ['post', '/api/spe/encuestas'],
   ])('%s %s sin sesión responde 401', async (metodo, ruta) => {
@@ -37,7 +35,6 @@ describe('Rutas SPE — acceso', () => {
 
   it.each([
     ['post', '/api/spe', 'admin'],
-    ['post', '/api/spe/upload', 'admin'],
     ['get', '/api/spe/historial', 'admin'],
     ['get', '/api/spe/pendientes', 'admin'],
     ['patch', '/api/spe/cargas/1/estado', 'admin'],
