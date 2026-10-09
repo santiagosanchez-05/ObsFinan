@@ -51,7 +51,6 @@ const stringRequired = z.string().trim().min(1, 'Este campo es obligatorio').max
 const shape = {
   year: z.coerce.number().int().min(2000).max(2100),
   semester: z.coerce.number().int().min(1).max(2),
-  companyName: z.string().trim().min(1).max(255),
 };
 
 Object.entries(OPCIONES).forEach(([campo, opciones]) => {
