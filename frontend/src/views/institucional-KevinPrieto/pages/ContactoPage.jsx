@@ -4,7 +4,7 @@ import { Send, Loader2 } from 'lucide-react';
 const FORM_VACIO = { nombre: '', correo: '', institucion: '', sedeId: '', asunto: '', mensaje: '' };
 
 const inputClass =
-  'w-full rounded-lg border border-black/10 bg-white px-3 py-2.5 text-sm text-ink outline-none focus:border-maroon focus:ring-2 focus:ring-maroon/10';
+  'w-full rounded-lg border border-line bg-card px-3 py-2.5 text-sm text-ink outline-none focus:border-brand focus:ring-2 focus:ring-brand/10';
 const labelClass = 'mb-1.5 block text-xs font-semibold text-ink/70';
 
 export const ContactoPage = () => {
@@ -60,8 +60,8 @@ export const ContactoPage = () => {
 
   return (
     <main className="px-4 py-10 sm:px-6">
-      <div className="mx-auto max-w-xl rounded-2xl border border-black/5 bg-white p-6 shadow-sm sm:p-8">
-        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-maroon">Contacto</p>
+      <div className="mx-auto max-w-xl rounded-2xl border border-line/70 bg-card p-6 shadow-sm sm:p-8">
+        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand">Contacto</p>
         <h1 className="mt-1 text-2xl font-bold text-ink">Contáctanos</h1>
         <p className="mt-2 text-sm text-ink/60">
           Si tienes alguna consulta, sugerencia o comentario, escribinos: tu mensaje le llega al administrador de la
@@ -73,8 +73,8 @@ export const ContactoPage = () => {
             role={feedback.type === 'error' ? 'alert' : 'status'}
             className={`mt-5 rounded-lg border px-3 py-2.5 text-sm ${
               feedback.type === 'success'
-                ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-                : 'border-red-200 bg-red-50 text-red-800'
+                ? 'border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300'
+                : 'border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/40 text-red-800 dark:text-red-300'
             }`}
           >
             {feedback.message}

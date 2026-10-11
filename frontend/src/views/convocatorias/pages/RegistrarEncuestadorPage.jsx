@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { ArrowLeft, Camera, CheckCircle2, Info } from 'lucide-react';
 import { useAuth, ROLES } from '../../../shared/AuthContext';
 
-const CAMPO = 'w-full rounded-lg border border-black/10 px-3 py-2 text-sm focus:border-maroon focus:outline-none';
+const CAMPO = 'w-full rounded-lg border border-line px-3 py-2 text-sm focus:border-brand focus:outline-none';
 
 function crearSchema(esSuperadmin) {
   return z
@@ -100,19 +100,19 @@ export default function RegistrarEncuestadorPage() {
   if (resultado) {
     return (
       <main className="min-h-[calc(100vh-4rem)] bg-surface px-4 py-6 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-lg rounded-2xl border border-black/10 bg-white p-8 text-center shadow-sm">
-          <CheckCircle2 size={40} className="mx-auto text-green-600" />
+        <div className="mx-auto max-w-lg rounded-2xl border border-line bg-card p-8 text-center shadow-sm">
+          <CheckCircle2 size={40} className="mx-auto text-green-600 dark:text-green-400" />
           <h1 className="mt-3 text-xl font-bold text-ink">Encuestador registrado</h1>
           {resultado.correoEnviado ? (
             <p className="mt-2 text-sm text-ink/60">Le enviamos un correo con su contraseña temporal. Al ingresar por primera vez deberá cambiarla.</p>
           ) : (
             <div className="mt-3 rounded-lg bg-surface p-3 text-sm text-ink/70">
               <p>No se pudo enviar el correo. Compártele esta contraseña temporal de forma privada:</p>
-              <p className="mt-2 font-mono text-lg font-bold text-maroon">{resultado.passwordTemporal}</p>
+              <p className="mt-2 font-mono text-lg font-bold text-brand">{resultado.passwordTemporal}</p>
             </div>
           )}
           <div className="mt-6 flex flex-wrap justify-center gap-2">
-            <Link to="/eventos" className="rounded-lg border border-black/10 px-5 py-2.5 text-sm font-semibold text-ink hover:bg-surface">
+            <Link to="/eventos" className="rounded-lg border border-line px-5 py-2.5 text-sm font-semibold text-ink hover:bg-surface">
               Ir a eventos
             </Link>
             <button
@@ -131,19 +131,19 @@ export default function RegistrarEncuestadorPage() {
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-surface px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-2xl">
-        <Link to="/convocatorias" className="inline-flex items-center gap-1 text-xs font-medium text-maroon hover:underline">
+        <Link to="/convocatorias" className="inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline">
           <ArrowLeft size={14} /> Volver a convocatorias
         </Link>
         <h1 className="mt-2 text-2xl font-bold tracking-tight text-ink">Registrar encuestador</h1>
         <p className="mt-1 text-sm text-ink/60">Crea la cuenta de un encuestador sin que pase por una convocatoria.</p>
 
-        <form onSubmit={handleSubmit(onSubmit)} noValidate className="mt-4 rounded-2xl border border-black/10 bg-white p-6 shadow-sm sm:p-8">
-          <div className="flex flex-col items-center border-b border-black/5 pb-6 text-center">
+        <form onSubmit={handleSubmit(onSubmit)} noValidate className="mt-4 rounded-2xl border border-line bg-card p-6 shadow-sm sm:p-8">
+          <div className="flex flex-col items-center border-b border-line/70 pb-6 text-center">
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
               aria-label="Elegir foto"
-              className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-surface text-ink/30 ring-1 ring-black/10 hover:text-maroon"
+              className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-surface text-ink/30 ring-1 ring-line hover:text-brand"
             >
               {previewUrl ? <img src={previewUrl} alt="Vista previa" className="h-full w-full object-cover" /> : <Camera size={22} />}
             </button>
@@ -182,12 +182,12 @@ export default function RegistrarEncuestadorPage() {
             )}
           </div>
 
-          <div className="mt-5 flex items-start gap-2 rounded-lg bg-blue-50 p-3 text-xs text-blue-800">
+          <div className="mt-5 flex items-start gap-2 rounded-lg bg-blue-50 dark:bg-blue-950/40 p-3 text-xs text-blue-800 dark:text-blue-300">
             <Info size={15} className="mt-0.5 shrink-0" />
             <p>Se le enviará un correo con una contraseña temporal. En su primer ingreso el sistema le pedirá cambiarla.</p>
           </div>
 
-          {errorServidor && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{errorServidor}</p>}
+          {errorServidor && <p className="mt-4 rounded-lg bg-red-50 dark:bg-red-950/40 px-3 py-2 text-sm text-red-700 dark:text-red-300">{errorServidor}</p>}
 
           <div className="mt-6 flex items-center gap-3">
             <button type="submit" disabled={enviando} className="rounded-lg bg-maroon px-6 py-2.5 text-sm font-semibold text-white hover:bg-maroon-light disabled:opacity-60">
@@ -206,7 +206,7 @@ function Campo({ id, label, error, children }) {
     <div>
       <label htmlFor={id} className="mb-1 block text-xs font-semibold text-ink">{label}</label>
       {children}
-      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+      {error && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{error}</p>}
     </div>
   );
 }

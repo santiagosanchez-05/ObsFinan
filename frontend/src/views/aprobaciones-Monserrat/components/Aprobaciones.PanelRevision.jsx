@@ -50,10 +50,10 @@ function porOrdenDeSeccion(a, b) {
 function Dato({ label, children, wide = false }) {
   return (
     <div className={wide ? 'col-span-2' : undefined}>
-      <dt className="text-[9px] font-bold uppercase tracking-wider text-[#8a9290]">
+      <dt className="text-[9px] font-bold uppercase tracking-wider text-muted">
         {label}
       </dt>
-      <dd className="mt-0.5 text-xs font-semibold text-[#252927]">
+      <dd className="mt-0.5 text-xs font-semibold text-ink">
         {children}
       </dd>
     </div>
@@ -63,7 +63,7 @@ function Dato({ label, children, wide = false }) {
 /* Valor de una respuesta: texto, varias opciones, "No aplica" o "Sin responder" */
 function Respuesta({ valor }) {
   if (valor === NO_APLICA) {
-    return <span className="font-normal italic text-[#8a9290]">No aplica</span>;
+    return <span className="font-normal italic text-muted">No aplica</span>;
   }
 
   if (sinResponder(valor)) {
@@ -78,8 +78,8 @@ function Respuesta({ valor }) {
 /* Encabezado de sección, igual que el Word: "II: Situación económica y expectativas" */
 function EncabezadoSeccion({ codigo, titulo }) {
   return (
-    <h3 className="mb-3 border-b border-[#edf0f1] pb-2 text-xs font-bold text-[#202522]">
-      {codigo && <span className="text-[#a00046]">{codigo}: </span>}
+    <h3 className="mb-3 border-b border-line pb-2 text-xs font-bold text-ink">
+      {codigo && <span className="text-brand">{codigo}: </span>}
       {titulo}
     </h3>
   );
@@ -114,7 +114,7 @@ function RespuestasManual({ respuestas, sistema }) {
   return (
     <>
       {pendientes.length > 0 && (
-        <div className="rounded-lg border border-[#f3dfb4] bg-[#fbf1de] p-3">
+        <div className="rounded-lg border border-[#f3dfb4] bg-[#fbf1de] dark:bg-white/10 p-3">
           <p className="mb-1 text-xs font-bold text-[#b7891e]">
             Revisar antes de aprobar
           </p>
@@ -139,11 +139,11 @@ function RespuestasManual({ respuestas, sistema }) {
           <section key={codigo ?? g.grupo}>
             <EncabezadoSeccion codigo={codigo} titulo={titulo} />
 
-            <dl className="divide-y divide-[#f0f2f2] rounded-lg border border-[#e2e6e8]">
+            <dl className="divide-y divide-line rounded-lg border border-line">
               {g.items?.map(([pregunta, respuesta]) => (
                 <div key={pregunta} className="px-3 py-2">
-                  <dt className="text-[11px] text-[#8a9290]">{pregunta}</dt>
-                  <dd className="text-xs font-semibold text-[#252927]">
+                  <dt className="text-[11px] text-muted">{pregunta}</dt>
+                  <dd className="text-xs font-semibold text-ink">
                     <Respuesta valor={respuesta} />
                   </dd>
                 </div>
@@ -161,7 +161,7 @@ function RespuestasManual({ respuestas, sistema }) {
 // ---------------------------------------------------------------------------
 
 const FOCO =
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-maroon/40 focus-visible:ring-offset-1';
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-1';
 
 function AccionesPanel({ onAprobar, onRechazar, disabled = false }) {
   return (
@@ -170,7 +170,7 @@ function AccionesPanel({ onAprobar, onRechazar, disabled = false }) {
         type="button"
         onClick={onRechazar}
         disabled={disabled}
-        className={`inline-flex h-10 items-center gap-2 rounded-lg border border-black/10 bg-white px-4 text-xs font-semibold text-ink/70 transition hover:border-maroon hover:text-maroon disabled:cursor-not-allowed disabled:opacity-50 ${FOCO}`}
+        className={`inline-flex h-10 items-center gap-2 rounded-lg border border-line bg-card px-4 text-xs font-semibold text-ink/70 transition hover:border-brand hover:text-brand disabled:cursor-not-allowed disabled:opacity-50 ${FOCO}`}
       >
         <X size={14} strokeWidth={2.5} />
         Rechazar
@@ -212,24 +212,24 @@ export default function PanelRevision({
         aria-modal="true"
         aria-label="Revisión de carga"
         onClick={(e) => e.stopPropagation()}
-        className="flex h-full w-full max-w-lg flex-col bg-white shadow-xl"
+        className="flex h-full w-full max-w-lg flex-col bg-card shadow-xl"
       >
-        <header className="flex items-start justify-between gap-3 border-b border-[#edf0f1] px-5 py-4">
+        <header className="flex items-start justify-between gap-3 border-b border-line px-5 py-4">
           <div className="flex items-center gap-2.5">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#f3ecfb] text-[#7c4dbd]">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#f3ecfb] dark:bg-white/10 text-[#7c4dbd] dark:text-[#b79be8]">
               <SquarePen size={15} />
             </span>
 
             <div>
-              <h2 className="text-sm font-bold text-[#202522]">{r.origen}</h2>
-              <p className="text-[9px] font-bold uppercase tracking-wider text-[#7c4dbd]">Manual</p>
+              <h2 className="text-sm font-bold text-ink">{r.origen}</h2>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-[#7c4dbd] dark:text-[#b79be8]">Manual</p>
             </div>
           </div>
 
           <button
             onClick={onClose}
             aria-label="Cerrar"
-            className="rounded p-1 text-[#8a9290] hover:bg-[#f4f6f8] hover:text-[#a00046]"
+            className="rounded p-1 text-muted hover:bg-surface hover:text-brand"
           >
             <X size={16} />
           </button>
@@ -240,7 +240,7 @@ export default function PanelRevision({
             <Dato label="Encuestador">
               {r.encuestador}
               {sistema === 'spe' && r.departamento && r.departamento !== '-' && (
-                <span className="mt-0.5 block text-[10px] font-normal text-[#8a9290]">
+                <span className="mt-0.5 block text-[10px] font-normal text-muted">
                   Encuesta en {r.departamento}
                 </span>
               )}
@@ -268,7 +268,7 @@ export default function PanelRevision({
           <RespuestasManual respuestas={r.respuestas} sistema={sistema} />
         </div>
 
-        <footer className="border-t border-[#edf0f1] px-5 py-3">
+        <footer className="border-t border-line px-5 py-3">
           <AccionesPanel
             disabled={procesando}
             onRechazar={() => onAccion(r, 'rechazar')}

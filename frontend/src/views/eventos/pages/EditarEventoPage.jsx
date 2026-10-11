@@ -35,18 +35,18 @@ export default function EditarEventoPage() {
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-surface px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-2xl">
-        <Link to={`/eventos/${id}`} className="inline-flex items-center gap-1 text-xs font-medium text-maroon hover:underline">
+        <Link to={`/eventos/${id}`} className="inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline">
           <ArrowLeft size={14} /> Volver al evento
         </Link>
         <h1 className="mt-2 text-2xl font-bold tracking-tight text-ink">Editar evento</h1>
 
         {error && (
-          <p className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
+          <p className="mt-4 rounded-lg bg-red-50 dark:bg-red-950/40 px-4 py-3 text-sm text-red-700 dark:text-red-300" role="alert">
             {error}
           </p>
         )}
         {sinPermiso && (
-          <p className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
+          <p className="mt-4 rounded-lg bg-red-50 dark:bg-red-950/40 px-4 py-3 text-sm text-red-700 dark:text-red-300" role="alert">
             Solo puedes editar eventos de tu sede.
           </p>
         )}

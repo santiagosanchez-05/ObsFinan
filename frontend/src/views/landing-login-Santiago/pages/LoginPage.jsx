@@ -52,10 +52,10 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-surface px-6">
-      <div className="w-full max-w-sm rounded-2xl border border-black/5 bg-white p-8 shadow-sm">
+      <div className="w-full max-w-sm rounded-2xl border border-line/70 bg-card p-8 shadow-sm">
         <Link
           to="/"
-          className="inline-flex items-center gap-1 text-xs font-medium text-ink/50 hover:text-maroon"
+          className="inline-flex items-center gap-1 text-xs font-medium text-ink/50 hover:text-brand"
         >
           <ArrowLeft size={14} />
           Volver al inicio
@@ -77,9 +77,9 @@ export default function LoginPage() {
               type="email"
               autoComplete="email"
               {...register('email')}
-              className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm focus:border-maroon focus:outline-none"
+              className="w-full rounded-lg border border-line px-3 py-2 text-sm focus:border-brand focus:outline-none"
             />
-            {errors.email && <p className="mt-1 text-xs text-red-600">{errors.email.message}</p>}
+            {errors.email && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.email.message}</p>}
           </div>
 
           <div>
@@ -91,20 +91,19 @@ export default function LoginPage() {
               type="password"
               autoComplete="current-password"
               {...register('password')}
-              className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm focus:border-maroon focus:outline-none"
+              className="w-full rounded-lg border border-line px-3 py-2 text-sm focus:border-brand focus:outline-none"
             />
-            {errors.password && <p className="mt-1 text-xs text-red-600">{errors.password.message}</p>}
+            {errors.password && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.password.message}</p>}
           </div>
 
           <div className="text-right">
-            {/* TODO: conectar cuando exista la pantalla "Olvidé mi contraseña" */}
-            <Link to="/olvide-mi-contrasena" className="text-xs text-maroon hover:underline">
+            <Link to="/olvide-mi-contrasena" className="text-xs text-brand hover:underline">
               ¿Olvidaste tu contraseña?
             </Link>
           </div>
 
           {errorServidor && (
-            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{errorServidor}</p>
+            <p className="rounded-lg bg-red-50 dark:bg-red-950/40 px-3 py-2 text-sm text-red-700 dark:text-red-300">{errorServidor}</p>
           )}
 
           <button

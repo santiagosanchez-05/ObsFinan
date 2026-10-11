@@ -43,22 +43,25 @@ const PAD_CARD_GRANDE = "clamp(16px, 4vw, 32px)";
 /* ------------------------------------------------------------------ */
 
 const COLORS = {
-  bg: "#f5f7f9",
-  white: "#ffffff",
+  // Colores del tema (index.css): cambian solos en modo oscuro.
+  onPrimary: "#ffffff",
+  primaryText: "var(--color-brand)", // guindo para textos e íconos (más claro en modo oscuro)
+  bg: "var(--color-surface)",
+  white: "var(--color-card)",
   primary: "#9e0044",
-  primarySoft: "#fef2f2",
+  primarySoft: "var(--color-brand-soft)",
   secondary: "#c2427a",
-  text: "#1a1a1a",
-  textMuted: "#64748b",
-  textFaint: "#94a3b8",
-  border: "#e5e7eb",
-  borderSoft: "#f3f4f6",
+  text: "var(--color-ink)",
+  textMuted: "var(--color-muted)",
+  textFaint: "var(--color-muted)",
+  border: "var(--color-line)",
+  borderSoft: "var(--color-line)",
   success: "#16a34a",
   successBg: "#f0fdf4",
   info: "#2563eb",
   infoBg: "#eff6ff",
-  neutralBg: "#f9fafb",
-  neutralText: "#9ca3af",
+  neutralBg: "var(--color-subtle)",
+  neutralText: "var(--color-muted)",
 };
 
 const FONT = "'Sora', system-ui, -apple-system, sans-serif";
@@ -96,7 +99,7 @@ function FilterTabs({ sedes, selected, onSelect }) {
           fontFamily: FONT,
           fontWeight: selected === "todas" ? 700 : 400,
           fontSize: 14,
-          color: selected === "todas" ? COLORS.white : COLORS.textMuted,
+          color: selected === "todas" ? COLORS.onPrimary : COLORS.textMuted,
           background: selected === "todas" ? COLORS.primary : "transparent",
           border: "none",
           borderRadius: 8,
@@ -123,7 +126,7 @@ function FilterTabs({ sedes, selected, onSelect }) {
               fontFamily: FONT,
               fontWeight: active ? 700 : 400,
               fontSize: 14,
-              color: active ? COLORS.white : COLORS.textMuted,
+              color: active ? COLORS.onPrimary : COLORS.textMuted,
               background: active ? COLORS.primary : "transparent",
               border: "none",
               borderRadius: 8,
@@ -201,7 +204,7 @@ function KpiCard({
             display: "flex",
           }}
         >
-          <Icon size={20} color={COLORS.primary} strokeWidth={2} />
+          <Icon size={20} color={COLORS.primaryText} strokeWidth={2} />
         </div>
 
         {(delta || badge) && (
@@ -407,7 +410,7 @@ function Avatar({ name }) {
         height: 32,
         borderRadius: "50%",
         background: "rgba(158,0,68,0.1)",
-        color: COLORS.primary,
+        color: COLORS.primaryText,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -489,7 +492,7 @@ function ErrorState({ message, onRetry }) {
           fontFamily: FONT,
           fontWeight: 700,
           fontSize: 14,
-          color: COLORS.white,
+          color: COLORS.onPrimary,
           background: COLORS.primary,
           border: "none",
           borderRadius: 8,
@@ -639,6 +642,8 @@ function SedeDetailView({ data, sedeLabel }) {
               }}
               contentStyle={{
                 fontFamily: FONT,
+                background: COLORS.white,
+                color: COLORS.text,
                 borderRadius: 8,
                 border: `1px solid ${COLORS.borderSoft}`,
               }}
@@ -700,7 +705,7 @@ function SedeDetailView({ data, sedeLabel }) {
                 fontFamily: FONT,
                 fontWeight: 700,
                 fontSize: 14,
-                color: COLORS.primary,
+                color: COLORS.primaryText,
                 background: "transparent",
                 border: "none",
                 cursor: "pointer",
@@ -936,6 +941,8 @@ function TodasView({ summary, globalKpis, onSelectSede }) {
                 formatter={(v) => formatNumber(v)}
                 contentStyle={{
                   fontFamily: FONT,
+                  background: COLORS.white,
+                  color: COLORS.text,
                   borderRadius: 8,
                   border: `1px solid ${COLORS.borderSoft}`,
                 }}
@@ -996,6 +1003,8 @@ function TodasView({ summary, globalKpis, onSelectSede }) {
                 formatter={(v) => formatNumber(v)}
                 contentStyle={{
                   fontFamily: FONT,
+                  background: COLORS.white,
+                  color: COLORS.text,
                   borderRadius: 8,
                   border: `1px solid ${COLORS.borderSoft}`,
                 }}
@@ -1149,7 +1158,7 @@ function TodasView({ summary, globalKpis, onSelectSede }) {
                         flexShrink: 0,
                       }}
                     >
-                      <MapPin size={14} color={COLORS.primary} />
+                      <MapPin size={14} color={COLORS.primaryText} />
                     </div>
 
                     <span
@@ -1205,7 +1214,7 @@ function pagerBtnStyle(active) {
     borderRadius: 4,
     border: active ? "none" : `1px solid ${COLORS.border}`,
     background: active ? COLORS.primary : COLORS.white,
-    color: active ? COLORS.white : COLORS.text,
+    color: active ? COLORS.onPrimary : COLORS.text,
     fontFamily: FONT,
     fontWeight: 700,
     fontSize: 12,

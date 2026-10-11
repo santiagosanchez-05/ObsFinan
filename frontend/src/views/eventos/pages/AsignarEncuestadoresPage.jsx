@@ -74,7 +74,7 @@ export default function AsignarEncuestadoresPage() {
       <main className="mx-auto max-w-xl px-6 py-24 text-center">
         <Users size={32} className="mx-auto text-ink/30" />
         <h1 className="mt-3 text-xl font-bold text-ink">{error}</h1>
-        <Link to="/eventos" className="mt-4 inline-block text-sm font-semibold text-maroon hover:underline">
+        <Link to="/eventos" className="mt-4 inline-block text-sm font-semibold text-brand hover:underline">
           Volver a la agenda
         </Link>
       </main>
@@ -94,7 +94,7 @@ export default function AsignarEncuestadoresPage() {
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-surface px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-5xl">
-        <Link to={`/eventos/${id}`} className="inline-flex items-center gap-1 text-xs font-medium text-maroon hover:underline">
+        <Link to={`/eventos/${id}`} className="inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline">
           <ArrowLeft size={14} /> Volver al evento
         </Link>
         <h1 className="mt-2 text-2xl font-bold tracking-tight text-ink">Encuestadores del evento</h1>
@@ -104,30 +104,30 @@ export default function AsignarEncuestadoresPage() {
         </p>
 
         {!conEncuesta && (
-          <p className="mt-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <p className="mt-4 rounded-lg bg-amber-50 dark:bg-amber-950/40 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
             Este evento no lleva encuestas, así que no se le asignan encuestadores. Puedes habilitar la encuesta ICA o SPE editando el evento.
           </p>
         )}
         {conEncuesta && yaPaso && (
-          <p className="mt-4 rounded-lg bg-surface px-4 py-3 text-sm text-ink/70 ring-1 ring-black/10">
+          <p className="mt-4 rounded-lg bg-surface px-4 py-3 text-sm text-ink/70 ring-1 ring-line">
             El evento ya pasó: solo puedes ver quiénes participaron.
           </p>
         )}
         {(errorAccion || error) && (
-          <p className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
+          <p className="mt-4 rounded-lg bg-red-50 dark:bg-red-950/40 px-4 py-3 text-sm text-red-700 dark:text-red-300" role="alert">
             {errorAccion || error}
           </p>
         )}
 
         <div className={`mt-5 grid gap-5 ${editable ? 'lg:grid-cols-2' : ''}`}>
-          <section className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm" aria-labelledby="titulo-asignados">
+          <section className="rounded-2xl border border-line bg-card p-5 shadow-sm" aria-labelledby="titulo-asignados">
             <h2 id="titulo-asignados" className="font-semibold text-ink">
               Asignados <span className="text-ink/40">({asignados.length})</span>
             </h2>
             {asignados.length === 0 ? (
               <p className="mt-4 text-sm text-ink/50">Todavía no hay encuestadores en este evento.</p>
             ) : (
-              <ul className="mt-3 divide-y divide-black/5">
+              <ul className="mt-3 divide-y divide-line/70">
                 {asignados.map((p) => (
                   <li key={p.id} className="flex items-center justify-between gap-3 py-3">
                     <div className="min-w-0">
@@ -135,7 +135,7 @@ export default function AsignarEncuestadoresPage() {
                       <p className="truncate text-xs text-ink/50">{p.correo}</p>
                       <span
                         className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                          p.seAnotoSolo ? 'bg-green-50 text-green-700' : 'bg-maroon/10 text-maroon'
+                          p.seAnotoSolo ? 'bg-green-50 dark:bg-green-950/40 text-green-700 dark:text-green-300' : 'bg-maroon/10 text-brand'
                         }`}
                       >
                         {p.seAnotoSolo ? 'Se anotó solo' : 'Asignado'}
@@ -146,7 +146,7 @@ export default function AsignarEncuestadoresPage() {
                         onClick={() => setAQuitar(p)}
                         disabled={enviando === p.id}
                         aria-label={`Quitar a ${p.nombre}`}
-                        className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+                        className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-red-200 dark:border-red-900 px-3 py-1.5 text-xs font-medium text-red-700 dark:text-red-300 hover:bg-red-50 disabled:opacity-50"
                       >
                         <UserMinus size={14} /> Quitar
                       </button>
@@ -158,7 +158,7 @@ export default function AsignarEncuestadoresPage() {
           </section>
 
           {editable && (
-            <section className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm" aria-labelledby="titulo-disponibles">
+            <section className="rounded-2xl border border-line bg-card p-5 shadow-sm" aria-labelledby="titulo-disponibles">
               <h2 id="titulo-disponibles" className="font-semibold text-ink">
                 Encuestadores disponibles de la sede <span className="text-ink/40">({disponibles.length})</span>
               </h2>
@@ -169,20 +169,20 @@ export default function AsignarEncuestadoresPage() {
                   value={busqueda}
                   onChange={(e) => setBusqueda(e.target.value)}
                   placeholder="Buscar por nombre o correo"
-                  className="w-full rounded-lg border border-black/10 py-2 pl-9 pr-3 text-sm focus:border-maroon focus:outline-none"
+                  className="w-full rounded-lg border border-line py-2 pl-9 pr-3 text-sm focus:border-brand focus:outline-none"
                 />
               </label>
               {disponibles.length === 0 ? (
                 <p className="mt-4 text-sm text-ink/50">
                   No hay más encuestadores activos en la sede {evento.sede}.{' '}
-                  <Link to="/encuestadores/nuevo" className="font-semibold text-maroon hover:underline">
+                  <Link to="/encuestadores/nuevo" className="font-semibold text-brand hover:underline">
                     Registrar un encuestador
                   </Link>
                 </p>
               ) : filtrados.length === 0 ? (
                 <p className="mt-4 text-sm text-ink/50">Nadie coincide con la búsqueda.</p>
               ) : (
-                <ul className="mt-3 max-h-[420px] divide-y divide-black/5 overflow-y-auto">
+                <ul className="mt-3 max-h-[420px] divide-y divide-line/70 overflow-y-auto">
                   {filtrados.map((p) => (
                     <li key={p.id} className="flex items-center justify-between gap-3 py-3">
                       <div className="min-w-0">

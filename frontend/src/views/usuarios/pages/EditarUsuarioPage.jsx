@@ -108,7 +108,7 @@ export default function EditarUsuarioPage() {
     return <main className="flex min-h-[calc(100vh-4rem)] items-center justify-center text-sm text-ink/50">Cargando...</main>;
   }
   if (estado.error) {
-    return <main className="flex min-h-[calc(100vh-4rem)] items-center justify-center text-sm text-maroon">{estado.error}</main>;
+    return <main className="flex min-h-[calc(100vh-4rem)] items-center justify-center text-sm text-brand">{estado.error}</main>;
   }
 
   const { usuario } = estado;
@@ -118,15 +118,15 @@ export default function EditarUsuarioPage() {
       <div className="mx-auto max-w-2xl">
         <Link
           to={`/superadmin/usuarios/${id}`}
-          className="inline-flex items-center gap-1 text-xs font-medium text-maroon hover:underline"
+          className="inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline"
         >
           <ArrowLeft size={14} /> Volver
         </Link>
         <h1 className="mt-2 text-2xl font-bold tracking-tight text-ink">Editar usuario</h1>
 
         {/* Ficha de solo lectura del usuario */}
-        <div className="mt-4 flex items-center gap-3 rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
-          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-maroon/10 text-sm font-bold text-maroon">
+        <div className="mt-4 flex items-center gap-3 rounded-2xl border border-line bg-card p-4 shadow-sm">
+          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-maroon/10 text-sm font-bold text-brand">
             {usuario.nombre.charAt(0)}
             {(usuario.apellidoPaterno ?? '').charAt(0)}
           </div>
@@ -136,13 +136,13 @@ export default function EditarUsuarioPage() {
             </p>
             <p className="text-xs text-ink/50">{usuario.correo}</p>
           </div>
-          <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-blue-700">
+          <span className="rounded-full bg-blue-50 dark:bg-blue-950/40 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">
             Lectura solamente
           </span>
         </div>
 
-        <form onSubmit={handleGuardar} className="mt-4 rounded-2xl border border-black/10 bg-white p-6 shadow-sm sm:p-8">
-          <div className="flex items-start gap-2 rounded-lg bg-blue-50 p-3 text-xs text-blue-800">
+        <form onSubmit={handleGuardar} className="mt-4 rounded-2xl border border-line bg-card p-6 shadow-sm sm:p-8">
+          <div className="flex items-start gap-2 rounded-lg bg-blue-50 dark:bg-blue-950/40 p-3 text-xs text-blue-800 dark:text-blue-300">
             <Info size={15} className="mt-0.5 shrink-0" />
             <p>Solo podés modificar el rol, la sede y el estado de la cuenta. Los datos personales los administra el propio usuario desde su perfil.</p>
           </div>
@@ -153,7 +153,7 @@ export default function EditarUsuarioPage() {
               <select
                 value={rol}
                 onChange={(e) => setRol(e.target.value)}
-                className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm focus:border-maroon focus:outline-none"
+                className="w-full rounded-lg border border-line px-3 py-2 text-sm focus:border-brand focus:outline-none"
               >
                 <option value="superadmin">Superadmin</option>
                 <option value="admin">Admin</option>
@@ -166,7 +166,7 @@ export default function EditarUsuarioPage() {
               <select
                 value={campusId}
                 onChange={(e) => setCampusId(e.target.value)}
-                className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm focus:border-maroon focus:outline-none"
+                className="w-full rounded-lg border border-line px-3 py-2 text-sm focus:border-brand focus:outline-none"
               >
                 {campuses.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -176,7 +176,7 @@ export default function EditarUsuarioPage() {
               </select>
             </label>
 
-            <div className="flex items-center justify-between rounded-lg border border-black/10 px-3 py-3">
+            <div className="flex items-center justify-between rounded-lg border border-line px-3 py-3">
               <div>
                 <p className="text-xs font-semibold text-ink">Estado de cuenta</p>
                 <p className="text-[11px] text-ink/50">{activo ? 'Activo' : 'Bloqueado'}</p>
@@ -189,7 +189,7 @@ export default function EditarUsuarioPage() {
                 className={`relative h-6 w-11 rounded-full transition ${activo ? 'bg-maroon' : 'bg-black/20'}`}
               >
                 <span
-                  className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition ${
+                  className={`absolute top-0.5 h-5 w-5 rounded-full bg-card shadow transition ${
                     activo ? 'left-[22px]' : 'left-0.5'
                   }`}
                 />
@@ -197,7 +197,7 @@ export default function EditarUsuarioPage() {
             </div>
           </div>
 
-          {errorGuardado && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{errorGuardado}</p>}
+          {errorGuardado && <p className="mt-4 rounded-lg bg-red-50 dark:bg-red-950/40 px-3 py-2 text-sm text-red-700 dark:text-red-300">{errorGuardado}</p>}
 
           <div className="mt-6 flex items-center gap-3">
             <button
@@ -214,21 +214,21 @@ export default function EditarUsuarioPage() {
         </form>
 
         {/* Resetear contraseña — acción independiente, no forma parte de "Guardar cambios" */}
-        <div className="mt-4 rounded-2xl border border-black/10 bg-white p-6 shadow-sm sm:p-8">
+        <div className="mt-4 rounded-2xl border border-line bg-card p-6 shadow-sm sm:p-8">
           <h2 className="text-sm font-bold text-ink">Resetear contraseña</h2>
           <p className="mt-1 text-xs text-ink/60">
             Genera una contraseña temporal nueva y se la envía a {usuario.correo} por correo.
           </p>
 
-          {resultadoReset?.error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{resultadoReset.error}</p>}
+          {resultadoReset?.error && <p className="mt-3 rounded-lg bg-red-50 dark:bg-red-950/40 px-3 py-2 text-sm text-red-700 dark:text-red-300">{resultadoReset.error}</p>}
           {resultadoReset && !resultadoReset.error && (
-            <div className="mt-3 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-800">
+            <div className="mt-3 rounded-lg bg-green-50 dark:bg-green-950/40 px-3 py-2 text-sm text-green-800 dark:text-green-300">
               {resultadoReset.correoEnviado ? (
                 <p>Se le envió un correo con la contraseña temporal.</p>
               ) : (
                 <>
                   <p>No se pudo enviar el correo — compartile esta contraseña a mano:</p>
-                  <p className="mt-1 font-mono text-base font-bold text-maroon">{resultadoReset.passwordTemporal}</p>
+                  <p className="mt-1 font-mono text-base font-bold text-brand">{resultadoReset.passwordTemporal}</p>
                 </>
               )}
             </div>
@@ -238,7 +238,7 @@ export default function EditarUsuarioPage() {
             type="button"
             onClick={() => setConfirmarReset(true)}
             disabled={reseteando}
-            className="mt-4 inline-flex items-center gap-2 rounded-lg border border-maroon px-4 py-2 text-sm font-semibold text-maroon hover:bg-maroon/5 disabled:opacity-60"
+            className="mt-4 inline-flex items-center gap-2 rounded-lg border border-brand px-4 py-2 text-sm font-semibold text-brand hover:bg-maroon/5 disabled:opacity-60"
           >
             <KeyRound size={15} /> {reseteando ? 'Reseteando...' : 'Resetear contraseña'}
           </button>

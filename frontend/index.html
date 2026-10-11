@@ -12,6 +12,12 @@
       rel="stylesheet"
     />
     <title>Bienestar Financiero Univalle</title>
+    <script>
+      // Modo oscuro guardado (src/shared/tema.js): se aplica antes de pintar.
+      try {
+        if (localStorage.getItem('bfu_tema') === 'oscuro') document.documentElement.classList.add('dark');
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root" translate="no"></div>

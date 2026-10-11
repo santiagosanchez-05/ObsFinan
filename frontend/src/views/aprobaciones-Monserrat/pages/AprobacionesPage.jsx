@@ -176,7 +176,7 @@ function AccionesFila({ onRevisar, onAprobar, onRechazar, disabled = false }) {
       <button
         type="button"
         onClick={onRevisar}
-        className="inline-flex items-center gap-1 text-ink/50 transition hover:text-maroon"
+        className="inline-flex items-center gap-1 text-ink/50 transition hover:text-brand"
       >
         <Eye size={15} /> Ver detalle
       </button>
@@ -185,7 +185,7 @@ function AccionesFila({ onRevisar, onAprobar, onRechazar, disabled = false }) {
         type="button"
         onClick={onRechazar}
         disabled={disabled}
-        className="inline-flex items-center gap-1 text-ink/50 transition hover:text-maroon disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-ink/50"
+        className="inline-flex items-center gap-1 text-ink/50 transition hover:text-brand disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-ink/50"
       >
         <X size={15} /> Rechazar
       </button>
@@ -207,7 +207,7 @@ function AccionesFila({ onRevisar, onAprobar, onRechazar, disabled = false }) {
 // ---------------------------------------------------------------------------
 
 const CLASE_SELECT =
-  'appearance-none rounded-lg border border-[#dfe4e5] bg-white py-2 pl-3 pr-8 text-xs font-semibold text-[#59615e] outline-none focus:border-[#a00046]';
+  'appearance-none rounded-lg border border-line bg-card py-2 pl-3 pr-8 text-xs font-semibold text-ink-2 outline-none focus:border-brand';
 
 export default function AprobacionesPage() {
   const { token, user } = useAuth();
@@ -445,25 +445,25 @@ export default function AprobacionesPage() {
       label: 'Registros pendientes',
       valor: cargandoActual ? '...' : lista.length,
       Icono: Clock,
-      estilo: 'bg-[#fbf1de] text-[#b7891e]',
+      estilo: 'bg-[#fbf1de] dark:bg-white/10 text-[#b7891e]',
     },
     {
       label: 'Espera más larga',
       valor: cargandoActual ? '...' : `${masAntigua} d`,
       Icono: Clock,
-      estilo: 'bg-[#e8f1fb] text-[#2f6fb0]',
+      estilo: 'bg-[#e8f1fb] dark:bg-white/10 text-[#2f6fb0]',
     },
   ];
 
   return (
-    <main className="min-h-[calc(100vh-4rem)] bg-[#f4f6f8] px-4 py-5 sm:px-6 lg:px-8">
+    <main className="min-h-[calc(100vh-4rem)] bg-surface px-4 py-5 sm:px-6 lg:px-8">
       {aviso && (
         <div
           role="status"
           aria-live="polite"
-          className="fixed bottom-5 right-5 z-50 flex max-w-sm items-start gap-2.5 rounded-xl border border-black/10 bg-white px-4 py-3 shadow-lg"
+          className="fixed bottom-5 right-5 z-50 flex max-w-sm items-start gap-2.5 rounded-xl border border-line bg-card px-4 py-3 shadow-lg"
         >
-          <CheckCircle2 size={16} className="mt-px shrink-0 text-maroon" />
+          <CheckCircle2 size={16} className="mt-px shrink-0 text-brand" />
 
           <p className="text-xs font-medium text-ink">{aviso}</p>
 
@@ -471,7 +471,7 @@ export default function AprobacionesPage() {
             type="button"
             onClick={() => setAviso('')}
             aria-label="Cerrar aviso"
-            className="-mr-1 shrink-0 rounded p-0.5 text-ink/40 hover:text-maroon"
+            className="-mr-1 shrink-0 rounded p-0.5 text-ink/40 hover:text-brand"
           >
             <X size={13} />
           </button>
@@ -494,20 +494,20 @@ export default function AprobacionesPage() {
           <div
             role="dialog"
             aria-modal="true"
-            className="w-full max-w-md rounded-xl bg-white p-5 shadow-xl"
+            className="w-full max-w-md rounded-xl bg-card p-5 shadow-xl"
           >
-            <h2 className="text-base font-bold text-[#202522]">
+            <h2 className="text-base font-bold text-ink">
               ¿Rechazar este registro?
             </h2>
 
-            <p className="mt-1 text-sm text-[#6d7673]">
+            <p className="mt-1 text-sm text-muted">
               Se rechazará el registro de {etiquetaRegistro(accion.registro)}.
               No contará en los dashboards.
             </p>
 
-            <label className="mt-4 block text-xs font-semibold text-[#59615e]">
+            <label className="mt-4 block text-xs font-semibold text-ink-2">
               Motivo del rechazo{' '}
-              <span className="font-normal text-[#8a9290]">(opcional)</span>
+              <span className="font-normal text-muted">(opcional)</span>
 
               <textarea
                 value={motivo}
@@ -515,11 +515,11 @@ export default function AprobacionesPage() {
                 maxLength={255}
                 rows={3}
                 placeholder="Ej.: faltan respuestas en la encuesta"
-                className="mt-1.5 w-full resize-none rounded-lg border border-[#dfe4e5] px-3 py-2 text-xs font-normal text-[#414845] outline-none focus:border-[#a00046]"
+                className="mt-1.5 w-full resize-none rounded-lg border border-line px-3 py-2 text-xs font-normal text-ink-2 outline-none focus:border-brand"
               />
             </label>
 
-            <p className="mt-1 text-right text-[10px] text-[#8a9290]">
+            <p className="mt-1 text-right text-[10px] text-muted">
               {motivo.length}/255
             </p>
 
@@ -530,7 +530,7 @@ export default function AprobacionesPage() {
                   setAccion(null);
                   setMotivo('');
                 }}
-                className="rounded-lg border border-[#dfe4e5] px-4 py-2 text-xs font-semibold text-[#59615e] hover:bg-[#f4f6f8] disabled:opacity-50"
+                className="rounded-lg border border-line px-4 py-2 text-xs font-semibold text-ink-2 hover:bg-surface disabled:opacity-50"
               >
                 Cancelar
               </button>
@@ -564,11 +564,11 @@ export default function AprobacionesPage() {
       <div className="mx-auto max-w-[1120px]">
         {/* Encabezado */}
         <div className="mb-5">
-          <h1 className="text-2xl font-bold tracking-tight text-[#202522] sm:text-[28px]">
+          <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-[28px]">
             Aprobación de encuestas
           </h1>
 
-          <p className="mt-1 text-sm text-[#6d7673]">{cfg.descripcion}</p>
+          <p className="mt-1 text-sm text-muted">{cfg.descripcion}</p>
         </div>
 
         {/* Tarjetas */}
@@ -576,7 +576,7 @@ export default function AprobacionesPage() {
           {tarjetas.map(({ label, valor, Icono, estilo }) => (
             <div
               key={label}
-              className="flex items-center gap-3 rounded-xl border border-[#e2e6e8] bg-white p-4 shadow-sm"
+              className="flex items-center gap-3 rounded-xl border border-line bg-card p-4 shadow-sm"
             >
               <span
                 className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${estilo}`}
@@ -585,32 +585,32 @@ export default function AprobacionesPage() {
               </span>
 
               <div>
-                <p className="text-[9px] font-bold uppercase tracking-wider text-[#8a9290]">
+                <p className="text-[9px] font-bold uppercase tracking-wider text-muted">
                   {label}
                 </p>
 
-                <p className="text-xl font-bold text-[#202522]">{valor}</p>
+                <p className="text-xl font-bold text-ink">{valor}</p>
               </div>
             </div>
           ))}
         </section>
 
         {/* Tabs + filtros */}
-        <section className="mb-5 flex flex-col gap-3 rounded-xl border border-[#e2e6e8] bg-white p-3 shadow-sm lg:flex-row lg:items-center">
-          <div className="inline-flex rounded-lg bg-[#f4f6f8] p-1">
+        <section className="mb-5 flex flex-col gap-3 rounded-xl border border-line bg-card p-3 shadow-sm lg:flex-row lg:items-center">
+          <div className="inline-flex rounded-lg bg-surface p-1">
             {sistemasDisponibles.map((s) => (
               <button
                 key={s.id}
                 onClick={() => cambiarSistema(s.id)}
                 className={`inline-flex items-center gap-2 rounded-md px-3.5 py-1.5 text-xs font-semibold transition ${
                   sistema === s.id
-                    ? 'bg-white text-[#202522] shadow-sm'
-                    : 'text-[#8a9290] hover:text-[#59615e]'
+                    ? 'bg-card text-ink shadow-sm'
+                    : 'text-muted hover:text-ink-2'
                 }`}
               >
                 {s.label}
 
-                <span className="rounded-full bg-[#fbe9f0] px-1.5 py-0.5 text-[10px] font-bold text-[#a00046]">
+                <span className="rounded-full bg-brand-soft px-1.5 py-0.5 text-[10px] font-bold text-brand">
                   {cargando[s.id] ? '...' : pendientes[s.id].length}
                 </span>
               </button>
@@ -635,7 +635,7 @@ export default function AprobacionesPage() {
 
               <ChevronDown
                 size={13}
-                className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8a9290]"
+                className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-muted"
               />
             </div>
 
@@ -658,7 +658,7 @@ export default function AprobacionesPage() {
 
                 <ChevronDown
                   size={13}
-                  className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8a9290]"
+                  className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-muted"
                 />
               </div>
             )}
@@ -682,7 +682,7 @@ export default function AprobacionesPage() {
 
                 <ChevronDown
                   size={13}
-                  className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8a9290]"
+                  className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-muted"
                 />
               </div>
             ) : null}
@@ -690,7 +690,7 @@ export default function AprobacionesPage() {
             <label className="relative">
               <Search
                 size={13}
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8a9290]"
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted"
               />
 
               <input
@@ -698,7 +698,7 @@ export default function AprobacionesPage() {
                 value={busqueda}
                 onChange={(e) => setBusqueda(e.target.value)}
                 placeholder={cfg.placeholderBusqueda}
-                className="w-72 rounded-lg border border-[#dfe4e5] bg-white py-2 pl-8 pr-3 text-xs text-[#414845] outline-none focus:border-[#a00046]"
+                className="w-72 rounded-lg border border-line bg-card py-2 pl-8 pr-3 text-xs text-ink-2 outline-none focus:border-brand"
               />
             </label>
           </div>
@@ -706,7 +706,7 @@ export default function AprobacionesPage() {
 
         {/* Error */}
         {error && (
-          <div className="mb-5 flex items-center justify-between gap-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+          <div className="mb-5 flex items-center justify-between gap-3 rounded-lg bg-red-50 dark:bg-red-950/40 px-3 py-2 text-sm text-red-700 dark:text-red-300">
             <span>{error}</span>
 
             <button
@@ -719,10 +719,10 @@ export default function AprobacionesPage() {
         )}
 
         {/* Tabla */}
-        <section className="overflow-hidden rounded-xl border border-[#e2e6e8] bg-white shadow-sm">
+        <section className="overflow-hidden rounded-xl border border-line bg-card shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[760px] text-left text-xs">
-              <thead className="bg-[#fafbfb] text-[9px] font-bold uppercase tracking-wider text-[#8a9290]">
+              <thead className="bg-subtle text-[9px] font-bold uppercase tracking-wider text-muted">
                 <tr>
                   <th className="px-4 py-3">{cfg.columnaZona}</th>
                   <th className="px-4 py-3">Periodo</th>
@@ -737,7 +737,7 @@ export default function AprobacionesPage() {
                   <tr>
                     <td
                       colSpan={5}
-                      className="px-4 py-10 text-center text-[#8a9290]"
+                      className="px-4 py-10 text-center text-muted"
                     >
                       <Loader2
                         size={18}
@@ -750,7 +750,7 @@ export default function AprobacionesPage() {
                   <tr>
                     <td
                       colSpan={5}
-                      className="px-4 py-10 text-center text-[#8a9290]"
+                      className="px-4 py-10 text-center text-muted"
                     >
                       {lista.length === 0
                         ? 'No hay registros pendientes. Todo está al día.'
@@ -764,20 +764,20 @@ export default function AprobacionesPage() {
                     return (
                       <tr
                         key={r.id}
-                        className="border-t border-[#f0f2f2] text-[#48504d] hover:bg-[#fff8fa]"
+                        className="border-t border-line text-ink-2 hover:bg-brand-soft"
                       >
-                        <td className="px-4 py-3 font-semibold text-[#252927]">
+                        <td className="px-4 py-3 font-semibold text-ink">
                           {(r.zonas ?? []).join(', ') || '-'}
                         </td>
 
                         <td className="px-4 py-3">{r.periodo}</td>
 
                         <td className="px-4 py-3">
-                          <p className="font-semibold text-[#252927]">
+                          <p className="font-semibold text-ink">
                             {r.encuestador}
                           </p>
 
-                          <p className="text-[10px] text-[#8a9290]">
+                          <p className="text-[10px] text-muted">
                             {esSpe
                               ? `Encuesta en ${r.departamento || '-'}`
                               : `Sede ${r.sede}`}
@@ -791,7 +791,7 @@ export default function AprobacionesPage() {
                             className={`text-[10px] ${
                               espera >= 3
                                 ? 'font-semibold text-[#b7891e]'
-                                : 'text-[#8a9290]'
+                                : 'text-muted'
                             }`}
                           >
                             {espera === 0 ? 'Hoy' : `Hace ${espera} d`}
@@ -818,7 +818,7 @@ export default function AprobacionesPage() {
             </table>
           </div>
 
-          <div className="flex items-center justify-between border-t border-[#edf0f1] px-4 py-3 text-[10px] text-[#8a9290]">
+          <div className="flex items-center justify-between border-t border-line px-4 py-3 text-[10px] text-muted">
             <span>
               Mostrando {filtrados.length} de {lista.length} registros pendientes
             </span>

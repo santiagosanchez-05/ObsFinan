@@ -3,12 +3,15 @@ import { useNavigate } from "react-router-dom";
 import { Clock3 } from "lucide-react";
 
 const COLORS = {
-  white: "#ffffff",
+  // Colores del tema (index.css): cambian solos en modo oscuro.
+  onPrimary: "#ffffff",
+  primaryText: "var(--color-brand)", // guindo para textos e íconos (más claro en modo oscuro)
+  white: "var(--color-card)",
   primary: "#9e0044",
-  primarySoft: "#fef2f2",
-  text: "#1a1a1a",
-  textMuted: "#64748b",
-  border: "#e5e7eb",
+  primarySoft: "var(--color-brand-soft)",
+  text: "var(--color-ink)",
+  textMuted: "var(--color-muted)",
+  border: "var(--color-line)",
 };
 
 const FONT = "'Sora', system-ui, -apple-system, sans-serif";
@@ -72,7 +75,7 @@ export default function SessionExpiredModal({ open, onFinish }) {
             margin: "0 auto 20px",
             borderRadius: "50%",
             background: COLORS.primarySoft,
-            color: COLORS.primary,
+            color: COLORS.primaryText,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",

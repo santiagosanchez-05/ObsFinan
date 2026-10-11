@@ -65,7 +65,7 @@ export default function EventoDetallePage() {
         <h1 className="mt-3 text-xl font-bold text-ink">
           {estado === 'no-encontrado' ? 'Este evento no existe o fue eliminado' : 'No se pudo cargar el evento'}
         </h1>
-        <Link to="/eventos" className="mt-4 inline-block text-sm font-semibold text-maroon hover:underline">
+        <Link to="/eventos" className="mt-4 inline-block text-sm font-semibold text-brand hover:underline">
           Volver a la agenda
         </Link>
       </main>
@@ -78,11 +78,11 @@ export default function EventoDetallePage() {
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-surface px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-4xl">
-        <Link to="/eventos" className="inline-flex items-center gap-1 text-xs font-medium text-maroon hover:underline">
+        <Link to="/eventos" className="inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline">
           <ArrowLeft size={14} /> Volver a la agenda
         </Link>
 
-        <article className="mt-3 overflow-hidden rounded-2xl border border-black/10 bg-white shadow-sm">
+        <article className="mt-3 overflow-hidden rounded-2xl border border-line bg-card shadow-sm">
           <div className={`relative bg-gradient-to-br from-maroon to-maroon-light ${evento.imagenUrl ? 'aspect-[21/9]' : 'h-28 sm:h-36'}`}>
             {evento.imagenUrl ? (
               <img src={evento.imagenUrl} alt={`Imagen del evento ${evento.titulo}`} className="h-full w-full object-cover" />
@@ -94,7 +94,7 @@ export default function EventoDetallePage() {
           <div className="p-6 sm:p-8">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <p className="text-sm font-semibold text-maroon">{formatearFecha(evento.fecha)}</p>
+                <p className="text-sm font-semibold text-brand">{formatearFecha(evento.fecha)}</p>
                 <h1 className="mt-1 text-2xl font-bold tracking-tight text-ink sm:text-3xl">{evento.titulo}</h1>
               </div>
 
@@ -102,21 +102,21 @@ export default function EventoDetallePage() {
                 <div className="flex shrink-0 flex-wrap gap-2">
                   <Link
                     to={`/eventos/${evento.id}/editar`}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-black/10 px-3 py-2 text-sm font-medium text-ink hover:bg-surface"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-line px-3 py-2 text-sm font-medium text-ink hover:bg-surface"
                   >
                     <Pencil size={14} /> Editar
                   </Link>
                   {(evento.hasIca || evento.hasSpe) && (
                     <Link
                       to={`/eventos/${evento.id}/encuestadores`}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-black/10 px-3 py-2 text-sm font-medium text-ink hover:bg-surface"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-line px-3 py-2 text-sm font-medium text-ink hover:bg-surface"
                     >
                       <UserPlus size={14} /> Encuestadores
                     </Link>
                   )}
                   <button
                     onClick={() => setConfirmar(true)}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 dark:border-red-900 px-3 py-2 text-sm font-medium text-red-700 dark:text-red-300 hover:bg-red-50"
                   >
                     <Trash2 size={14} /> Eliminar
                   </button>
@@ -125,12 +125,12 @@ export default function EventoDetallePage() {
             </div>
 
             {errorEliminar && (
-              <p className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
+              <p className="mt-4 rounded-lg bg-red-50 dark:bg-red-950/40 px-4 py-3 text-sm text-red-700 dark:text-red-300" role="alert">
                 {errorEliminar}
               </p>
             )}
 
-            <dl className="mt-6 grid gap-4 border-y border-black/5 py-5 sm:grid-cols-2">
+            <dl className="mt-6 grid gap-4 border-y border-line/70 py-5 sm:grid-cols-2">
               <Dato icono={Clock} etiqueta="Hora" valor={`${evento.hora} · ${evento.modalidadNombre}`} />
               <Dato icono={esVirtual ? Video : MapPin} etiqueta={esVirtual ? 'Plataforma' : 'Lugar'} valor={evento.lugar} />
               <Dato icono={Building2} etiqueta="Sede" valor={evento.sede} />
@@ -192,7 +192,7 @@ function Dato({ icono: Icono, etiqueta, valor }) {
   return (
     <div className="flex items-start gap-3">
       <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-maroon/10">
-        <Icono size={16} className="text-maroon" />
+        <Icono size={16} className="text-brand" />
       </span>
       <div>
         <dt className="text-xs text-ink/50">{etiqueta}</dt>
@@ -235,10 +235,10 @@ function Participacion({ evento, user, token, onCambio }) {
   }
 
   return (
-    <section className="mt-6 rounded-xl border border-maroon/20 bg-maroon/5 p-4">
+    <section className="mt-6 rounded-xl border border-brand/20 bg-maroon/5 p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
-          <ClipboardCheck size={20} className="mt-0.5 shrink-0 text-maroon" />
+          <ClipboardCheck size={20} className="mt-0.5 shrink-0 text-brand" />
           <div>
             <h2 className="text-sm font-semibold text-ink">
               {evento.participando ? (yaPaso ? 'Participaste como encuestador' : 'Estás anotado como encuestador') : 'Este evento necesita encuestadores'}
@@ -256,7 +256,7 @@ function Participacion({ evento, user, token, onCambio }) {
             <button
               onClick={() => setConfirmarBaja(true)}
               disabled={enviando}
-              className="shrink-0 rounded-lg border border-black/10 bg-white px-4 py-2 text-sm font-medium text-ink hover:bg-surface disabled:opacity-60"
+              className="shrink-0 rounded-lg border border-line bg-card px-4 py-2 text-sm font-medium text-ink hover:bg-surface disabled:opacity-60"
             >
               Dejar de participar
             </button>
@@ -271,7 +271,7 @@ function Participacion({ evento, user, token, onCambio }) {
           ))}
       </div>
       {error && (
-        <p className="mt-3 text-sm text-red-700" role="alert">
+        <p className="mt-3 text-sm text-red-700 dark:text-red-300" role="alert">
           {error}
         </p>
       )}

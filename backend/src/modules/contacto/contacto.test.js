@@ -144,3 +144,21 @@ describe('escaparHtml', () => {
     expect(escaparHtml(`<b>"Hola" & 'chau'</b>`)).toBe('&lt;b&gt;&quot;Hola&quot; &amp; &#39;chau&#39;&lt;/b&gt;');
   });
 });
+
+describe('GET /api/contacto/correo (footer)', () => {
+  it('es pública y devuelve el correo del Superadmin activo más antiguo', async () => {
+    pool.query.mockResolvedValueOnce([[{ email: 'primero@correo.com' }]]);
+    const res = await request(app).get('/api/contacto/correo');
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ correo: 'primero@correo.com' });
+    const [sql] = pool.query.mock.calls[0];
+    expect(sql).toContain("role_name = 'superadmin' AND u.status = 1");
+    expect(sql).toContain('ORDER BY u.created_at ASC');
+  });
+
+  it('si no hay Superadmin activo devuelve null', async () => {
+    pool.query.mockResolvedValueOnce([[]]);
+    const res = await request(app).get('/api/contacto/correo');
+    expect(res.body).toEqual({ correo: null });
+  });
+});

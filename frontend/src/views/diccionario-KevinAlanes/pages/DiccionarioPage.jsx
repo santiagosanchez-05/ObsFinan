@@ -641,27 +641,27 @@ export default function DiccionarioPage() {
   );
 
   return (
-    <main className="min-h-[calc(100vh-4rem)] bg-[#f4f6f8] px-4 py-6 sm:px-6 lg:px-8">
+    <main className="min-h-[calc(100vh-4rem)] bg-surface px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-[1200px]">
         <div className="mb-6 flex items-start gap-3">
-          <div className="rounded-lg bg-[#faeef2] p-3 text-[#a00046]">
+          <div className="rounded-lg bg-brand-soft p-3 text-brand">
             <BookOpen size={24} />
           </div>
           <div>
-            <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.18em] text-[#a00046]">
+            <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.18em] text-brand">
               Observatorio de Bienestar Financiero
             </p>
-            <h1 className="text-2xl font-bold tracking-tight text-[#202522] sm:text-[28px]">
+            <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-[28px]">
               Diccionario de variables
             </h1>
-            <p className="mt-1 text-sm text-[#6d7673]">
+            <p className="mt-1 text-sm text-muted">
               Consulta el significado de cada columna de los datasets del
               observatorio.
             </p>
           </div>
         </div>
 
-        <nav className="mb-4 flex flex-wrap gap-1 rounded-xl border border-[#e2e6e8] bg-white p-1.5 shadow-sm">
+        <nav className="mb-4 flex flex-wrap gap-1 rounded-xl border border-line bg-card p-1.5 shadow-sm">
           {Object.entries(DATASETS).map(([clave, valor]) => (
             <button
               key={clave}
@@ -669,8 +669,8 @@ export default function DiccionarioPage() {
               onClick={() => setDatasetActivo(clave)}
               className={`rounded-lg px-4 py-2 text-xs font-semibold transition ${
                 datasetActivo === clave
-                  ? "bg-[#a00046] text-white shadow-sm"
-                  : "text-[#69716e] hover:bg-[#fff3f7] hover:text-[#a00046]"
+                  ? "bg-maroon text-white shadow-sm"
+                  : "text-ink-2 hover:bg-brand-soft hover:text-brand"
               }`}
             >
               {valor.titulo.split(" — ")[0]}
@@ -678,31 +678,31 @@ export default function DiccionarioPage() {
           ))}
         </nav>
 
-        <div className="mb-4 rounded-xl border border-[#e2e6e8] bg-white p-4 shadow-sm">
-          <h2 className="text-sm font-bold text-[#252927]">{dataset.titulo}</h2>
-          <p className="mt-1 text-xs text-[#6d7673]">{dataset.descripcion}</p>
+        <div className="mb-4 rounded-xl border border-line bg-card p-4 shadow-sm">
+          <h2 className="text-sm font-bold text-ink">{dataset.titulo}</h2>
+          <p className="mt-1 text-xs text-muted">{dataset.descripcion}</p>
         </div>
 
         <div className="mb-4">
           <div className="relative">
             <Search
               size={16}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8a9290]"
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-muted"
             />
             <input
               type="text"
               placeholder="Buscar variable..."
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
-              className="w-full rounded-lg border border-[#dfe4e5] bg-white py-2.5 pl-9 pr-4 text-sm text-[#414845] outline-none focus:border-[#a00046]"
+              className="w-full rounded-lg border border-line bg-card py-2.5 pl-9 pr-4 text-sm text-ink-2 outline-none focus:border-brand"
             />
           </div>
         </div>
 
-        <div className="overflow-hidden rounded-xl border border-[#e2e6e8] bg-white shadow-sm">
+        <div className="overflow-hidden rounded-xl border border-line bg-card shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[640px] text-left text-xs">
-              <thead className="bg-[#fafbfb] text-[9px] font-bold uppercase tracking-wider text-[#8a9290]">
+              <thead className="bg-subtle text-[9px] font-bold uppercase tracking-wider text-muted">
                 <tr>
                   <th className="px-4 py-3">Variable</th>
                   <th className="px-4 py-3">Tipo</th>
@@ -713,15 +713,15 @@ export default function DiccionarioPage() {
                 {variablesFiltradas.map((variable) => (
                   <tr
                     key={variable.nombre}
-                    className="border-t border-[#f0f2f2] hover:bg-[#fff8fa]"
+                    className="border-t border-line hover:bg-brand-soft"
                   >
-                    <td className="px-4 py-3 font-mono text-[11px] font-semibold text-[#a00046]">
+                    <td className="px-4 py-3 font-mono text-[11px] font-semibold text-brand">
                       {variable.nombre}
                     </td>
-                    <td className="px-4 py-3 text-[#59615e]">
+                    <td className="px-4 py-3 text-ink-2">
                       {variable.tipo}
                     </td>
-                    <td className="px-4 py-3 text-[#414845]">
+                    <td className="px-4 py-3 text-ink-2">
                       {variable.descripcion}
                     </td>
                   </tr>
@@ -729,7 +729,7 @@ export default function DiccionarioPage() {
               </tbody>
             </table>
           </div>
-          <div className="border-t border-[#edf0f1] px-4 py-3 text-[10px] text-[#8a929a]">
+          <div className="border-t border-line px-4 py-3 text-[10px] text-muted">
             Mostrando {variablesFiltradas.length} de {dataset.variables.length}{" "}
             variables
           </div>

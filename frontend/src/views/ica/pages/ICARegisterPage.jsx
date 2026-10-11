@@ -5,7 +5,7 @@ import { ArrowLeft, CheckCircle2, ChevronRight, Info } from 'lucide-react';
 import { useAuth } from '../../../shared/AuthContext';
 import { periodoDelEvento } from '../../encuestador/useEventoEncuesta';
 
-const CAMPO_ICA = 'w-full rounded-lg border border-[#dfe4e5] bg-white px-3 py-2 text-xs text-[#414845] outline-none focus:border-[#a00046]';
+const CAMPO_ICA = 'w-full rounded-lg border border-line bg-card px-3 py-2 text-xs text-ink-2 outline-none focus:border-brand';
 
 const PREGUNTAS = [
   ['q01ContributesFinancially', '¿Usted contribuye económicamente en su hogar y/o participa en la toma de decisiones financieras?', ['Sí', 'No']],
@@ -122,12 +122,12 @@ export default function ICARegisterPage({ eventId = null, evento = null, encuest
 
   if (guardado) {
     return (
-      <main className="min-h-[calc(100vh-4rem)] bg-[#f4f6f8] px-4 py-5 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-lg rounded-xl border border-[#e2e6e8] bg-white p-8 text-center shadow-sm">
+      <main className="min-h-[calc(100vh-4rem)] bg-surface px-4 py-5 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-lg rounded-xl border border-line bg-card p-8 text-center shadow-sm">
           <CheckCircle2 size={40} className="mx-auto text-[#3c8d66]" />
-          <h1 className="mt-3 text-xl font-bold text-[#252927]">Formulario completado</h1>
-          <p className="mt-2 text-sm text-[#6d7673]">{encuestador ? 'La encuesta se guardó correctamente y quedó pendiente de aprobación.' : 'La entrevista se guardó correctamente y sus resultados ya están disponibles en el dashboard ICA.'}</p>
-          <Link to={encuestador ? '/encuestador/eventos' : '/ica'} className="mt-6 inline-flex rounded-lg bg-[#a00046] px-5 py-2.5 text-xs font-semibold text-white hover:bg-[#820039]">
+          <h1 className="mt-3 text-xl font-bold text-ink">Formulario completado</h1>
+          <p className="mt-2 text-sm text-muted">{encuestador ? 'La encuesta se guardó correctamente y quedó pendiente de aprobación.' : 'La entrevista se guardó correctamente y sus resultados ya están disponibles en el dashboard ICA.'}</p>
+          <Link to={encuestador ? '/encuestador/eventos' : '/ica'} className="mt-6 inline-flex rounded-lg bg-maroon px-5 py-2.5 text-xs font-semibold text-white hover:bg-maroon-dark">
             {encuestador ? 'Volver a mis eventos' : 'Volver al dashboard'}
           </Link>
         </div>
@@ -136,36 +136,36 @@ export default function ICARegisterPage({ eventId = null, evento = null, encuest
   }
 
   return (
-    <main className="min-h-[calc(100vh-4rem)] bg-[#f4f6f8] px-4 py-5 sm:px-6 lg:px-8">
+    <main className="min-h-[calc(100vh-4rem)] bg-surface px-4 py-5 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-2xl">
-        <Link to={encuestador ? '/encuestador/eventos' : '/ica'} className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#a00046] hover:underline">
+        <Link to={encuestador ? '/encuestador/eventos' : '/ica'} className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand hover:underline">
           <ArrowLeft size={13} /> {encuestador ? 'Volver a mis eventos' : 'Volver al Dashboard ICA'}
         </Link>
 
         <div className="mb-5 mt-3">
-          <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.18em] text-[#a00046]">{encuestador ? 'Encuesta de campo' : 'Registro individual'}</p>
-          <h1 className="text-2xl font-bold tracking-tight text-[#202522] sm:text-[28px]">{encuestador ? 'Registrar encuesta ICA' : 'Registrar nuevo registro — ICA'}</h1>
-          <p className="mt-1 max-w-xl text-sm text-[#6d7673]">Aplica el instrumento ICA a una persona. Las respuestas se organizan en 32 preguntas y la pregunta 22 define el bloque que corresponde completar.</p>
+          <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.18em] text-brand">{encuestador ? 'Encuesta de campo' : 'Registro individual'}</p>
+          <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-[28px]">{encuestador ? 'Registrar encuesta ICA' : 'Registrar nuevo registro — ICA'}</h1>
+          <p className="mt-1 max-w-xl text-sm text-muted">Aplica el instrumento ICA a una persona. Las respuestas se organizan en 32 preguntas y la pregunta 22 define el bloque que corresponde completar.</p>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="rounded-xl border border-[#e2e6e8] bg-white p-5 shadow-sm sm:p-6">
-          <div className="mb-5 flex items-center gap-3 rounded-lg bg-[#fff4f7] px-3 py-2.5 text-[11px] text-[#6d7673]">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#a00046] text-xs font-bold text-white">32</span>
-            <span><strong className="text-[#252927]">Instrumento individual</strong><br />Completa una respuesta por pregunta.</span>
+        <form onSubmit={handleSubmit(onSubmit)} className="rounded-xl border border-line bg-card p-5 shadow-sm sm:p-6">
+          <div className="mb-5 flex items-center gap-3 rounded-lg bg-brand-soft px-3 py-2.5 text-[11px] text-muted">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-maroon text-xs font-bold text-white">32</span>
+            <span><strong className="text-ink">Instrumento individual</strong><br />Completa una respuesta por pregunta.</span>
           </div>
 
-          <div className="grid gap-4 border-b border-[#edf0f1] pb-5 sm:grid-cols-2">
+          <div className="grid gap-4 border-b border-line pb-5 sm:grid-cols-2">
             <Campo label="Comuna" error={errors.communityId?.message}>
               <select {...register('communityId', { required: 'Selecciona una comuna' })} defaultValue="" disabled={cargandoComunas || Boolean(errorComunas)} className={CAMPO_ICA}>
                 <option value="" disabled>{cargandoComunas ? 'Cargando comunas...' : 'Selecciona una comuna'}</option>
                 {comunas.map((comuna) => <option key={comuna.id} value={comuna.id}>{etiquetaComuna(comuna, comunas)}</option>)}
               </select>
-              {errorComunas && <span className="mt-1 block text-[10px] text-[#a00046]">{errorComunas}</span>}
+              {errorComunas && <span className="mt-1 block text-[10px] text-brand">{errorComunas}</span>}
             </Campo>
             {periodoEvento ? (
-              <div className="rounded-lg border border-[#edf0f1] bg-[#fafbfc] px-3 py-2.5 text-xs text-[#6d7673]">
-                <span className="block text-[11px] font-bold text-[#414845]">Evento</span>
-                <span className="block font-semibold text-[#252927]">{evento.titulo}</span>
+              <div className="rounded-lg border border-line bg-subtle px-3 py-2.5 text-xs text-muted">
+                <span className="block text-[11px] font-bold text-ink-2">Evento</span>
+                <span className="block font-semibold text-ink">{evento.titulo}</span>
                 <span>Período: Q{periodoEvento.quarter} {periodoEvento.year} (según la fecha del evento)</span>
               </div>
             ) : (
@@ -200,16 +200,16 @@ export default function ICARegisterPage({ eventId = null, evento = null, encuest
             })}
           </div>
 
-          <div className="mt-5 flex items-start gap-2 rounded-lg bg-[#f4f6f8] p-3 text-[11px] text-[#59615e]">
-            <Info size={15} className="mt-0.5 shrink-0 text-[#a00046]" />
+          <div className="mt-5 flex items-start gap-2 rounded-lg bg-surface p-3 text-[11px] text-ink-2">
+            <Info size={15} className="mt-0.5 shrink-0 text-brand" />
             <p>Las respuestas se validan antes de guardarse y alimentan los indicadores del dashboard ICA.</p>
           </div>
 
-          {errorServidor && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{errorServidor}</p>}
+          {errorServidor && <p className="mt-4 rounded-lg bg-red-50 dark:bg-red-950/40 px-3 py-2 text-xs text-red-700 dark:text-red-300">{errorServidor}</p>}
 
           <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
-            <Link to="/ica" className="text-center text-xs font-semibold text-[#59615e] hover:text-[#a00046]">Cancelar</Link>
-            <button type="submit" disabled={enviando} className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#a00046] px-5 py-2.5 text-xs font-semibold text-white shadow-sm hover:bg-[#820039] disabled:opacity-60">{enviando ? 'Guardando...' : 'Guardar entrevista'} <ChevronRight size={14} /></button>
+            <Link to="/ica" className="text-center text-xs font-semibold text-ink-2 hover:text-brand">Cancelar</Link>
+            <button type="submit" disabled={enviando} className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-maroon px-5 py-2.5 text-xs font-semibold text-white shadow-sm hover:bg-maroon-dark disabled:opacity-60">{enviando ? 'Guardando...' : 'Guardar entrevista'} <ChevronRight size={14} /></button>
           </div>
         </form>
       </div>
@@ -221,23 +221,23 @@ function Pregunta({ numero, campo, pregunta, opciones, register, error }) {
   const esNumero = opciones === 'number';
 
   return (
-    <fieldset className="rounded-lg border border-[#e7ebec] p-3.5 transition-colors focus-within:border-[#c98ba5] sm:p-4">
-      <legend className="max-w-full px-1 text-[13px] font-semibold leading-5 text-[#252927]">
-        <span className="mr-2 text-[11px] font-bold text-[#a00046]">{String(numero).padStart(2, '0')}</span>{pregunta}
+    <fieldset className="rounded-lg border border-line p-3.5 transition-colors focus-within:border-brand-line sm:p-4">
+      <legend className="max-w-full px-1 text-[13px] font-semibold leading-5 text-ink">
+        <span className="mr-2 text-[11px] font-bold text-brand">{String(numero).padStart(2, '0')}</span>{pregunta}
       </legend>
       {esNumero ? (
         <input type="number" min="0" max="120" {...register(campo, { required: 'Respondé esta pregunta' })} className={`${CAMPO_ICA} mt-3 max-w-45`} placeholder="Edad" />
       ) : (
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
           {opciones.map((opcion) => (
-            <label key={opcion} className="flex cursor-pointer items-start gap-2 rounded-md border border-[#edf0f1] px-2.5 py-2 text-[11px] leading-4 text-[#59615e] hover:border-[#c98ba5] hover:bg-[#fff8fa]">
-              <input type="radio" value={opcion} {...register(campo, { required: 'Seleccioná una respuesta' })} className="mt-0.5 accent-[#a00046]" />
+            <label key={opcion} className="flex cursor-pointer items-start gap-2 rounded-md border border-line px-2.5 py-2 text-[11px] leading-4 text-ink-2 hover:border-brand-line hover:bg-brand-soft">
+              <input type="radio" value={opcion} {...register(campo, { required: 'Seleccioná una respuesta' })} className="mt-0.5 accent-maroon" />
               <span>{opcion}</span>
             </label>
           ))}
         </div>
       )}
-      {error && <span className="mt-2 block text-[10px] text-[#a00046]">{error}</span>}
+      {error && <span className="mt-2 block text-[10px] text-brand">{error}</span>}
     </fieldset>
   );
 }
@@ -245,9 +245,9 @@ function Pregunta({ numero, campo, pregunta, opciones, register, error }) {
 function Campo({ label, error, children }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#8a9290]">{label}</span>
+      <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-muted">{label}</span>
       {children}
-      {error && <span className="mt-1 block text-[10px] text-[#a00046]">{error}</span>}
+      {error && <span className="mt-1 block text-[10px] text-brand">{error}</span>}
     </label>
   );
 }

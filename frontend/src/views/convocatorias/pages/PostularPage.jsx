@@ -140,7 +140,7 @@ export default function PostularPage() {
     return (
       <main className="min-h-[calc(100vh-4rem)] bg-surface px-4 py-12 sm:px-6 lg:px-8">
         <div className="mx-auto flex max-w-xl flex-col items-center justify-center py-20 text-ink/60">
-          <Loader2 className="h-8 w-8 animate-spin text-maroon" />
+          <Loader2 className="h-8 w-8 animate-spin text-brand" />
           <p className="mt-3 text-xs font-medium">Buscando convocatorias abiertas...</p>
         </div>
       </main>
@@ -152,7 +152,7 @@ export default function PostularPage() {
       <div className="mx-auto max-w-2xl space-y-6">
         {/* Cabecera pública */}
         <div className="text-center space-y-1">
-          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-maroon">
+          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand">
             Convocatoria Abierta
           </p>
           <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-[30px]">
@@ -164,7 +164,7 @@ export default function PostularPage() {
         </div>
 
         {errorCarga && (
-          <div className="flex items-center gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-xs font-medium text-rose-700 shadow-xs">
+          <div className="flex items-center gap-3 rounded-2xl border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/40 p-4 text-xs font-medium text-rose-700 dark:text-rose-300 shadow-xs">
             <AlertCircle className="h-5 w-5 shrink-0 text-rose-500" />
             <span>{errorCarga}</span>
           </div>
@@ -172,8 +172,8 @@ export default function PostularPage() {
 
         {/* Pantalla de éxito */}
         {postulacionExitosa ? (
-          <div className="rounded-2xl border border-emerald-200 bg-white p-8 text-center shadow-xs space-y-4">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+          <div className="rounded-2xl border border-emerald-200 dark:border-emerald-900 bg-card p-8 text-center shadow-xs space-y-4">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400">
               <CheckCircle2 className="h-8 w-8" />
             </div>
 
@@ -205,7 +205,7 @@ export default function PostularPage() {
               <button
                 type="button"
                 onClick={handleNuevaPostulacion}
-                className="rounded-xl border border-ink/15 bg-white px-4 py-2.5 text-xs font-semibold text-ink hover:bg-surface transition-colors"
+                className="rounded-xl border border-ink/15 bg-card px-4 py-2.5 text-xs font-semibold text-ink hover:bg-surface transition-colors"
               >
                 Enviar otra postulación
               </button>
@@ -220,7 +220,7 @@ export default function PostularPage() {
           </div>
         ) : convocatorias.length === 0 ? (
           /* Estado sin convocatorias abiertas */
-          <div className="rounded-2xl border border-dashed border-ink/15 bg-white p-10 text-center shadow-xs space-y-3">
+          <div className="rounded-2xl border border-dashed border-ink/15 bg-card p-10 text-center shadow-xs space-y-3">
             <HelpCircle className="mx-auto h-10 w-10 text-ink/30" />
             <h3 className="text-sm font-semibold text-ink">No hay convocatorias vigentes</h3>
             <p className="text-xs text-ink/50 max-w-sm mx-auto">
@@ -240,10 +240,10 @@ export default function PostularPage() {
           /* Formulario de postulación */
           <form
             onSubmit={handleSubmit}
-            className="rounded-2xl border border-ink/10 bg-white p-6 shadow-xs sm:p-8 space-y-5"
+            className="rounded-2xl border border-ink/10 bg-card p-6 shadow-xs sm:p-8 space-y-5"
           >
             {errorEnvio && (
-              <div className="flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3.5 text-xs font-medium text-rose-700">
+              <div className="flex items-center gap-2 rounded-xl border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/40 p-3.5 text-xs font-medium text-rose-700 dark:text-rose-300">
                 <AlertCircle className="h-4 w-4 shrink-0 text-rose-500" />
                 <span>{errorEnvio}</span>
               </div>
@@ -258,7 +258,7 @@ export default function PostularPage() {
                 id="convocatoria"
                 value={convocatoriaSeleccionada}
                 onChange={(e) => setConvocatoriaSeleccionada(e.target.value)}
-                className="w-full rounded-xl border border-ink/15 bg-white px-3.5 py-2.5 text-xs font-medium text-ink focus:border-maroon focus:outline-hidden"
+                className="w-full rounded-xl border border-ink/15 bg-card px-3.5 py-2.5 text-xs font-medium text-ink focus:border-brand focus:outline-hidden"
                 required
               >
                 {convocatorias.map((c) => (
@@ -283,7 +283,7 @@ export default function PostularPage() {
                   onChange={handleChange}
                   placeholder="Ej. Juan Carlos"
                   required
-                  className="w-full rounded-xl border border-ink/15 bg-white px-3.5 py-2 text-xs text-ink placeholder:text-ink/35 focus:border-maroon focus:outline-hidden"
+                  className="w-full rounded-xl border border-ink/15 bg-card px-3.5 py-2 text-xs text-ink placeholder:text-ink/35 focus:border-brand focus:outline-hidden"
                 />
               </div>
 
@@ -299,7 +299,7 @@ export default function PostularPage() {
                   onChange={handleChange}
                   placeholder="Ej. Pérez"
                   required
-                  className="w-full rounded-xl border border-ink/15 bg-white px-3.5 py-2 text-xs text-ink placeholder:text-ink/35 focus:border-maroon focus:outline-hidden"
+                  className="w-full rounded-xl border border-ink/15 bg-card px-3.5 py-2 text-xs text-ink placeholder:text-ink/35 focus:border-brand focus:outline-hidden"
                 />
               </div>
             </div>
@@ -316,7 +316,7 @@ export default function PostularPage() {
                   value={formulario.maternal_last_name}
                   onChange={handleChange}
                   placeholder="Ej. Gómez"
-                  className="w-full rounded-xl border border-ink/15 bg-white px-3.5 py-2 text-xs text-ink placeholder:text-ink/35 focus:border-maroon focus:outline-hidden"
+                  className="w-full rounded-xl border border-ink/15 bg-card px-3.5 py-2 text-xs text-ink placeholder:text-ink/35 focus:border-brand focus:outline-hidden"
                 />
               </div>
 
@@ -332,7 +332,7 @@ export default function PostularPage() {
                   onChange={handleChange}
                   placeholder="Ej. 76543210"
                   required
-                  className="w-full rounded-xl border border-ink/15 bg-white px-3.5 py-2 text-xs text-ink placeholder:text-ink/35 focus:border-maroon focus:outline-hidden"
+                  className="w-full rounded-xl border border-ink/15 bg-card px-3.5 py-2 text-xs text-ink placeholder:text-ink/35 focus:border-brand focus:outline-hidden"
                 />
               </div>
             </div>
@@ -349,7 +349,7 @@ export default function PostularPage() {
                 onChange={handleChange}
                 placeholder="Ej. juan.perez@estudiante.univalle.edu"
                 required
-                className="w-full rounded-xl border border-ink/15 bg-white px-3.5 py-2 text-xs text-ink placeholder:text-ink/35 focus:border-maroon focus:outline-hidden"
+                className="w-full rounded-xl border border-ink/15 bg-card px-3.5 py-2 text-xs text-ink placeholder:text-ink/35 focus:border-brand focus:outline-hidden"
               />
               <p className="text-[11px] text-ink/50">
                 Asegúrate de escribir un correo al que tengas acceso frecuente.

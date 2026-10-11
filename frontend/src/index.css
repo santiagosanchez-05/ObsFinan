@@ -1,13 +1,58 @@
 @import "tailwindcss";
 
+/* Modo oscuro: lo activa la clase `dark` en <html> (ver src/shared/tema.js). */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   /* Paleta oficial Univalle (extraída de univalle.edu) */
   --color-maroon: #9E0044;
   --color-maroon-light: #BA254A;
+  --color-maroon-dark: #7D0035;
   --color-surface: #F5F7F9;
   --color-ink: #1D201E;
 
+  /* Colores del tema: cada uno tiene su versión oscura en `.dark` (abajo).
+     Usar estos en vez de hex sueltos para que el modo oscuro funcione. */
+  --color-card: #FFFFFF; /* tarjetas, paneles, headers */
+  --color-subtle: #F7F8F9; /* fondos suaves dentro de una tarjeta */
+  --color-line: #E2E6E8; /* bordes y separadores */
+  --color-ink-2: #4A524F; /* texto secundario */
+  --color-muted: #7A8380; /* texto de ayuda, etiquetas */
+  --color-brand: #A00046; /* guindo para textos, bordes e íconos */
+  --color-brand-soft: #FFF3F7; /* fondo rosado suave */
+  --color-brand-line: #E8B6C6; /* borde rosado */
+  --color-night: #1D201E; /* siempre oscuro: footer, tooltips, overlays */
+
   --font-sans: "Sora", system-ui, sans-serif;
+}
+
+.dark {
+  color-scheme: dark;
+  --color-surface: #0F1211;
+  --color-ink: #E6EAE8;
+  --color-card: #181C1B;
+  --color-subtle: #202524;
+  --color-line: #2E3533;
+  --color-ink-2: #C3CAC7;
+  --color-muted: #959E9B;
+  --color-brand: #F27BA6;
+  --color-brand-soft: #351A25;
+  --color-brand-line: #6E3149;
+  --color-night: #050606;
+}
+
+/* Tooltips de los gráficos (Recharts los pinta blancos por defecto). */
+.recharts-default-tooltip {
+  background-color: var(--color-card) !important;
+  border-color: var(--color-line) !important;
+  color: var(--color-ink);
+}
+.recharts-tooltip-label {
+  color: var(--color-ink);
+}
+/* El texto de las leyendas toma el color de la serie: en modo oscuro el guindo no se lee. */
+.dark .recharts-legend-item-text {
+  color: var(--color-ink-2) !important;
 }
 
 body {

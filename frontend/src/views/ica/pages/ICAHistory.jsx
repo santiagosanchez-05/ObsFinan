@@ -149,7 +149,7 @@ export default function ICAHistory() {
   }
 
   function IconoOrden({ columna }) {
-    if (sortBy !== columna) return <ChevronsUpDown size={11} className="text-[#c3c9c7]" />;
+    if (sortBy !== columna) return <ChevronsUpDown size={11} className="text-muted" />;
     return sortDir === 'asc' ? <ChevronUp size={11} /> : <ChevronDown size={11} />;
   }
 
@@ -174,7 +174,7 @@ export default function ICAHistory() {
   }
 
   return (
-    <main className="min-h-[calc(100vh-4rem)] bg-[#f4f6f8] px-4 py-5 sm:px-6 lg:px-8">
+    <main className="min-h-[calc(100vh-4rem)] bg-surface px-4 py-5 sm:px-6 lg:px-8">
       <ConfirmDialog
         open={Boolean(registroAEliminar)}
         titulo="¿Eliminar este registro?"
@@ -188,37 +188,37 @@ export default function ICAHistory() {
         {/* Breadcrumb */}
         <Link
           to="/ica"
-          className="mb-3 inline-flex items-center gap-1.5 text-xs font-semibold text-[#a00046] hover:underline"
+          className="mb-3 inline-flex items-center gap-1.5 text-xs font-semibold text-brand hover:underline"
         >
           <ArrowLeft size={13} /> Volver al Dashboard ICA
         </Link>
 
         {/* Encabezado */}
         <div className="mb-5">
-          <h1 className="text-2xl font-bold tracking-tight text-[#202522] sm:text-[28px]">
+          <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-[28px]">
             Historial de registros — ICA
           </h1>
-          <p className="mt-1 text-sm text-[#6d7673]">
+          <p className="mt-1 text-sm text-muted">
             Todos los registros individuales del Índice de Calidad Aseguradora.
           </p>
         </div>
 
         {/* Barra de tabs, filtro, búsqueda y acción */}
-        <section className="mb-5 flex flex-col gap-3 rounded-xl border border-[#e2e6e8] bg-white p-3 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+        <section className="mb-5 flex flex-col gap-3 rounded-xl border border-line bg-card p-3 shadow-sm lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-wrap items-center gap-3">
 
             <div className="relative">
               <select
                 value={communityId}
                 onChange={(e) => cambiarComunidad(e.target.value)}
-                className="appearance-none rounded-lg border border-[#dfe4e5] bg-white py-2 pl-3 pr-8 text-xs font-semibold text-[#59615e] outline-none focus:border-[#a00046]"
+                className="appearance-none rounded-lg border border-line bg-card py-2 pl-3 pr-8 text-xs font-semibold text-ink-2 outline-none focus:border-brand"
               >
                 <option value="">Filtrar por Comuna</option>
                 {comunidades.map((c) => (
                   <option key={c.id} value={c.id}>{new Set(comunidades.map((x) => x.campusId)).size > 1 && c.sede ? `${c.nombre} (${c.sede})` : c.nombre}</option>
                 ))}
               </select>
-              <ChevronDown size={13} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8a9290]" />
+              <ChevronDown size={13} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-muted" />
             </div>
             <div className="relative">
               <select
@@ -227,7 +227,7 @@ export default function ICAHistory() {
                   setEstado(e.target.value);
                   setPage(1);
                 }}
-                className="appearance-none rounded-lg border border-[#dfe4e5] bg-white py-2 pl-3 pr-8 text-xs font-semibold text-[#59615e] outline-none focus:border-[#a00046]"
+                className="appearance-none rounded-lg border border-line bg-card py-2 pl-3 pr-8 text-xs font-semibold text-ink-2 outline-none focus:border-brand"
               >
                 <option value="">Filtrar por Estado</option>
                 <option value="verificado">Verificado</option>
@@ -237,53 +237,53 @@ export default function ICAHistory() {
 
               <ChevronDown
                 size={13}
-                className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8a9290]"
+                className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-muted"
               />
             </div>
             <label className="relative">
-              <Search size={13} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8a9290]" />
+              <Search size={13} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
               <input
                 type="text"
                 value={busquedaInput}
                 onChange={(e) => setBusquedaInput(e.target.value)}
                 placeholder="Buscar por comuna..."
-                className="w-64 rounded-lg border border-[#dfe4e5] bg-white py-2 pl-8 pr-3 text-xs text-[#414845] outline-none focus:border-[#a00046]"
+                className="w-64 rounded-lg border border-line bg-card py-2 pl-8 pr-3 text-xs text-ink-2 outline-none focus:border-brand"
               />
             </label>
           </div>
 
           <Link
             to="/ica/registrar"
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#a00046] px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#820039]"
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-maroon px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-maroon-dark"
           >
             <Plus size={14} /> Nuevo Registro
           </Link>
         </section>
 
         {error && (
-          <p className="mb-5 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+          <p className="mb-5 rounded-lg bg-red-50 dark:bg-red-950/40 px-3 py-2 text-sm text-red-700 dark:text-red-300">{error}</p>
         )}
 
         {/* Tabla */}
-        <section className="overflow-hidden rounded-xl border border-[#e2e6e8] bg-white shadow-sm">
+        <section className="overflow-hidden rounded-xl border border-line bg-card shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[880px] text-left text-xs">
-              <thead className="bg-[#fafbfb] text-[9px] font-bold uppercase tracking-wider text-[#8a9290]">
+              <thead className="bg-subtle text-[9px] font-bold uppercase tracking-wider text-muted">
                 <tr>
                   <th className="px-4 py-3">Origen</th>
                   <th className="px-4 py-3">
-                    <button onClick={() => alternarOrden('comuna')} className="inline-flex items-center gap-1 hover:text-[#a00046]">
+                    <button onClick={() => alternarOrden('comuna')} className="inline-flex items-center gap-1 hover:text-brand">
                       {COLUMNAS_ORDENABLES.comuna} <IconoOrden columna="comuna" />
                     </button>
                   </th>
                   <th className="px-4 py-3">
-                    <button onClick={() => alternarOrden('periodo')} className="inline-flex items-center gap-1 hover:text-[#a00046]">
+                    <button onClick={() => alternarOrden('periodo')} className="inline-flex items-center gap-1 hover:text-brand">
                       {COLUMNAS_ORDENABLES.periodo} <IconoOrden columna="periodo" />
                     </button>
                   </th>
                   <th className="px-4 py-3">Registros</th>
                   <th className="px-4 py-3">
-                    <button onClick={() => alternarOrden('fecha')} className="inline-flex items-center gap-1 hover:text-[#a00046]">
+                    <button onClick={() => alternarOrden('fecha')} className="inline-flex items-center gap-1 hover:text-brand">
                       {COLUMNAS_ORDENABLES.fecha} <IconoOrden columna="fecha" />
                     </button>
                   </th>
@@ -294,35 +294,35 @@ export default function ICAHistory() {
               <tbody>
                 {cargando ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-[#8a9290]">
+                    <td colSpan={7} className="px-4 py-8 text-center text-muted">
                       <Loader2 size={16} className="mx-auto mb-2 animate-spin" />
                       Cargando historial...
                     </td>
                   </tr>
                 ) : registros.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-[#8a9290]">
+                    <td colSpan={7} className="px-4 py-8 text-center text-muted">
                       No hay registros que coincidan con los filtros seleccionados.
                     </td>
                   </tr>
                 ) : (
                   registros.map((r) => (
-                    <tr key={r.id} className="border-t border-[#f0f2f2] text-[#48504d] hover:bg-[#fff8fa]">
+                    <tr key={r.id} className="border-t border-line text-ink-2 hover:bg-brand-soft">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2.5">
-                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#f3ecfb] text-[#7c4dbd]">
+                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#f3ecfb] dark:bg-white/10 text-[#7c4dbd] dark:text-[#b79be8]">
                             <SquarePen size={14} />
                           </span>
                           <div>
-                            <p className="font-semibold text-[#252927]">{r.origen}</p>
-                            <p className="text-[9px] font-bold uppercase tracking-wider text-[#7c4dbd]">Manual</p>
+                            <p className="font-semibold text-ink">{r.origen}</p>
+                            <p className="text-[9px] font-bold uppercase tracking-wider text-[#7c4dbd] dark:text-[#b79be8]">Manual</p>
                           </div>
                         </div>
                       </td>
                       <td className="px-4 py-3">{r.comuna}</td>
                       <td className="px-4 py-3">{r.periodo}</td>
                       <td className="px-4 py-3">
-                        <span className="rounded-full bg-[#f1f3f3] px-2 py-1 text-[10px] font-bold text-[#414845]">
+                        <span className="rounded-full bg-subtle px-2 py-1 text-[10px] font-bold text-ink-2">
                           {r.registros}
                         </span>
                       </td>
@@ -330,19 +330,19 @@ export default function ICAHistory() {
                       <td className="px-4 py-3">
                         <span
                           className={`rounded-full px-2 py-1 text-[10px] font-bold ${r.estado === 'Verificado'
-                              ? 'bg-[#eaf6ef] text-[#2f9e58]'
+                              ? 'bg-[#eaf6ef] dark:bg-white/10 text-[#2f9e58]'
                               : r.estado === 'Rechazado'
-                                ? 'bg-[#fdeaea] text-[#dc2626]'
-                                : 'bg-[#fbf1de] text-[#b7891e]'
+                                ? 'bg-[#fdeaea] dark:bg-white/10 text-[#dc2626]'
+                                : 'bg-[#fbf1de] dark:bg-white/10 text-[#b7891e]'
                             }`}
                         >
                           {r.estado}
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex items-center justify-end gap-3 text-[#8a9290]">
-                          <Link to={`/ica/historial/${r.id}`} className="hover:text-[#a00046]"><Eye size={14} /></Link>
-                          <button onClick={() => setRegistroAEliminar(r)} className="hover:text-[#a00046]">
+                        <div className="flex items-center justify-end gap-3 text-muted">
+                          <Link to={`/ica/historial/${r.id}`} className="hover:text-brand"><Eye size={14} /></Link>
+                          <button onClick={() => setRegistroAEliminar(r)} className="hover:text-brand">
                             <Trash2 size={14} />
                           </button>
                         </div>
@@ -354,7 +354,7 @@ export default function ICAHistory() {
             </table>
           </div>
 
-          <div className="flex flex-col gap-2 border-t border-[#edf0f1] px-4 py-3 text-[10px] text-[#8a9290] sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-2 border-t border-line px-4 py-3 text-[10px] text-muted sm:flex-row sm:items-center sm:justify-between">
             <span>
               Mostrando {registros.length} de {total} registros
             </span>
@@ -362,17 +362,17 @@ export default function ICAHistory() {
               <button
                 disabled={page <= 1}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
-                className="rounded border border-[#e4e8e8] px-2 py-1 disabled:opacity-50"
+                className="rounded border border-line px-2 py-1 disabled:opacity-50"
               >
                 <ChevronDown size={12} className="rotate-90" />
               </button>
-              <span className="px-2 font-semibold text-[#59615e]">
+              <span className="px-2 font-semibold text-ink-2">
                 Página {page} de {totalPaginas}
               </span>
               <button
                 disabled={page >= totalPaginas}
                 onClick={() => setPage((p) => Math.min(totalPaginas, p + 1))}
-                className="rounded border border-[#e4e8e8] px-2 py-1 disabled:opacity-50"
+                className="rounded border border-line px-2 py-1 disabled:opacity-50"
               >
                 <ChevronDown size={12} className="-rotate-90" />
               </button>

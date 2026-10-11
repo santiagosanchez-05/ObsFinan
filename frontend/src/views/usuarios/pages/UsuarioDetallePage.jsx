@@ -69,19 +69,19 @@ export default function UsuarioDetallePage() {
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-surface px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-2xl">
-        <Link to="/superadmin/usuarios" className="inline-flex items-center gap-1 text-xs font-medium text-maroon hover:underline">
+        <Link to="/superadmin/usuarios" className="inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline">
           <ArrowLeft size={14} /> Volver a Usuarios
         </Link>
         <h1 className="mt-2 text-2xl font-bold tracking-tight text-ink">Detalle de usuario</h1>
 
         {estado.cargando && <p className="mt-6 text-sm text-ink/50">Cargando...</p>}
-        {estado.error && <p className="mt-6 text-sm text-maroon">{estado.error}</p>}
+        {estado.error && <p className="mt-6 text-sm text-brand">{estado.error}</p>}
 
         {estado.usuario && (
-          <div className="mt-4 rounded-2xl border border-black/10 bg-white p-6 shadow-sm sm:p-8">
+          <div className="mt-4 rounded-2xl border border-line bg-card p-6 shadow-sm sm:p-8">
             {/* Encabezado centrado: avatar + nombre + badges */}
             <div className="flex flex-col items-center text-center">
-              <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-maroon/10 text-2xl font-bold text-maroon">
+              <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-maroon/10 text-2xl font-bold text-brand">
                 {fotoUrl ? (
                   <img src={fotoUrl} alt={`Foto de ${estado.usuario.nombre}`} className="h-full w-full object-cover" />
                 ) : (
@@ -95,12 +95,12 @@ export default function UsuarioDetallePage() {
                 {estado.usuario.nombre} {estado.usuario.apellidos}
               </h2>
               <div className="mt-2 flex items-center gap-2">
-                <span className="rounded-full bg-maroon/10 px-3 py-1 text-[11px] font-semibold text-maroon">
+                <span className="rounded-full bg-maroon/10 px-3 py-1 text-[11px] font-semibold text-brand">
                   {ROL_LABEL[estado.usuario.rol] ?? estado.usuario.rol}
                 </span>
                 <span
                   className={`rounded-full px-3 py-1 text-[11px] font-semibold ${
-                    estado.usuario.activo ? 'bg-green-100 text-green-700' : 'bg-black/5 text-ink/50'
+                    estado.usuario.activo ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300' : 'bg-ink/5 text-ink/50'
                   }`}
                 >
                   {estado.usuario.activo ? 'Activo' : 'Bloqueado'}
@@ -109,9 +109,9 @@ export default function UsuarioDetallePage() {
             </div>
 
             {/* Dos columnas: información personal / información de la cuenta */}
-            <div className="mt-8 grid gap-8 border-t border-black/5 pt-6 sm:grid-cols-2">
+            <div className="mt-8 grid gap-8 border-t border-line/70 pt-6 sm:grid-cols-2">
               <div>
-                <h3 className="border-b border-black/5 pb-2 text-sm font-bold text-ink">Información personal</h3>
+                <h3 className="border-b border-line/70 pb-2 text-sm font-bold text-ink">Información personal</h3>
                 <div className="mt-4 grid grid-cols-2 gap-4">
                   <Dato label="Nombres" valor={estado.usuario.nombre} />
                   <div />
@@ -124,7 +124,7 @@ export default function UsuarioDetallePage() {
               </div>
 
               <div>
-                <h3 className="border-b border-black/5 pb-2 text-sm font-bold text-ink">Información de la cuenta</h3>
+                <h3 className="border-b border-line/70 pb-2 text-sm font-bold text-ink">Información de la cuenta</h3>
                 <div className="mt-4 space-y-4">
                   <Dato label="Rol" valor={ROL_LABEL[estado.usuario.rol] ?? estado.usuario.rol} />
                   <Dato label="Sede" valor={estado.usuario.sede} />
@@ -149,7 +149,7 @@ export default function UsuarioDetallePage() {
               </div>
             </div>
 
-            <div className="mt-8 flex justify-center border-t border-black/5 pt-6">
+            <div className="mt-8 flex justify-center border-t border-line/70 pt-6">
               <Link
                 to={`/superadmin/usuarios/${estado.usuario.id}/editar`}
                 className="rounded-lg bg-maroon px-6 py-2.5 text-sm font-semibold text-white hover:bg-maroon-light"

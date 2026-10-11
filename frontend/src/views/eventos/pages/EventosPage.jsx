@@ -74,7 +74,7 @@ export default function EventosPage() {
       <div className="mx-auto max-w-6xl">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.18em] text-maroon">Agenda</p>
+            <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.18em] text-brand">Agenda</p>
             <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-[28px]">Eventos</h1>
             <p className="mt-1 text-sm text-ink/60">
               Charlas, talleres y jornadas de encuesta del Observatorio en las sedes de Univalle.
@@ -91,7 +91,7 @@ export default function EventosPage() {
         </div>
 
         {esEncuestador && (
-          <label className="mt-5 flex items-center gap-2 rounded-xl border border-maroon/20 bg-maroon/5 px-4 py-3 text-sm text-ink">
+          <label className="mt-5 flex items-center gap-2 rounded-xl border border-brand/20 bg-maroon/5 px-4 py-3 text-sm text-ink">
             <input
               type="checkbox"
               checked={soloDisponibles}
@@ -106,7 +106,7 @@ export default function EventosPage() {
           </label>
         )}
 
-        <div className={`${esEncuestador ? 'mt-3' : 'mt-5'} flex flex-col gap-3 rounded-2xl border border-black/10 bg-white p-3 shadow-sm md:flex-row md:items-center`}>
+        <div className={`${esEncuestador ? 'mt-3' : 'mt-5'} flex flex-col gap-3 rounded-2xl border border-line bg-card p-3 shadow-sm md:flex-row md:items-center`}>
           {!filtrarDisponibles && (
             <div className="flex rounded-lg bg-surface p-1" role="tablist" aria-label="Periodo">
               {PERIODOS.map((p) => (
@@ -119,7 +119,7 @@ export default function EventosPage() {
                     setPagina(1);
                   }}
                   className={`flex-1 rounded-md px-4 py-1.5 text-sm font-medium transition md:flex-none ${
-                    periodo === p.valor ? 'bg-white text-maroon shadow-sm' : 'text-ink/60 hover:text-ink'
+                    periodo === p.valor ? 'bg-card text-brand shadow-sm' : 'text-ink/60 hover:text-ink'
                   }`}
                 >
                   {p.nombre}
@@ -136,7 +136,7 @@ export default function EventosPage() {
                 setCampusId(e.target.value);
                 setPagina(1);
               }}
-              className="rounded-lg border border-black/10 px-3 py-2 text-sm focus:border-maroon focus:outline-none"
+              className="rounded-lg border border-line px-3 py-2 text-sm focus:border-brand focus:outline-none"
             >
               <option value="">Todas las sedes</option>
               {sedes.map((s) => (
@@ -154,13 +154,13 @@ export default function EventosPage() {
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
               placeholder="Buscar por título o lugar"
-              className="w-full rounded-lg border border-black/10 py-2 pl-9 pr-3 text-sm focus:border-maroon focus:outline-none"
+              className="w-full rounded-lg border border-line py-2 pl-9 pr-3 text-sm focus:border-brand focus:outline-none"
             />
           </label>
         </div>
 
         {error && (
-          <p className="mt-6 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
+          <p className="mt-6 rounded-lg bg-red-50 dark:bg-red-950/40 px-4 py-3 text-sm text-red-700 dark:text-red-300" role="alert">
             {error}
           </p>
         )}
@@ -168,7 +168,7 @@ export default function EventosPage() {
         {cargando && !datos && <p className="mt-10 text-center text-sm text-ink/50">Cargando eventos…</p>}
 
         {!error && datos && eventos.length === 0 && (
-          <div className="mt-6 rounded-2xl border border-dashed border-black/15 bg-white px-6 py-14 text-center">
+          <div className="mt-6 rounded-2xl border border-dashed border-line bg-card px-6 py-14 text-center">
             <CalendarDays size={28} className="mx-auto text-ink/30" />
             <p className="mt-3 font-semibold text-ink">
               {filtrarDisponibles
@@ -198,7 +198,7 @@ export default function EventosPage() {
             <button
               onClick={() => setPagina((p) => p - 1)}
               disabled={paginacion.pagina <= 1}
-              className="rounded-lg border border-black/10 bg-white px-3 py-1.5 font-medium text-ink disabled:opacity-40"
+              className="rounded-lg border border-line bg-card px-3 py-1.5 font-medium text-ink disabled:opacity-40"
             >
               Anterior
             </button>
@@ -208,7 +208,7 @@ export default function EventosPage() {
             <button
               onClick={() => setPagina((p) => p + 1)}
               disabled={paginacion.pagina >= paginacion.totalPaginas}
-              className="rounded-lg border border-black/10 bg-white px-3 py-1.5 font-medium text-ink disabled:opacity-40"
+              className="rounded-lg border border-line bg-card px-3 py-1.5 font-medium text-ink disabled:opacity-40"
             >
               Siguiente
             </button>
@@ -225,7 +225,7 @@ function TarjetaEvento({ evento, mostrarEncuestas, mostrarParticipacion }) {
   return (
     <Link
       to={`/eventos/${evento.id}`}
-      className="group flex h-full flex-col overflow-hidden rounded-2xl border border-black/10 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+      className="group flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-card shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
     >
       <div className="relative aspect-[16/9] bg-gradient-to-br from-maroon to-maroon-light">
         {evento.imagenUrl ? (
@@ -233,14 +233,14 @@ function TarjetaEvento({ evento, mostrarEncuestas, mostrarParticipacion }) {
         ) : (
           <CalendarDays size={40} className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white/40" />
         )}
-        <div className="absolute left-3 top-3 rounded-lg bg-white px-2.5 py-1 text-center leading-tight shadow">
-          <p className="text-lg font-bold text-maroon">{dia}</p>
+        <div className="absolute left-3 top-3 rounded-lg bg-card px-2.5 py-1 text-center leading-tight shadow">
+          <p className="text-lg font-bold text-brand">{dia}</p>
           <p className="text-[11px] font-semibold uppercase text-ink/60">{mes}</p>
         </div>
       </div>
 
       <div className="flex flex-1 flex-col p-4">
-        <h2 className="font-semibold text-ink group-hover:text-maroon">{evento.titulo}</h2>
+        <h2 className="font-semibold text-ink group-hover:text-brand">{evento.titulo}</h2>
         <ul className="mt-3 space-y-1.5 text-sm text-ink/60">
           <li className="flex items-center gap-2">
             <Clock size={14} className="shrink-0" /> {evento.hora} · {evento.modalidadNombre}
@@ -255,7 +255,7 @@ function TarjetaEvento({ evento, mostrarEncuestas, mostrarParticipacion }) {
 
         {mostrarEncuestas && (evento.hasIca || evento.hasSpe) && (
           <div className="mt-auto flex gap-2 pt-4">
-            {evento.hasIca && <span className="rounded-full bg-maroon/10 px-2.5 py-0.5 text-xs font-semibold text-maroon">Encuesta ICA</span>}
+            {evento.hasIca && <span className="rounded-full bg-maroon/10 px-2.5 py-0.5 text-xs font-semibold text-brand">Encuesta ICA</span>}
             {evento.hasSpe && <span className="rounded-full bg-ink/10 px-2.5 py-0.5 text-xs font-semibold text-ink">Encuesta SPE</span>}
           </div>
         )}
@@ -263,11 +263,11 @@ function TarjetaEvento({ evento, mostrarEncuestas, mostrarParticipacion }) {
         {mostrarParticipacion && (evento.participando || evento.puedeParticipar) && (
           <div className="mt-auto pt-4">
             {evento.participando ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-semibold text-green-700">
+              <span className="inline-flex items-center gap-1 rounded-full bg-green-50 dark:bg-green-950/40 px-2.5 py-0.5 text-xs font-semibold text-green-700 dark:text-green-300">
                 <CheckCircle2 size={12} /> Ya estás anotado
               </span>
             ) : (
-              <span className="rounded-full bg-maroon/10 px-2.5 py-0.5 text-xs font-semibold text-maroon">Puedes participar</span>
+              <span className="rounded-full bg-maroon/10 px-2.5 py-0.5 text-xs font-semibold text-brand">Puedes participar</span>
             )}
           </div>
         )}

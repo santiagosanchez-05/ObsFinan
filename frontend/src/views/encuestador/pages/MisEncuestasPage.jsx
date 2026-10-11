@@ -92,7 +92,7 @@ export default function MisEncuestasPage() {
       <div className="mx-auto max-w-5xl space-y-6">
         {/* Cabecera */}
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-maroon">
+          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand">
             Panel del Encuestador
           </p>
           <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-[28px]">
@@ -104,7 +104,7 @@ export default function MisEncuestasPage() {
         </div>
 
         {/* Resumen de estados y filtros */}
-        <div className="flex flex-col gap-4 rounded-2xl border border-ink/10 bg-white p-4 shadow-xs">
+        <div className="flex flex-col gap-4 rounded-2xl border border-ink/10 bg-card p-4 shadow-xs">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2">
               <button
@@ -125,7 +125,7 @@ export default function MisEncuestasPage() {
                 className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
                   filtroEstado === 'pendiente'
                     ? 'bg-amber-500 text-white'
-                    : 'bg-surface text-amber-700 hover:bg-amber-50'
+                    : 'bg-surface text-amber-700 dark:text-amber-300 hover:bg-amber-50'
                 }`}
               >
                 <Clock className="h-3.5 w-3.5" />
@@ -138,7 +138,7 @@ export default function MisEncuestasPage() {
                 className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
                   filtroEstado === 'aprobada'
                     ? 'bg-emerald-600 text-white'
-                    : 'bg-surface text-emerald-700 hover:bg-emerald-50'
+                    : 'bg-surface text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50'
                 }`}
               >
                 <CheckCircle2 className="h-3.5 w-3.5" />
@@ -151,7 +151,7 @@ export default function MisEncuestasPage() {
                 className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
                   filtroEstado === 'rechazada'
                     ? 'bg-rose-600 text-white'
-                    : 'bg-surface text-rose-700 hover:bg-rose-50'
+                    : 'bg-surface text-rose-700 dark:text-rose-300 hover:bg-rose-50'
                 }`}
               >
                 <XCircle className="h-3.5 w-3.5" />
@@ -164,7 +164,7 @@ export default function MisEncuestasPage() {
               <select
                 value={filtroModulo}
                 onChange={(e) => setFiltroModulo(e.target.value)}
-                className="rounded-lg border border-ink/15 bg-white px-3 py-1.5 text-xs font-medium text-ink focus:border-maroon focus:outline-hidden"
+                className="rounded-lg border border-ink/15 bg-card px-3 py-1.5 text-xs font-medium text-ink focus:border-brand focus:outline-hidden"
               >
                 <option value="todos">Todos los módulos</option>
                 <option value="ICA">Solo ICA</option>
@@ -177,13 +177,13 @@ export default function MisEncuestasPage() {
         {/* Estados de carga y error */}
         {cargando && (
           <div className="flex flex-col items-center justify-center py-20 text-ink/60">
-            <Loader2 className="h-8 w-8 animate-spin text-maroon" />
+            <Loader2 className="h-8 w-8 animate-spin text-brand" />
             <p className="mt-3 text-xs font-medium">Consultando estado de tus encuestas...</p>
           </div>
         )}
 
         {error && !cargando && (
-          <div className="flex items-center gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-xs font-medium text-rose-700 shadow-xs">
+          <div className="flex items-center gap-3 rounded-2xl border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/40 p-4 text-xs font-medium text-rose-700 dark:text-rose-300 shadow-xs">
             <AlertCircle className="h-5 w-5 shrink-0 text-rose-500" />
             <span>{error}</span>
           </div>
@@ -191,7 +191,7 @@ export default function MisEncuestasPage() {
 
         {/* Estado vacío */}
         {!cargando && !error && encuestasFiltradas.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-ink/15 bg-white p-12 text-center shadow-xs space-y-3">
+          <div className="rounded-2xl border border-dashed border-ink/15 bg-card p-12 text-center shadow-xs space-y-3">
             <FileText className="mx-auto h-10 w-10 text-ink/30" />
             <h3 className="text-sm font-semibold text-ink">No hay encuestas para mostrar</h3>
             <p className="text-xs text-ink/50 max-w-sm mx-auto">
@@ -212,12 +212,12 @@ export default function MisEncuestasPage() {
               return (
                 <div
                   key={enc.id}
-                  className={`rounded-2xl border bg-white p-5 shadow-xs transition-colors ${
+                  className={`rounded-2xl border bg-card p-5 shadow-xs transition-colors ${
                     esRechazada
-                      ? 'border-rose-200 hover:border-rose-300'
+                      ? 'border-rose-200 dark:border-rose-900 hover:border-rose-300'
                       : esAprobada
-                      ? 'border-emerald-200 hover:border-emerald-300'
-                      : 'border-amber-200 hover:border-amber-300'
+                      ? 'border-emerald-200 dark:border-emerald-900 hover:border-emerald-300'
+                      : 'border-amber-200 dark:border-amber-900 hover:border-amber-300'
                   }`}
                 >
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
@@ -226,10 +226,10 @@ export default function MisEncuestasPage() {
                         <span
                           className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider ${
                             esAprobada
-                              ? 'bg-emerald-100 text-emerald-800'
+                              ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300'
                               : esRechazada
-                              ? 'bg-rose-100 text-rose-800'
-                              : 'bg-amber-100 text-amber-800'
+                              ? 'bg-rose-100 dark:bg-rose-900/40 text-rose-800 dark:text-rose-300'
+                              : 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300'
                           }`}
                         >
                           {esAprobada ? (
@@ -253,8 +253,8 @@ export default function MisEncuestasPage() {
                         <span
                           className={`rounded-full px-2 py-0.5 text-[11px] font-bold uppercase ${
                             enc.modulo === 'ICA'
-                              ? 'bg-maroon/10 text-maroon'
-                              : 'bg-sky-100 text-sky-800'
+                              ? 'bg-maroon/10 text-brand'
+                              : 'bg-sky-100 dark:bg-sky-900/40 text-sky-800 dark:text-sky-300'
                           }`}
                         >
                           {enc.modulo}
@@ -296,12 +296,12 @@ export default function MisEncuestasPage() {
 
                       {/* Motivo de rechazo destacado */}
                       {esRechazada && enc.motivoRechazo && (
-                        <div className="mt-2 rounded-xl border border-rose-200 bg-rose-50/70 p-3 text-xs text-rose-900">
-                          <p className="font-semibold text-rose-800 flex items-center gap-1.5">
-                            <AlertCircle className="h-3.5 w-3.5 text-rose-600 shrink-0" />
+                        <div className="mt-2 rounded-xl border border-rose-200 dark:border-rose-900 bg-rose-50/70 dark:bg-rose-950/40 p-3 text-xs text-rose-900 dark:text-rose-300">
+                          <p className="font-semibold text-rose-800 dark:text-rose-300 flex items-center gap-1.5">
+                            <AlertCircle className="h-3.5 w-3.5 text-rose-600 dark:text-rose-400 shrink-0" />
                             <span>Motivo del rechazo:</span>
                           </p>
-                          <p className="mt-0.5 text-rose-700 pl-5">{enc.motivoRechazo}</p>
+                          <p className="mt-0.5 text-rose-700 dark:text-rose-300 pl-5">{enc.motivoRechazo}</p>
                         </div>
                       )}
                     </div>

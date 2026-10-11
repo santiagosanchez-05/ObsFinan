@@ -19,7 +19,7 @@ const OPCIONES_POR_DEFECTO = {
 // El semestre es siempre 1 o 2, no depende de lo que haya en la base.
 const SEMESTRES = [1, 2];
 
-const CLASE_SELECT = 'w-full rounded-lg border border-[#dfe4e5] bg-white px-3 py-2 text-xs text-[#414845] outline-none focus:border-[#a00046]';
+const CLASE_SELECT = 'w-full rounded-lg border border-line bg-card px-3 py-2 text-xs text-ink-2 outline-none focus:border-brand';
 
 // Las opciones pueden llegar como texto ('La Paz') o como { value, label }.
 const valorDe = (opcion) => (typeof opcion === 'object' ? String(opcion.value ?? opcion.id ?? opcion.nombre) : String(opcion));
@@ -35,9 +35,9 @@ export default function FiltrosSpe({ filtros = {}, onAplicar, opciones }) {
   const anios = opciones?.anios ?? [...new Set(lista('periodos').map(({ year }) => Number(year)))].sort((a, b) => b - a);
 
   return (
-    <section className="rounded-xl border border-[#e2e6e8] bg-white p-4 shadow-sm">
-      <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#777f7c]">
-        <Filter size={14} className="text-[#a00046]" /> Filtros de consulta
+    <section className="rounded-xl border border-line bg-card p-4 shadow-sm">
+      <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted">
+        <Filter size={14} className="text-brand" /> Filtros de consulta
       </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[repeat(5,1fr)_auto]">
         <Campo etiqueta="Año" value={borrador.year} onChange={cambiar('year')}>
@@ -63,7 +63,7 @@ export default function FiltrosSpe({ filtros = {}, onAplicar, opciones }) {
         <button
           type="button"
           onClick={() => onAplicar?.(borrador)}
-          className="rounded-lg bg-[#252927] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#a00046]"
+          className="rounded-lg bg-night px-5 py-2 text-sm font-semibold text-white transition hover:bg-maroon"
         >
           Aplicar filtros
         </button>
@@ -75,7 +75,7 @@ export default function FiltrosSpe({ filtros = {}, onAplicar, opciones }) {
 function Campo({ etiqueta, value, onChange, children }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#8a9290]">{etiqueta}</span>
+      <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-muted">{etiqueta}</span>
       <select value={value} onChange={onChange} className={CLASE_SELECT}>
         <option value="">Todos</option>
         {children}

@@ -32,16 +32,16 @@ const ESTADOS = [
 ];
 
 const ESTILO_ESTADO = {
-  Aprobada: 'bg-[#eaf6ef] text-[#2f9e58]',
-  Pendiente: 'bg-[#fbf1de] text-[#b7891e]',
-  Rechazada: 'bg-[#fdeaea] text-[#c0392b]',
+  Aprobada: 'bg-[#eaf6ef] dark:bg-white/10 text-[#2f9e58]',
+  Pendiente: 'bg-[#fbf1de] dark:bg-white/10 text-[#b7891e]',
+  Rechazada: 'bg-[#fdeaea] dark:bg-white/10 text-[#c0392b]',
 };
 
 const PAGE_SIZE = 10;
 const SEMESTRES = [1, 2];
 
 const CLASE_SELECT =
-  'appearance-none rounded-lg border border-[#dfe4e5] bg-white py-2 pl-3 pr-8 text-xs font-semibold text-[#59615e] outline-none focus:border-[#a00046]';
+  'appearance-none rounded-lg border border-line bg-card py-2 pl-3 pr-8 text-xs font-semibold text-ink-2 outline-none focus:border-brand';
 
 function formatearFecha(valor) {
   if (!valor) return '-';
@@ -135,10 +135,10 @@ export default function HistorialSpePage() {
 
   const tarjetas = useMemo(
     () => [
-      { label: 'Total registros', valor: resumen?.totalRegistros ?? '-', Icono: Landmark, estilo: 'bg-[#fbe9f0] text-[#a00046]' },
-      { label: 'Pendientes', valor: resumen?.pendientes ?? '-', Icono: Clock, estilo: 'bg-[#fbf1de] text-[#b7891e]' },
-      { label: 'Aprobados', valor: resumen?.aprobadas ?? '-', Icono: CheckCircle2, estilo: 'bg-[#eaf6ef] text-[#2f9e58]' },
-      { label: 'Rechazados', valor: resumen?.rechazadas ?? '-', Icono: XCircle, estilo: 'bg-[#fdeaea] text-[#c0392b]' },
+      { label: 'Total registros', valor: resumen?.totalRegistros ?? '-', Icono: Landmark, estilo: 'bg-brand-soft text-brand' },
+      { label: 'Pendientes', valor: resumen?.pendientes ?? '-', Icono: Clock, estilo: 'bg-[#fbf1de] dark:bg-white/10 text-[#b7891e]' },
+      { label: 'Aprobados', valor: resumen?.aprobadas ?? '-', Icono: CheckCircle2, estilo: 'bg-[#eaf6ef] dark:bg-white/10 text-[#2f9e58]' },
+      { label: 'Rechazados', valor: resumen?.rechazadas ?? '-', Icono: XCircle, estilo: 'bg-[#fdeaea] dark:bg-white/10 text-[#c0392b]' },
     ],
     [resumen],
   );
@@ -161,14 +161,14 @@ export default function HistorialSpePage() {
   }
 
   function IconoOrden({ columna }) {
-    if (sortBy !== columna) return <ChevronsUpDown size={11} className="text-[#c3c9c7]" />;
+    if (sortBy !== columna) return <ChevronsUpDown size={11} className="text-muted" />;
     return sortDir === 'asc' ? <ChevronUp size={11} /> : <ChevronDown size={11} />;
   }
 
   function Encabezado({ columna }) {
     return (
       <th className="px-4 py-3">
-        <button onClick={() => alternarOrden(columna)} className="inline-flex items-center gap-1 hover:text-[#a00046]">
+        <button onClick={() => alternarOrden(columna)} className="inline-flex items-center gap-1 hover:text-brand">
           {COLUMNAS_ORDENABLES[columna]} <IconoOrden columna={columna} />
         </button>
       </th>
@@ -196,7 +196,7 @@ export default function HistorialSpePage() {
   }
 
   return (
-    <main className="min-h-[calc(100vh-4rem)] bg-[#f4f6f8] px-4 py-5 sm:px-6 lg:px-8">
+    <main className="min-h-[calc(100vh-4rem)] bg-surface px-4 py-5 sm:px-6 lg:px-8">
       <ConfirmDialog
         open={Boolean(registroAEliminar)}
         titulo="¿Eliminar este registro?"
@@ -209,7 +209,7 @@ export default function HistorialSpePage() {
       <div className="mx-auto max-w-[1120px]">
         <Link
           to="/spe"
-          className="mb-3 inline-flex items-center gap-1.5 text-xs font-semibold text-[#a00046] hover:underline"
+          className="mb-3 inline-flex items-center gap-1.5 text-xs font-semibold text-brand hover:underline"
         >
           <ArrowLeft size={13} /> Volver al Dashboard SPE
         </Link>
@@ -217,24 +217,24 @@ export default function HistorialSpePage() {
         {/* Encabezado */}
         <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-[#202522] sm:text-[28px]">
+            <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-[28px]">
               Historial de registros — Sector Privado Exportador
             </h1>
-            <p className="mt-1 text-sm text-[#6d7673]">
+            <p className="mt-1 text-sm text-muted">
               Todos los registros ingresados para el Sector Privado Exportador.
             </p>
           </div>
 
           <Link
             to="/spe/registrar"
-            className="inline-flex items-center justify-center gap-2 self-start rounded-lg bg-[#a00046] px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#820039] sm:self-auto"
+            className="inline-flex items-center justify-center gap-2 self-start rounded-lg bg-maroon px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-maroon-dark sm:self-auto"
           >
             <Plus size={14} /> Nuevo Registro
           </Link>
         </div>
 
         {/* Filtros y búsqueda */}
-        <section className="mb-5 rounded-xl border border-[#e2e6e8] bg-white p-3 shadow-sm">
+        <section className="mb-5 rounded-xl border border-line bg-card p-3 shadow-sm">
           <div className="flex flex-wrap items-center gap-3">
             <div className="relative">
               <select value={departamento} onChange={(e) => cambiarFiltro(setDepartamento)(e.target.value)} className={CLASE_SELECT}>
@@ -243,7 +243,7 @@ export default function HistorialSpePage() {
                   <option key={d} value={d}>{d}</option>
                 ))}
               </select>
-              <ChevronDown size={13} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8a9290]" />
+              <ChevronDown size={13} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-muted" />
             </div>
 
             <div className="relative">
@@ -253,7 +253,7 @@ export default function HistorialSpePage() {
                   <option key={a} value={a}>{a}</option>
                 ))}
               </select>
-              <ChevronDown size={13} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8a9290]" />
+              <ChevronDown size={13} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-muted" />
             </div>
 
             <div className="relative">
@@ -263,7 +263,7 @@ export default function HistorialSpePage() {
                   <option key={s} value={s}>Semestre {s}</option>
                 ))}
               </select>
-              <ChevronDown size={13} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8a9290]" />
+              <ChevronDown size={13} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-muted" />
             </div>
 
             <div className="relative">
@@ -273,31 +273,31 @@ export default function HistorialSpePage() {
                   <option key={e.valor} value={e.valor}>{e.etiqueta}</option>
                 ))}
               </select>
-              <ChevronDown size={13} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8a9290]" />
+              <ChevronDown size={13} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-muted" />
             </div>
 
             <label className="relative min-w-[220px] flex-1">
-              <Search size={13} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8a9290]" />
+              <Search size={13} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
               <input
                 type="text"
                 value={busquedaInput}
                 onChange={(e) => setBusquedaInput(e.target.value)}
                 placeholder="Buscar por sector..."
-                className="w-full rounded-lg border border-[#dfe4e5] bg-white py-2 pl-8 pr-3 text-xs text-[#414845] outline-none focus:border-[#a00046]"
+                className="w-full rounded-lg border border-line bg-card py-2 pl-8 pr-3 text-xs text-ink-2 outline-none focus:border-brand"
               />
             </label>
           </div>
         </section>
 
         {error && (
-          <p className="mb-5 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+          <p className="mb-5 rounded-lg bg-red-50 dark:bg-red-950/40 px-3 py-2 text-sm text-red-700 dark:text-red-300">{error}</p>
         )}
 
         {/* Tabla */}
-        <section className="overflow-hidden rounded-xl border border-[#e2e6e8] bg-white shadow-sm">
+        <section className="overflow-hidden rounded-xl border border-line bg-card shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[760px] text-left text-xs">
-              <thead className="bg-[#fafbfb] text-[9px] font-bold uppercase tracking-wider text-[#8a9290]">
+              <thead className="bg-subtle text-[9px] font-bold uppercase tracking-wider text-muted">
                 <tr>
                   <Encabezado columna="sector" />
                   <Encabezado columna="departamento" />
@@ -310,37 +310,37 @@ export default function HistorialSpePage() {
               <tbody>
                 {cargando ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-[#8a9290]">
+                    <td colSpan={6} className="px-4 py-8 text-center text-muted">
                       <Loader2 size={16} className="mx-auto mb-2 animate-spin" />
                       Cargando historial...
                     </td>
                   </tr>
                 ) : registros.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-[#8a9290]">
+                    <td colSpan={6} className="px-4 py-8 text-center text-muted">
                       No hay registros que coincidan con los filtros seleccionados.
                     </td>
                   </tr>
                 ) : (
                   registros.map((r) => (
-                    <tr key={r.id} className="border-t border-[#f0f2f2] text-[#48504d] hover:bg-[#fff8fa]">
-                      <td className="px-4 py-3 font-semibold text-[#252927]">{r.sector || '—'}</td>
+                    <tr key={r.id} className="border-t border-line text-ink-2 hover:bg-brand-soft">
+                      <td className="px-4 py-3 font-semibold text-ink">{r.sector || '—'}</td>
                       <td className="px-4 py-3">{r.departamento || '—'}</td>
                       <td className="px-4 py-3">{r.periodo}</td>
                       <td className="px-4 py-3">{formatearFecha(r.fecha)}</td>
                       <td className="px-4 py-3">
                         <span
-                          className={`rounded-full px-2 py-1 text-[10px] font-bold ${ESTILO_ESTADO[r.estado] || 'bg-[#f1f3f3] text-[#414845]'}`}
+                          className={`rounded-full px-2 py-1 text-[10px] font-bold ${ESTILO_ESTADO[r.estado] || 'bg-subtle text-ink-2'}`}
                         >
                           {r.estado}
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex items-center justify-end gap-3 text-[#8a9290]">
-                          <Link to={`/spe/historial/${r.id}`} className="hover:text-[#a00046]">
+                        <div className="flex items-center justify-end gap-3 text-muted">
+                          <Link to={`/spe/historial/${r.id}`} className="hover:text-brand">
                             <Eye size={14} />
                           </Link>
-                          <button onClick={() => setRegistroAEliminar(r)} className="hover:text-[#a00046]">
+                          <button onClick={() => setRegistroAEliminar(r)} className="hover:text-brand">
                             <Trash2 size={14} />
                           </button>
                         </div>
@@ -352,7 +352,7 @@ export default function HistorialSpePage() {
             </table>
           </div>
 
-          <div className="flex flex-col gap-2 border-t border-[#edf0f1] px-4 py-3 text-[10px] text-[#8a9290] sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-2 border-t border-line px-4 py-3 text-[10px] text-muted sm:flex-row sm:items-center sm:justify-between">
             <span>
               Mostrando {registros.length} de {total} registros
             </span>
@@ -360,17 +360,17 @@ export default function HistorialSpePage() {
               <button
                 disabled={page <= 1}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
-                className="rounded border border-[#e4e8e8] px-2 py-1 disabled:opacity-50"
+                className="rounded border border-line px-2 py-1 disabled:opacity-50"
               >
                 <ChevronDown size={12} className="rotate-90" />
               </button>
-              <span className="px-2 font-semibold text-[#59615e]">
+              <span className="px-2 font-semibold text-ink-2">
                 Página {page} de {totalPaginas}
               </span>
               <button
                 disabled={page >= totalPaginas}
                 onClick={() => setPage((p) => Math.min(totalPaginas, p + 1))}
-                className="rounded border border-[#e4e8e8] px-2 py-1 disabled:opacity-50"
+                className="rounded border border-line px-2 py-1 disabled:opacity-50"
               >
                 <ChevronDown size={12} className="-rotate-90" />
               </button>
@@ -381,13 +381,13 @@ export default function HistorialSpePage() {
         {/* Tarjetas de resumen */}
         <section className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
           {tarjetas.map(({ label, valor, Icono, estilo }) => (
-            <div key={label} className="flex items-center gap-3 rounded-xl border border-[#e2e6e8] bg-white p-4 shadow-sm">
+            <div key={label} className="flex items-center gap-3 rounded-xl border border-line bg-card p-4 shadow-sm">
               <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${estilo}`}>
                 <Icono size={16} />
               </span>
               <div>
-                <p className="text-[9px] font-bold uppercase tracking-wider text-[#8a9290]">{label}</p>
-                <p className="text-xl font-bold text-[#202522]">{valor}</p>
+                <p className="text-[9px] font-bold uppercase tracking-wider text-muted">{label}</p>
+                <p className="text-xl font-bold text-ink">{valor}</p>
               </div>
             </div>
           ))}

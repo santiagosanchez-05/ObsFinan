@@ -103,7 +103,7 @@ Las funciones de Liz ya existen vacías, así que Monserrat puede llamarlas desd
 1. El Admin/Superadmin crea el evento y marca qué encuestas se toman: `has_ica`, `has_spe` o las dos (Santiago, US44). Solo el Superadmin puede marcar `has_spe`.
 2. Le asigna encuestadores (Santiago, US55), **o el encuestador se anota solo** desde el detalle del evento ("Quiero participar como encuestador"), sin límite, en eventos con encuesta de su sede que no hayan pasado. Las dos formas guardan la misma fila en `event_surveyor`; también puede bajarse (status 0).
 3. El encuestador entra a **Mis eventos** (Kevin Prieto, US56): cada evento muestra "Registrar encuesta ICA" si `has_ica = 1` y "Registrar encuesta SPE" si `has_spe = 1`.
-4. El botón lleva a `/encuestador/eventos/:eventId/ica` (Liz, US57) o `/encuestador/eventos/:eventId/spe` (Kevin Alanes, US66). El backend valida que el evento esté asignado al encuestador y que tenga esa encuesta habilitada; si no, responde 400.
+4. El botón lleva a `/encuestador/eventos/:eventId/ica` (Liz, US57) o `/encuestador/eventos/:eventId/spe` (Kevin Alanes, US66). Son los mismos formularios del registro individual (`ICARegisterPage` y `RegistrarSpePage`) en modo evento. El backend valida que el evento esté asignado al encuestador y que tenga esa encuesta habilitada; si no, responde 400 (`modules/events/events.encuesta.service.js`). **El período sale de la fecha del evento** (ICA: año y trimestre; SPE: año y semestre): el formulario no lo pide y el backend rechaza el SPE si lo mandan.
 5. La encuesta entra **pendiente** (`data_load.status = 1`) y llega a la bandeja de aprobaciones (Monserrat): las ICA al Admin de la sede del encuestador y a todos los Superadmin; las SPE solo a los Superadmin.
 6. Al aprobarla pasa a 2 y se recalcula el agregado (Liz). El encuestador ve el estado en **Mis encuestas** (Kevin Prieto, US61).
 
@@ -131,3 +131,17 @@ El diagrama ya está aplicado en la BD real. Santiago le pasa a Monserrat el scr
 - **Índices SPE** (IEE, ICE, IIE, ICIE) según la misma metodología: `modules/spe/spe.indices.service.js`.
 - **Formulario SPE** con las opciones exactas del Word y de la BD (`views/spe/spe.questions.js` y `modules/spe/spe.registro.validation.js` deben coincidir). Ojo: la BD no está en modo estricto y guarda vacío cualquier valor que no esté en el ENUM.
 - Login: máximo 5 intentos cada 15 minutos.
+
+## Cambios del 10/10 (integración final)
+
+- **US66 encuesta SPE del encuestador:** `POST /api/spe/encuestas` usa la misma validación (`encuestaSpeSchema`) y el mismo guardado (`insertarEncuesta`) que el registro del Superadmin. Ya no hay un mapeo aparte ni valores por defecto inventados: lo que falta se rechaza. Entra pendiente y los índices se calculan al aprobarla.
+- **US53 postulantes:** la sede se revisa antes de crear la cuenta (antes el Admin de otra sede alcanzaba a aprobar). Aceptar pide confirmación, crea el encuestador en la sede de la convocatoria y le manda su contraseña temporal.
+- **US50 crear convocatoria** y **US54 registrar encuestador:** pantallas hechas. El Admin trabaja siempre en su sede; el Superadmin la elige. Desde Convocatorias hay acceso a "Registrar encuestador".
+- Tests nuevos: `spe.encuestador.test.js`, `ica.encuestador.test.js`, `convocatorias.postulantes.test.js`, `users.encuestadores.test.js` y los de `NuevaConvocatoriaPage`, `RegistrarEncuestadorPage` y `EncuestaSpePage`.
+
+## Modo oscuro y correo de contacto (10/10)
+
+- **Modo oscuro:** botón sol/luna junto a la foto de perfil (`Navbar`) y en el header del visitante (`PublicHeader`). La elección se guarda en el navegador (`bfu_tema`) y `index.html` la aplica antes de pintar la página. Lógica en `shared/tema.js` y `shared/BotonTema.jsx`.
+- **Colores:** usar los del tema definidos en `src/index.css` (`bg-card`, `bg-subtle`, `bg-surface`, `border-line`, `text-ink`, `text-ink-2`, `text-muted`, `text-brand`, `bg-brand-soft`, `border-brand-line`, `bg-night`). Cada uno tiene su versión oscura. **No usar hex sueltos ni `bg-white`**: no cambian con el tema. Para estilos en línea, `var(--color-...)`. El guindo de botones sigue siendo `bg-maroon` (texto blanco); para textos e íconos guindo, `text-brand`.
+- **Correo de contacto de los footers** (landing y Sobre nosotros): `GET /api/contacto/correo` devuelve el del Superadmin activo más antiguo; si no hay, queda `observatorio@univalle.edu` (`shared/useCorreoContacto.js`).
+- **Recalculación aplicada:** los ICA (Itocta y Molle, Q3 2026) y los índices de las 8 encuestas SPE aprobadas se recalcularon con la metodología nueva.

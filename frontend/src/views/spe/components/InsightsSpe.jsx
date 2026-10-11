@@ -7,7 +7,7 @@ import { ArrowDownRight, ArrowUpRight, Info } from "lucide-react";
 
 const TONOS = {
   rojo: {
-    clase: "border-[#a00046] text-[#a00046]",
+    clase: "border-brand text-brand",
     icono: <ArrowDownRight size={14} />,
   },
   verde: {
@@ -18,14 +18,14 @@ const TONOS = {
     clase: "border-[#d49b31] text-[#b77d18]",
     icono: <Info size={14} />,
   },
-  gris: { clase: "border-[#aeb8b5] text-[#78827f]", icono: <Info size={14} /> },
+  gris: { clase: "border-muted text-muted", icono: <Info size={14} /> },
 };
 
 function Finding({ tono, texto }) {
   const { clase, icono } = TONOS[tono] ?? TONOS.gris;
   return (
     <div
-      className={`rounded-lg border-l-2 bg-white px-3 py-3 text-[10px] leading-relaxed text-[#59615e] shadow-sm ${clase}`}
+      className={`rounded-lg border-l-2 bg-card px-3 py-3 text-[10px] leading-relaxed text-ink-2 shadow-sm ${clase}`}
     >
       <span className="mr-1 inline-flex align-middle">{icono}</span>
       {texto}
@@ -37,10 +37,10 @@ export default function InsightsSpe({ insights = [] }) {
   if (!insights.length) {
     return (
       <section className="mb-5">
-        <h2 className="mb-3 text-sm font-bold text-[#252927]">
+        <h2 className="mb-3 text-sm font-bold text-ink">
           Hallazgos clave del período
         </h2>
-        <p className="rounded-lg border border-[#e2e6e8] bg-white px-4 py-5 text-sm text-[#6d7673]">
+        <p className="rounded-lg border border-line bg-card px-4 py-5 text-sm text-muted">
           No hay hallazgos disponibles para el período seleccionado.
         </p>
       </section>
@@ -49,7 +49,7 @@ export default function InsightsSpe({ insights = [] }) {
 
   return (
     <section className="mb-5">
-      <h2 className="mb-3 text-sm font-bold text-[#252927]">
+      <h2 className="mb-3 text-sm font-bold text-ink">
         Hallazgos clave del período
       </h2>
       <div className="grid gap-3 lg:grid-cols-4">

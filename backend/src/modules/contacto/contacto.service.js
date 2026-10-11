@@ -69,4 +69,18 @@ async function enviarMensajeContacto({ nombre, correo, institucion, sedeId, asun
   return { sede, sinAdmin };
 }
 
-module.exports = { obtenerSedesActivas, obtenerDestinatarios, enviarMensajeContacto, escaparHtml };
+// Correo público del footer: el Superadmin activo más antiguo. Si se da de
+// baja, pasa solo al siguiente. Si no hay ninguno, el frontend usa el genérico.
+async function obtenerCorreoContacto() {
+  const [rows] = await pool.query(
+    `SELECT u.email
+       FROM user u
+       JOIN role r ON r.role_id = u.role_id
+      WHERE r.role_name = 'superadmin' AND u.status = 1
+      ORDER BY u.created_at ASC, u.user_id ASC
+      LIMIT 1`,
+  );
+  return rows[0]?.email ?? null;
+}
+
+module.exports = { obtenerSedesActivas, obtenerDestinatarios, enviarMensajeContacto, escaparHtml, obtenerCorreoContacto };

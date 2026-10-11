@@ -7,7 +7,7 @@ import { useAuth } from '../../../shared/AuthContext';
 import apiFetch from '../../../shared/apiFetch';
 import { MODALIDADES, headersDe, hoyIso } from '../eventosUtils';
 
-const CAMPO = 'w-full rounded-lg border border-black/10 px-3 py-2 text-sm focus:border-maroon focus:outline-none';
+const CAMPO = 'w-full rounded-lg border border-line px-3 py-2 text-sm focus:border-brand focus:outline-none';
 const MAX_IMAGEN = 5 * 1024 * 1024;
 
 // Mismas reglas que el backend (events.validation.js). La fecha: al crear,
@@ -160,7 +160,7 @@ export default function EventoForm({ evento = null, onGuardado }) {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate className="mt-4 rounded-2xl border border-black/10 bg-white p-6 shadow-sm sm:p-8">
+    <form onSubmit={handleSubmit(onSubmit)} noValidate className="mt-4 rounded-2xl border border-line bg-card p-6 shadow-sm sm:p-8">
       {/* Imagen opcional */}
       <div>
         <p className="text-sm font-medium text-ink">Imagen del evento <span className="font-normal text-ink/40">(opcional)</span></p>
@@ -171,7 +171,7 @@ export default function EventoForm({ evento = null, onGuardado }) {
               type="button"
               onClick={sacarImagen}
               aria-label="Quitar imagen"
-              className="absolute right-2 top-2 rounded-full bg-white/90 p-1.5 text-ink shadow hover:text-maroon"
+              className="absolute right-2 top-2 rounded-full bg-card/90 p-1.5 text-ink shadow hover:text-brand"
             >
               <X size={16} />
             </button>
@@ -180,7 +180,7 @@ export default function EventoForm({ evento = null, onGuardado }) {
           <button
             type="button"
             onClick={() => inputImagen.current?.click()}
-            className="mt-2 flex h-36 w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-black/15 text-ink/40 hover:border-maroon hover:text-maroon"
+            className="mt-2 flex h-36 w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-line text-ink/40 hover:border-brand hover:text-brand"
           >
             <ImagePlus size={28} />
             <span className="text-sm font-medium">Subir imagen</span>
@@ -188,7 +188,7 @@ export default function EventoForm({ evento = null, onGuardado }) {
           </button>
         )}
         {preview && (
-          <button type="button" onClick={() => inputImagen.current?.click()} className="mt-2 text-xs font-semibold text-maroon">
+          <button type="button" onClick={() => inputImagen.current?.click()} className="mt-2 text-xs font-semibold text-brand">
             Cambiar imagen
           </button>
         )}
@@ -200,7 +200,7 @@ export default function EventoForm({ evento = null, onGuardado }) {
           className="hidden"
           data-testid="input-imagen"
         />
-        {errorImagen && <p className="mt-1 text-xs text-red-600">{errorImagen}</p>}
+        {errorImagen && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errorImagen}</p>}
       </div>
 
       <div className="mt-6 space-y-4">
@@ -258,7 +258,7 @@ export default function EventoForm({ evento = null, onGuardado }) {
           <textarea rows={5} {...register('descripcion')} className={CAMPO} />
         </Campo>
 
-        <fieldset className="rounded-xl border border-black/10 p-4">
+        <fieldset className="rounded-xl border border-line p-4">
           <legend className="px-1 text-sm font-medium text-ink">Encuestas que se toman en el evento</legend>
           <p className="text-xs text-ink/50">Si no marcas ninguna, es un evento sin encuesta (charla o taller) y no lleva encuestadores.</p>
           <label className="mt-3 flex items-center gap-2 text-sm text-ink">
@@ -278,7 +278,7 @@ export default function EventoForm({ evento = null, onGuardado }) {
       </div>
 
       {errorServidor && (
-        <p className="mt-5 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
+        <p className="mt-5 rounded-lg bg-red-50 dark:bg-red-950/40 px-4 py-3 text-sm text-red-700 dark:text-red-300" role="alert">
           {errorServidor}
         </p>
       )}
@@ -302,7 +302,7 @@ function Campo({ label, error, children }) {
         <span className="text-sm font-medium text-ink">{label}</span>
         <div className="mt-1">{children}</div>
       </label>
-      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+      {error && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{error}</p>}
     </div>
   );
 }

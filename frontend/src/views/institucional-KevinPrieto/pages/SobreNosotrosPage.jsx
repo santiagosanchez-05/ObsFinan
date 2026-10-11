@@ -1,18 +1,20 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import CitaAcademica from '../../../shared/CitaAcademica';
+import { useCorreoContacto } from '../../../shared/useCorreoContacto';
 
 export const SobreNosotrosPage = () => {
+  const correoContacto = useCorreoContacto();
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-800">
+    <div className="min-h-screen bg-subtle font-sans text-ink-2">
       
       {/* 1. ¿Qué es el Observatorio de Bienestar Financiero? */}
-      <section className="bg-slate-100/60 px-6 py-16 text-center">
+      <section className="bg-subtle/60 px-6 py-16 text-center">
         <div className="mx-auto max-w-4xl">
-          <h1 className="text-3xl font-extrabold text-slate-900 md:text-4xl">
+          <h1 className="text-3xl font-extrabold text-ink md:text-4xl">
             ¿Qué es el Observatorio de Bienestar Financiero?
           </h1>
-          <p className="mt-4 text-base leading-relaxed text-slate-600">
+          <p className="mt-4 text-base leading-relaxed text-muted">
             El Observatorio de Bienestar Financiero es una iniciativa de investigación aplicada de la
             Universidad Privada del Valle (Univalle), que recopila, analiza y publica de forma abierta
             indicadores sobre la salud financiera de los hogares, las MYPEs y el sector exportador de
@@ -22,36 +24,36 @@ export const SobreNosotrosPage = () => {
       </section>
 
       {/* 2. ¿Para qué sirve? */}
-      <section className="bg-white px-6 py-16">
+      <section className="bg-card px-6 py-16">
         <div className="mx-auto grid max-w-6xl items-center gap-12 md:grid-cols-2">
           <div>
-            <h2 className="text-3xl font-extrabold text-slate-900">¿Para qué sirve?</h2>
-            <p className="mt-4 text-base leading-relaxed text-slate-600">
+            <h2 className="text-3xl font-extrabold text-ink">¿Para qué sirve?</h2>
+            <p className="mt-4 text-base leading-relaxed text-muted">
               Sirve como fuente pública y actualizada de datos para que investigadores, periodistas, formuladores de política pública, y la ciudadanía en general puedan entender cómo evoluciona el bienestar financiero en Bolivia — más allá del ámbito universitario.
             </p>
 
             <div className="mt-8 space-y-6">
               <div className="flex items-start gap-4">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-900">Transparencia de Datos</h3>
-                  <p className="text-sm text-slate-500">Acceso irrestricto a métricas de salud económica.</p>
+                  <h3 className="font-bold text-ink">Transparencia de Datos</h3>
+                  <p className="text-sm text-muted">Acceso irrestricto a métricas de salud económica.</p>
                 </div>
               </div>
 
               <div className="flex items-start gap-4">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                   </svg>
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-900">Toma de Decisiones</h3>
-                  <p className="text-sm text-slate-500">Insumos críticos para políticas de inclusión financiera.</p>
+                  <h3 className="font-bold text-ink">Toma de Decisiones</h3>
+                  <p className="text-sm text-muted">Insumos críticos para políticas de inclusión financiera.</p>
                 </div>
               </div>
             </div>
@@ -68,31 +70,31 @@ export const SobreNosotrosPage = () => {
       </section>
 
       {/* 3. ¿Qué analiza? */}
-      <section className="bg-slate-100/60 px-6 py-16">
+      <section className="bg-subtle/60 px-6 py-16">
         <div className="mx-auto max-w-6xl">
-          <h2 className="text-center text-3xl font-extrabold text-slate-900">¿Qué analiza?</h2>
+          <h2 className="text-center text-3xl font-extrabold text-ink">¿Qué analiza?</h2>
 
           <div className="mt-12 grid gap-6 md:grid-cols-2">
-            <div className="rounded-2xl bg-white p-8 shadow-sm">
-              <div className="mb-6 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-pink-100 text-pink-700">
+            <div className="rounded-2xl bg-card p-8 shadow-sm">
+              <div className="mb-6 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-pink-100 dark:bg-pink-900/40 text-pink-700 dark:text-pink-300">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V6m0 8v2m0-10e-1 0 2.08.402 2.599 1M12 18c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <h3 className="text-xl font-bold text-slate-900">ICA — Índice de Calidad Aseguradora</h3>
-              <p className="mt-3 text-sm leading-relaxed text-slate-600">
+              <h3 className="text-xl font-bold text-ink">ICA — Índice de Calidad Aseguradora</h3>
+              <p className="mt-3 text-sm leading-relaxed text-muted">
                 Mide el conocimiento sobre seguros, el uso de seguros, la educación aseguradora y la previsión frente a riesgos de los hogares en distintas comunas.
               </p>
             </div>
 
-            <div className="rounded-2xl bg-white p-8 shadow-sm">
-              <div className="mb-6 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-pink-100 text-pink-700">
+            <div className="rounded-2xl bg-card p-8 shadow-sm">
+              <div className="mb-6 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-pink-100 dark:bg-pink-900/40 text-pink-700 dark:text-pink-300">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0zM3.6 9h16.8M3.6 15h16.8" />
                 </svg>
               </div>
-              <h3 className="text-xl font-bold text-slate-900">SPE — Sector Privado Exportador</h3>
-              <p className="mt-3 text-sm leading-relaxed text-slate-600">
+              <h3 className="text-xl font-bold text-ink">SPE — Sector Privado Exportador</h3>
+              <p className="mt-3 text-sm leading-relaxed text-muted">
                 Mide, con la encuesta SOCOMEX–SOCIFIN, las expectativas empresariales (IEE), la competitividad (ICE), la internacionalización (IIE) y el clima para la inversión (ICIE) de las empresas bolivianas exportadoras.
               </p>
             </div>
@@ -197,20 +199,20 @@ export const SobreNosotrosPage = () => {
             <h4 className="font-bold text-white text-sm tracking-wider uppercase">Contacto</h4>
             <ul className="mt-4 space-y-3 text-xs">
               <li className="flex items-start gap-2">
-                <svg className="w-4 h-4 text-pink-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-pink-600 dark:text-pink-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
                 <span>Campus Tiquipaya, Cochabamba, Bolivia</span>
               </li>
               <li className="flex items-center gap-2">
-                <svg className="w-4 h-4 text-pink-600 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-pink-600 dark:text-pink-400 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
-                <span>observatorio@univalle.edu</span>
+                <a href={`mailto:${correoContacto}`} className="hover:text-white">{correoContacto}</a>
               </li>
               <li className="flex items-center gap-2">
-                <svg className="w-4 h-4 text-pink-600 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-pink-600 dark:text-pink-400 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                 </svg>
                 <span>+591 (4) 431 8800</span>
@@ -239,7 +241,7 @@ export const SobreNosotrosPage = () => {
               <p className="mt-1 font-semibold text-xs text-white">
                 "Informe Semestral SPE - Q4 2024"
               </p>
-              <span className="mt-2 block text-xs font-bold text-pink-600">
+              <span className="mt-2 block text-xs font-bold text-pink-600 dark:text-pink-400">
                 Diciembre 2024
               </span>
             </div>

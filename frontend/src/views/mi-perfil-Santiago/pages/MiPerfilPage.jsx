@@ -240,23 +240,23 @@ export default function MiPerfilPage() {
     <div className="mx-auto max-w-4xl px-4 py-8 space-y-6">
       {/* Encabezado */}
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Mi perfil</h1>
-        <p className="text-sm text-slate-500 mt-1">
+        <h1 className="text-2xl font-bold text-ink">Mi perfil</h1>
+        <p className="text-sm text-muted mt-1">
           Administra tu información personal y tu contraseña
         </p>
       </div>
 
       {/* TARJETA 1: Información Personal */}
-      <div className="rounded-2xl bg-white p-8 shadow-sm border border-slate-100">
-        <h2 className="text-lg font-bold text-slate-900 mb-6">Información personal</h2>
+      <div className="rounded-2xl bg-card p-8 shadow-sm border border-line">
+        <h2 className="text-lg font-bold text-ink mb-6">Información personal</h2>
 
         <form onSubmit={handleSaveProfile} className="space-y-6">
           {mensajePerfil.texto && (
             <div
               className={`p-3 rounded-xl text-xs font-medium ${
                 mensajePerfil.tipo === 'success'
-                  ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                  : 'bg-red-50 text-red-800 border border-red-200'
+                  ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900'
+                  : 'bg-red-50 dark:bg-red-950/40 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-900'
               }`}
             >
               {mensajePerfil.texto}
@@ -282,11 +282,11 @@ export default function MiPerfilPage() {
                 type="button"
                 onClick={() => inputFotoRef.current?.click()}
                 disabled={subiendoFoto}
-                className="font-bold text-maroon hover:underline text-sm disabled:opacity-60"
+                className="font-bold text-brand hover:underline text-sm disabled:opacity-60"
               >
                 {subiendoFoto ? 'Subiendo...' : 'Cambiar foto'}
               </button>
-              <p className="text-xs text-slate-400 mt-0.5">JPG o PNG. Máximo 5MB.</p>
+              <p className="text-xs text-muted mt-0.5">JPG o PNG. Máximo 5MB.</p>
               <input
                 ref={inputFotoRef}
                 type="file"
@@ -300,47 +300,47 @@ export default function MiPerfilPage() {
 
           {/* Campo: Nombres */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">
+            <label className="block text-xs font-bold text-ink-2 mb-1.5">
               Nombres
             </label>
             <input
               type="text"
               value={nombres}
               onChange={(e) => setNombres(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-2.5 text-sm text-slate-800 outline-none focus:border-maroon focus:bg-white"
+              className="w-full rounded-xl border border-line bg-subtle/50 px-4 py-2.5 text-sm text-ink-2 outline-none focus:border-brand focus:bg-card"
             />
           </div>
 
           {/* Campos: Apellidos */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+              <label className="block text-xs font-bold text-ink-2 mb-1.5">
                 Apellido paterno
               </label>
               <input
                 type="text"
                 value={apellidoPaterno}
                 onChange={(e) => setApellidoPaterno(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-2.5 text-sm text-slate-800 outline-none focus:border-maroon focus:bg-white"
+                className="w-full rounded-xl border border-line bg-subtle/50 px-4 py-2.5 text-sm text-ink-2 outline-none focus:border-brand focus:bg-card"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+              <label className="block text-xs font-bold text-ink-2 mb-1.5">
                 Apellido materno
               </label>
               <input
                 type="text"
                 value={apellidoMaterno}
                 onChange={(e) => setApellidoMaterno(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-2.5 text-sm text-slate-800 outline-none focus:border-maroon focus:bg-white"
+                className="w-full rounded-xl border border-line bg-subtle/50 px-4 py-2.5 text-sm text-ink-2 outline-none focus:border-brand focus:bg-card"
               />
             </div>
           </div>
 
           {/* Información Restringida */}
-          <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-5 space-y-4">
-            <div className="flex items-center gap-2 text-slate-500 font-bold text-xs tracking-wider">
-              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-slate-400 text-[10px] font-bold text-white">
+          <div className="rounded-xl border border-line bg-subtle/70 p-5 space-y-4">
+            <div className="flex items-center gap-2 text-muted font-bold text-xs tracking-wider">
+              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-muted text-[10px] font-bold text-white">
                 i
               </span>
               INFORMACIÓN RESTRINGIDA
@@ -348,32 +348,32 @@ export default function MiPerfilPage() {
 
             <div className="grid grid-cols-1 gap-4 text-xs sm:grid-cols-2">
               <div>
-                <span className="text-slate-400 block mb-0.5">Correo electrónico</span>
-                <span className="font-medium text-slate-600 flex items-center gap-1.5">
-                  {user?.correo || 'Sin correo'} <Lock size={12} className="text-slate-400" />
+                <span className="text-muted block mb-0.5">Correo electrónico</span>
+                <span className="font-medium text-muted flex items-center gap-1.5">
+                  {user?.correo || 'Sin correo'} <Lock size={12} className="text-muted" />
                 </span>
               </div>
               <div>
-                <span className="text-slate-400 block mb-0.5">Rol</span>
-                <span className="font-medium text-slate-600 flex items-center gap-1.5">
-                  {user?.role ? (user.role.charAt(0).toUpperCase() + user.role.slice(1)) : 'Usuario'} <Lock size={12} className="text-slate-400" />
+                <span className="text-muted block mb-0.5">Rol</span>
+                <span className="font-medium text-muted flex items-center gap-1.5">
+                  {user?.role ? (user.role.charAt(0).toUpperCase() + user.role.slice(1)) : 'Usuario'} <Lock size={12} className="text-muted" />
                 </span>
               </div>
               <div>
-                <span className="text-slate-400 block mb-0.5">Sede</span>
-                <span className="font-medium text-slate-600 flex items-center gap-1.5">
-                  {user?.sede || 'Cochabamba'} <Lock size={12} className="text-slate-400" />
+                <span className="text-muted block mb-0.5">Sede</span>
+                <span className="font-medium text-muted flex items-center gap-1.5">
+                  {user?.sede || 'Cochabamba'} <Lock size={12} className="text-muted" />
                 </span>
               </div>
               <div>
-                <span className="text-slate-400 block mb-0.5">Estado</span>
-                <span className="font-medium text-slate-600 flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500"></span> Activo <Lock size={12} className="text-slate-400" />
+                <span className="text-muted block mb-0.5">Estado</span>
+                <span className="font-medium text-muted flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500"></span> Activo <Lock size={12} className="text-muted" />
                 </span>
               </div>
             </div>
 
-            <p className="text-[11px] text-slate-400 pt-1">
+            <p className="text-[11px] text-muted pt-1">
               Estos datos solo pueden ser modificados por un administrador del sistema.
             </p>
           </div>
@@ -391,16 +391,16 @@ export default function MiPerfilPage() {
       </div>
 
       {/* TARJETA 2: Cambiar Contraseña */}
-      <div className="rounded-2xl bg-white p-8 shadow-sm border border-slate-100">
-        <h2 className="text-lg font-bold text-slate-900 mb-6">Cambiar contraseña</h2>
+      <div className="rounded-2xl bg-card p-8 shadow-sm border border-line">
+        <h2 className="text-lg font-bold text-ink mb-6">Cambiar contraseña</h2>
 
         <form onSubmit={handleUpdatePassword} className="space-y-5">
           {mensajePassword.texto && (
             <div
               className={`p-3 rounded-xl text-xs font-medium ${
                 mensajePassword.tipo === 'success'
-                  ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                  : 'bg-red-50 text-red-800 border border-red-200'
+                  ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900'
+                  : 'bg-red-50 dark:bg-red-950/40 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-900'
               }`}
             >
               {mensajePassword.texto}
@@ -408,7 +408,7 @@ export default function MiPerfilPage() {
           )}
 
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">
+            <label className="block text-xs font-bold text-ink-2 mb-1.5">
               Contraseña actual
             </label>
             <div className="relative">
@@ -417,12 +417,12 @@ export default function MiPerfilPage() {
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-2.5 text-sm text-slate-800 outline-none focus:border-maroon focus:bg-white pr-10"
+                className="w-full rounded-xl border border-line bg-subtle/50 px-4 py-2.5 text-sm text-ink-2 outline-none focus:border-brand focus:bg-card pr-10"
               />
               <button
                 type="button"
                 onClick={() => setShowCurrent(!showCurrent)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-muted"
               >
                 {showCurrent ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
@@ -430,7 +430,7 @@ export default function MiPerfilPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">
+            <label className="block text-xs font-bold text-ink-2 mb-1.5">
               Nueva contraseña
             </label>
             <div className="relative">
@@ -439,12 +439,12 @@ export default function MiPerfilPage() {
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="Ingresa tu nueva contraseña"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-2.5 text-sm text-slate-800 outline-none focus:border-maroon focus:bg-white pr-10"
+                className="w-full rounded-xl border border-line bg-subtle/50 px-4 py-2.5 text-sm text-ink-2 outline-none focus:border-brand focus:bg-card pr-10"
               />
               <button
                 type="button"
                 onClick={() => setShowNew(!showNew)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-muted"
               >
                 {showNew ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
@@ -452,7 +452,7 @@ export default function MiPerfilPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">
+            <label className="block text-xs font-bold text-ink-2 mb-1.5">
               Confirmar nueva contraseña
             </label>
             <div className="relative">
@@ -461,12 +461,12 @@ export default function MiPerfilPage() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Repite tu nueva contraseña"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-2.5 text-sm text-slate-800 outline-none focus:border-maroon focus:bg-white pr-10"
+                className="w-full rounded-xl border border-line bg-subtle/50 px-4 py-2.5 text-sm text-ink-2 outline-none focus:border-brand focus:bg-card pr-10"
               />
               <button
                 type="button"
                 onClick={() => setShowConfirm(!showConfirm)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-muted"
               >
                 {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
@@ -475,15 +475,15 @@ export default function MiPerfilPage() {
 
           {/* Validaciones */}
           <div className="pt-2 space-y-1.5">
-            <p className="text-xs font-bold text-slate-500 mb-2">La contraseña debe contener:</p>
+            <p className="text-xs font-bold text-muted mb-2">La contraseña debe contener:</p>
             
             <div className="flex items-center gap-2 text-xs">
               {hasMinLength ? (
                 <CheckCircle2 size={14} className="text-emerald-500" />
               ) : (
-                <Circle size={14} className="text-slate-300" />
+                <Circle size={14} className="text-muted" />
               )}
-              <span className={hasMinLength ? 'text-slate-700 font-medium' : 'text-slate-400'}>
+              <span className={hasMinLength ? 'text-ink-2 font-medium' : 'text-muted'}>
                 Mínimo 8 caracteres
               </span>
             </div>
@@ -492,9 +492,9 @@ export default function MiPerfilPage() {
               {hasUpper ? (
                 <CheckCircle2 size={14} className="text-emerald-500" />
               ) : (
-                <Circle size={14} className="text-slate-300" />
+                <Circle size={14} className="text-muted" />
               )}
-              <span className={hasUpper ? 'text-slate-700 font-medium' : 'text-slate-400'}>
+              <span className={hasUpper ? 'text-ink-2 font-medium' : 'text-muted'}>
                 Al menos una mayúscula
               </span>
             </div>
@@ -503,9 +503,9 @@ export default function MiPerfilPage() {
               {hasNumber ? (
                 <CheckCircle2 size={14} className="text-emerald-500" />
               ) : (
-                <Circle size={14} className="text-slate-300" />
+                <Circle size={14} className="text-muted" />
               )}
-              <span className={hasNumber ? 'text-slate-700 font-medium' : 'text-slate-400'}>
+              <span className={hasNumber ? 'text-ink-2 font-medium' : 'text-muted'}>
                 Al menos un número
               </span>
             </div>
@@ -524,4 +524,4 @@ export default function MiPerfilPage() {
       </div>
     </div>
   );
-}
+}

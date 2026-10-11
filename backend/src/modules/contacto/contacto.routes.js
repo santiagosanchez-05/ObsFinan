@@ -1,7 +1,7 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const router = express.Router();
-const { getSedesContacto, postContacto } = require('./contacto.controller');
+const { getSedesContacto, postContacto, getCorreoContacto } = require('./contacto.controller');
 
 // Rutas públicas (sin requireAuth): las usa el formulario de contacto.
 // Máximo 5 mensajes por IP cada 15 minutos — evita que se use para spamear
@@ -9,7 +9,7 @@ const { getSedesContacto, postContacto } = require('./contacto.controller');
 const contactoLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 5,
-  message: { error: 'Enviaste demasiados mensajes. Probá de nuevo en unos minutos.' },
+  message: { error: 'Enviaste demasiados mensajes. Intenta de nuevo en unos minutos.' },
   standardHeaders: true,
   legacyHeaders: false,
   // En los tests se manda el formulario muchas veces seguidas desde la misma IP.
@@ -17,6 +17,7 @@ const contactoLimiter = rateLimit({
 });
 
 router.get('/sedes', getSedesContacto);
+router.get('/correo', getCorreoContacto); // correo del footer
 router.post('/', contactoLimiter, postContacto);
 
 module.exports = router;

@@ -65,13 +65,13 @@ export default function ExportarSpe({ filtros }) {
           type="button"
           onClick={() => manejarDescarga('csv')}
           disabled={Boolean(descargando)}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-ink/15 bg-white px-3 py-1.5 text-xs font-semibold text-ink shadow-xs hover:bg-surface transition-colors disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-ink/15 bg-card px-3 py-1.5 text-xs font-semibold text-ink shadow-xs hover:bg-surface transition-colors disabled:opacity-50"
           title="Descargar datos filtrados en formato CSV"
         >
           {descargando === 'csv' ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin text-maroon" />
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-brand" />
           ) : (
-            <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600" />
+            <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
           )}
           <span>Exportar CSV</span>
         </button>
@@ -80,20 +80,20 @@ export default function ExportarSpe({ filtros }) {
           type="button"
           onClick={() => manejarDescarga('json')}
           disabled={Boolean(descargando)}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-ink/15 bg-white px-3 py-1.5 text-xs font-semibold text-ink shadow-xs hover:bg-surface transition-colors disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-ink/15 bg-card px-3 py-1.5 text-xs font-semibold text-ink shadow-xs hover:bg-surface transition-colors disabled:opacity-50"
           title="Descargar datos filtrados en formato JSON"
         >
           {descargando === 'json' ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin text-maroon" />
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-brand" />
           ) : (
-            <FileCode className="h-3.5 w-3.5 text-sky-600" />
+            <FileCode className="h-3.5 w-3.5 text-sky-600 dark:text-sky-400" />
           )}
           <span>Exportar JSON</span>
         </button>
       </div>
 
       {error && (
-        <div className="flex items-center gap-1 text-[11px] font-medium text-rose-600">
+        <div className="flex items-center gap-1 text-[11px] font-medium text-rose-600 dark:text-rose-400">
           <AlertCircle className="h-3 w-3 shrink-0" />
           <span>{error}</span>
         </div>

@@ -25,8 +25,18 @@ async function postContacto(req, res) {
       return res.status(400).json({ error: 'La sede seleccionada no existe o no está activa' });
     }
     console.error('Error enviando mensaje de contacto:', err);
-    return res.status(500).json({ error: 'No se pudo enviar el mensaje. Intentá de nuevo más tarde.' });
+    return res.status(500).json({ error: 'No se pudo enviar el mensaje. Intenta de nuevo más tarde.' });
   }
 }
 
-module.exports = { getSedesContacto, postContacto };
+async function getCorreoContacto(req, res) {
+  try {
+    const correo = await contactoService.obtenerCorreoContacto();
+    return res.json({ correo });
+  } catch (err) {
+    console.error('Error al obtener el correo de contacto:', err);
+    return res.status(500).json({ error: 'No se pudo obtener el correo de contacto' });
+  }
+}
+
+module.exports = { getSedesContacto, postContacto, getCorreoContacto };

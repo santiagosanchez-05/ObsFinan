@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { ArrowLeft, CheckCircle2, Info } from 'lucide-react';
 import { useAuth, ROLES } from '../../../shared/AuthContext';
 
-const CAMPO = 'w-full rounded-lg border border-black/10 px-3 py-2 text-sm focus:border-maroon focus:outline-none';
+const CAMPO = 'w-full rounded-lg border border-line px-3 py-2 text-sm focus:border-brand focus:outline-none';
 
 // Fecha de hoy en Bolivia (AAAA-MM-DD), para el valor por defecto del inicio.
 const hoy = () => new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString().slice(0, 10);
@@ -82,8 +82,8 @@ export default function NuevaConvocatoriaPage() {
   if (creada) {
     return (
       <main className="min-h-[calc(100vh-4rem)] bg-surface px-4 py-6 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-lg rounded-2xl border border-black/10 bg-white p-8 text-center shadow-sm">
-          <CheckCircle2 size={40} className="mx-auto text-green-600" />
+        <div className="mx-auto max-w-lg rounded-2xl border border-line bg-card p-8 text-center shadow-sm">
+          <CheckCircle2 size={40} className="mx-auto text-green-600 dark:text-green-400" />
           <h1 className="mt-3 text-xl font-bold text-ink">Convocatoria creada</h1>
           <p className="mt-2 text-sm text-ink/60">
             “{creada.titulo}” ya aparece en el formulario público de postulación mientras esté vigente.
@@ -99,13 +99,13 @@ export default function NuevaConvocatoriaPage() {
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-surface px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-2xl">
-        <Link to="/convocatorias" className="inline-flex items-center gap-1 text-xs font-medium text-maroon hover:underline">
+        <Link to="/convocatorias" className="inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline">
           <ArrowLeft size={14} /> Volver a convocatorias
         </Link>
         <h1 className="mt-2 text-2xl font-bold tracking-tight text-ink">Nueva convocatoria</h1>
         <p className="mt-1 text-sm text-ink/60">Abre una convocatoria para que las personas se postulen como encuestadores.</p>
 
-        <form onSubmit={handleSubmit(onSubmit)} noValidate className="mt-4 space-y-4 rounded-2xl border border-black/10 bg-white p-6 shadow-sm sm:p-8">
+        <form onSubmit={handleSubmit(onSubmit)} noValidate className="mt-4 space-y-4 rounded-2xl border border-line bg-card p-6 shadow-sm sm:p-8">
           <Campo id="conv-titulo" label="Título" error={errors.title?.message}>
             <input id="conv-titulo" {...register('title')} placeholder="Ej. Convocatoria de encuestadores 2026-II" className={CAMPO} />
           </Campo>
@@ -138,12 +138,12 @@ export default function NuevaConvocatoriaPage() {
             <textarea id="conv-descripcion" rows={4} {...register('description')} placeholder="Requisitos, horarios, a quién está dirigida..." className={CAMPO} />
           </Campo>
 
-          <div className="flex items-start gap-2 rounded-lg bg-blue-50 p-3 text-xs text-blue-800">
+          <div className="flex items-start gap-2 rounded-lg bg-blue-50 dark:bg-blue-950/40 p-3 text-xs text-blue-800 dark:text-blue-300">
             <Info size={15} className="mt-0.5 shrink-0" />
             <p>Las postulaciones se revisan en “Postulantes”. Al aceptar a alguien se le crea su cuenta de encuestador en esta sede.</p>
           </div>
 
-          {errorServidor && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{errorServidor}</p>}
+          {errorServidor && <p className="rounded-lg bg-red-50 dark:bg-red-950/40 px-3 py-2 text-sm text-red-700 dark:text-red-300">{errorServidor}</p>}
 
           <div className="flex items-center gap-3">
             <button type="submit" disabled={enviando} className="rounded-lg bg-maroon px-6 py-2.5 text-sm font-semibold text-white hover:bg-maroon-light disabled:opacity-60">
@@ -162,7 +162,7 @@ function Campo({ id, label, error, children }) {
     <div>
       <label htmlFor={id} className="mb-1 block text-xs font-semibold text-ink">{label}</label>
       {children}
-      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+      {error && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{error}</p>}
     </div>
   );
 }

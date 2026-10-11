@@ -77,15 +77,15 @@ export default function RegistrarUsuarioPage() {
   if (resultado) {
     return (
       <main className="min-h-[calc(100vh-4rem)] bg-surface px-4 py-6 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-lg rounded-2xl border border-black/10 bg-white p-8 text-center shadow-sm">
-          <CheckCircle2 size={40} className="mx-auto text-green-600" />
+        <div className="mx-auto max-w-lg rounded-2xl border border-line bg-card p-8 text-center shadow-sm">
+          <CheckCircle2 size={40} className="mx-auto text-green-600 dark:text-green-400" />
           <h1 className="mt-3 text-xl font-bold text-ink">Usuario registrado correctamente</h1>
           {resultado.correoEnviado ? (
             <p className="mt-2 text-sm text-ink/60">Le enviamos un correo con su contraseña temporal.</p>
           ) : (
             <div className="mt-3 rounded-lg bg-surface p-3 text-sm text-ink/70">
               <p>No se pudo enviar el correo — compartile esta contraseña temporal a mano:</p>
-              <p className="mt-2 font-mono text-lg font-bold text-maroon">{resultado.passwordTemporal}</p>
+              <p className="mt-2 font-mono text-lg font-bold text-brand">{resultado.passwordTemporal}</p>
             </div>
           )}
           <button
@@ -102,7 +102,7 @@ export default function RegistrarUsuarioPage() {
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-surface px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-2xl">
-        <Link to="/superadmin/usuarios" className="inline-flex items-center gap-1 text-xs font-medium text-maroon hover:underline">
+        <Link to="/superadmin/usuarios" className="inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline">
           <ArrowLeft size={14} /> Volver a Usuarios
         </Link>
         <h1 className="mt-2 text-2xl font-bold tracking-tight text-ink">Registrar nuevo usuario</h1>
@@ -110,13 +110,13 @@ export default function RegistrarUsuarioPage() {
 
         <form
           onSubmit={handleSubmit(onSubmit)}
-          className="mt-4 rounded-2xl border border-black/10 bg-white p-6 shadow-sm sm:p-8"
+          className="mt-4 rounded-2xl border border-line bg-card p-6 shadow-sm sm:p-8"
         >
-          <div className="flex flex-col items-center border-b border-black/5 pb-6 text-center">
+          <div className="flex flex-col items-center border-b border-line/70 pb-6 text-center">
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-surface text-ink/30 ring-1 ring-black/10 hover:text-maroon"
+              className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-surface text-ink/30 ring-1 ring-line hover:text-brand"
             >
               {previewUrl ? (
                 <img src={previewUrl} alt="Vista previa" className="h-full w-full object-cover" />
@@ -125,7 +125,7 @@ export default function RegistrarUsuarioPage() {
               )}
             </button>
             <input ref={fileInputRef} type="file" accept="image/jpeg,image/png" onChange={handleFotoChange} className="hidden" />
-            <button type="button" onClick={() => fileInputRef.current?.click()} className="mt-2 text-xs font-semibold text-maroon">
+            <button type="button" onClick={() => fileInputRef.current?.click()} className="mt-2 text-xs font-semibold text-brand">
               Subir foto
             </button>
             <p className="mt-1 text-[11px] text-ink/40">Formatos sugeridos: JPG o PNG. Máx 5MB.</p>
@@ -133,25 +133,25 @@ export default function RegistrarUsuarioPage() {
 
           <div className="mt-6 space-y-4">
             <Campo label="Nombres" error={errors.nombre?.message}>
-              <input {...register('nombre')} placeholder="Ej. Juan Ignacio" className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm focus:border-maroon focus:outline-none" />
+              <input {...register('nombre')} placeholder="Ej. Juan Ignacio" className="w-full rounded-lg border border-line px-3 py-2 text-sm focus:border-brand focus:outline-none" />
             </Campo>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <Campo label="Apellido paterno" error={errors.apellidoPaterno?.message}>
-                <input {...register('apellidoPaterno')} placeholder="Ej. Pérez" className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm focus:border-maroon focus:outline-none" />
+                <input {...register('apellidoPaterno')} placeholder="Ej. Pérez" className="w-full rounded-lg border border-line px-3 py-2 text-sm focus:border-brand focus:outline-none" />
               </Campo>
               <Campo label="Apellido materno">
-                <input {...register('apellidoMaterno')} placeholder="Ej. García" className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm focus:border-maroon focus:outline-none" />
+                <input {...register('apellidoMaterno')} placeholder="Ej. García" className="w-full rounded-lg border border-line px-3 py-2 text-sm focus:border-brand focus:outline-none" />
               </Campo>
             </div>
 
             <Campo label="Correo electrónico" error={errors.correo?.message}>
-              <input {...register('correo')} type="email" placeholder="usuario@univalle.edu" className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm focus:border-maroon focus:outline-none" />
+              <input {...register('correo')} type="email" placeholder="usuario@univalle.edu" className="w-full rounded-lg border border-line px-3 py-2 text-sm focus:border-brand focus:outline-none" />
             </Campo>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <Campo label="Rol" error={errors.rol?.message}>
-                <select {...register('rol')} defaultValue="" className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm focus:border-maroon focus:outline-none">
+                <select {...register('rol')} defaultValue="" className="w-full rounded-lg border border-line px-3 py-2 text-sm focus:border-brand focus:outline-none">
                   <option value="" disabled>
                     Asignar rol
                   </option>
@@ -161,7 +161,7 @@ export default function RegistrarUsuarioPage() {
                 </select>
               </Campo>
               <Campo label="Sede" error={errors.campusId?.message}>
-                <select {...register('campusId')} defaultValue="" className="w-full rounded-lg border border-black/10 px-3 py-2 text-sm focus:border-maroon focus:outline-none">
+                <select {...register('campusId')} defaultValue="" className="w-full rounded-lg border border-line px-3 py-2 text-sm focus:border-brand focus:outline-none">
                   <option value="" disabled>
                     Selecciona sede
                   </option>
@@ -175,12 +175,12 @@ export default function RegistrarUsuarioPage() {
             </div>
           </div>
 
-          <div className="mt-5 flex items-start gap-2 rounded-lg bg-blue-50 p-3 text-xs text-blue-800">
+          <div className="mt-5 flex items-start gap-2 rounded-lg bg-blue-50 dark:bg-blue-950/40 p-3 text-xs text-blue-800 dark:text-blue-300">
             <Info size={15} className="mt-0.5 shrink-0" />
             <p>Se enviará un correo al usuario con instrucciones para crear su contraseña una vez completado el registro.</p>
           </div>
 
-          {errorServidor && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{errorServidor}</p>}
+          {errorServidor && <p className="mt-4 rounded-lg bg-red-50 dark:bg-red-950/40 px-3 py-2 text-sm text-red-700 dark:text-red-300">{errorServidor}</p>}
 
           <div className="mt-6 flex items-center gap-3">
             <button
@@ -205,7 +205,7 @@ function Campo({ label, error, children }) {
     <label className="block">
       <span className="mb-1 block text-xs font-semibold text-ink">{label}</span>
       {children}
-      {error && <span className="mt-1 block text-xs text-red-600">{error}</span>}
+      {error && <span className="mt-1 block text-xs text-red-600 dark:text-red-400">{error}</span>}
     </label>
   );
 }

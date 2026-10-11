@@ -88,14 +88,14 @@ export default function VerificarCodigoPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-surface px-6 py-10">
       <div className="w-full max-w-sm">
-        <div className="rounded-2xl border border-black/5 bg-white shadow-sm">
+        <div className="rounded-2xl border border-line/70 bg-card shadow-sm">
           <div className="flex flex-col items-center px-8 pt-8 pb-6 text-center">
             <img src={univalleLogo} alt="Univalle" className="h-12 w-12" />
             <h2 className="mt-3 text-base font-bold text-ink">Bienestar Financiero</h2>
-            <p className="text-sm font-medium text-maroon">Universidad del Valle</p>
+            <p className="text-sm font-medium text-brand">Universidad del Valle</p>
           </div>
 
-          <div className="border-t border-black/5 px-8 py-6">
+          <div className="border-t border-line/70 px-8 py-6">
             <h1 className="text-lg font-bold text-ink">Ingresa tu código de recuperación</h1>
             <p className="mt-1 text-sm text-ink/60">
               Enviamos un código de verificación a tu correo electrónico. Ingrésalo a
@@ -112,7 +112,7 @@ export default function VerificarCodigoPage() {
                   onKeyDown={(e) => handleKeyDown(i, e)}
                   inputMode="numeric"
                   maxLength={1}
-                  className="h-12 w-11 rounded-lg border border-black/10 bg-surface text-center text-lg font-semibold text-ink focus:border-maroon focus:outline-none"
+                  className="h-12 w-11 rounded-lg border border-line bg-surface text-center text-lg font-semibold text-ink focus:border-brand focus:outline-none"
                 />
               ))}
             </div>
@@ -120,16 +120,16 @@ export default function VerificarCodigoPage() {
             <p className="mt-3 text-center text-xs text-ink/50">
               ¿No recibiste el código?{' '}
               {segundosRestantes > 0 ? (
-                <span className="font-medium text-maroon">Reenviar en {formatoTiempo}</span>
+                <span className="font-medium text-brand">Reenviar en {formatoTiempo}</span>
               ) : (
-                <button onClick={reenviar} className="font-medium text-maroon hover:underline">
+                <button onClick={reenviar} className="font-medium text-brand hover:underline">
                   Reenviar
                 </button>
               )}
             </p>
 
             {error && (
-              <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-center text-sm text-red-700">{error}</p>
+              <p className="mt-3 rounded-lg bg-red-50 dark:bg-red-950/40 px-3 py-2 text-center text-sm text-red-700 dark:text-red-300">{error}</p>
             )}
 
             <button
@@ -142,12 +142,12 @@ export default function VerificarCodigoPage() {
 
             <Link
               to="/login"
-              className="mt-3 block text-center text-sm font-medium text-maroon hover:underline"
+              className="mt-3 block text-center text-sm font-medium text-brand hover:underline"
             >
               Volver
             </Link>
 
-            <div className="mt-5 flex items-center justify-center gap-1.5 border-t border-black/5 pt-4 text-[11px] uppercase tracking-wide text-ink/40">
+            <div className="mt-5 flex items-center justify-center gap-1.5 border-t border-line/70 pt-4 text-[11px] uppercase tracking-wide text-ink/40">
               <ShieldCheck size={12} />
               Acceso institucional seguro
             </div>

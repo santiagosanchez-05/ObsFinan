@@ -78,17 +78,17 @@ export default function CambiarContrasenaObligatoriaPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-surface px-6 py-10">
       <div className="w-full max-w-sm">
-        <div className="rounded-2xl border border-black/5 bg-white shadow-sm">
+        <div className="rounded-2xl border border-line/70 bg-card shadow-sm">
           <div className="flex flex-col items-center px-8 pt-8 pb-6 text-center">
             <img src={univalleLogo} alt="Univalle" className="h-12 w-12" />
             <h1 className="mt-3 text-lg font-bold text-ink">Tienes que cambiar tu contraseña</h1>
-            <p className="mt-2 flex items-center gap-1.5 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            <p className="mt-2 flex items-center gap-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 px-3 py-2 text-xs text-amber-800 dark:text-amber-300">
               <ShieldAlert size={14} className="shrink-0" />
               Iniciaste sesión con una contraseña temporal. Elige una nueva antes de seguir.
             </p>
           </div>
 
-          <div className="border-t border-black/5 px-8 py-6">
+          <div className="border-t border-line/70 px-8 py-6">
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div>
                 <label htmlFor="newPassword" className="mb-1 block text-sm font-medium text-ink">
@@ -101,7 +101,7 @@ export default function CambiarContrasenaObligatoriaPage() {
                     type={verNueva ? 'text' : 'password'}
                     autoComplete="new-password"
                     {...register('newPassword')}
-                    className="w-full rounded-lg border border-black/10 bg-surface py-2.5 pl-9 pr-9 text-sm focus:border-maroon focus:outline-none"
+                    className="w-full rounded-lg border border-line bg-surface py-2.5 pl-9 pr-9 text-sm focus:border-brand focus:outline-none"
                   />
                   <button
                     type="button"
@@ -112,7 +112,7 @@ export default function CambiarContrasenaObligatoriaPage() {
                     {verNueva ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
-                {errors.newPassword && <p className="mt-1 text-xs text-red-600">{errors.newPassword.message}</p>}
+                {errors.newPassword && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.newPassword.message}</p>}
               </div>
 
               <div>
@@ -126,7 +126,7 @@ export default function CambiarContrasenaObligatoriaPage() {
                     type={verConfirmar ? 'text' : 'password'}
                     autoComplete="new-password"
                     {...register('confirmPassword')}
-                    className="w-full rounded-lg border border-black/10 bg-surface py-2.5 pl-9 pr-9 text-sm focus:border-maroon focus:outline-none"
+                    className="w-full rounded-lg border border-line bg-surface py-2.5 pl-9 pr-9 text-sm focus:border-brand focus:outline-none"
                   />
                   <button
                     type="button"
@@ -138,7 +138,7 @@ export default function CambiarContrasenaObligatoriaPage() {
                   </button>
                 </div>
                 {errors.confirmPassword && (
-                  <p className="mt-1 text-xs text-red-600">{errors.confirmPassword.message}</p>
+                  <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.confirmPassword.message}</p>
                 )}
               </div>
 
@@ -146,7 +146,7 @@ export default function CambiarContrasenaObligatoriaPage() {
                 {reglas.map((r) => (
                   <div key={r.texto} className="flex items-center gap-2 py-0.5 text-xs">
                     {r.ok ? (
-                      <CheckCircle2 size={14} className="text-emerald-600" />
+                      <CheckCircle2 size={14} className="text-emerald-600 dark:text-emerald-400" />
                     ) : (
                       <Circle size={14} className="text-ink/30" />
                     )}
@@ -156,7 +156,7 @@ export default function CambiarContrasenaObligatoriaPage() {
               </div>
 
               {errorServidor && (
-                <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{errorServidor}</p>
+                <p className="rounded-lg bg-red-50 dark:bg-red-950/40 px-3 py-2 text-sm text-red-700 dark:text-red-300">{errorServidor}</p>
               )}
 
               <button
@@ -171,7 +171,7 @@ export default function CambiarContrasenaObligatoriaPage() {
             <button
               type="button"
               onClick={logout}
-              className="mt-3 block w-full text-center text-sm font-medium text-ink/50 hover:text-maroon"
+              className="mt-3 block w-full text-center text-sm font-medium text-ink/50 hover:text-brand"
             >
               Cerrar sesión
             </button>

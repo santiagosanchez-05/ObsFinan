@@ -16,6 +16,7 @@ import {
   Mail,
   Phone,
 } from 'lucide-react';
+import { useCorreoContacto } from '../../../shared/useCorreoContacto';
 import univalleLogo from '../../../assets/univalleLogo.png';
 import boliviaMap from '../../../assets/boliviamap.jpg';
 
@@ -92,19 +93,20 @@ const ROLES = [
 ];
 
 export default function LandingPage() {
+  const correoContacto = useCorreoContacto();
   return (
     <>
       {/* HERO */}
       <section className="mx-auto max-w-5xl px-6 pb-16 pt-20 text-center">
         <h1 className="text-4xl font-bold leading-tight text-ink md:text-5xl">
-          Midiendo el Bienestar Financiero en <span className="text-maroon">Bolivia</span>.
+          Midiendo el Bienestar Financiero en <span className="text-brand">Bolivia</span>.
         </h1>
         <p className="mx-auto mt-4 max-w-2xl text-ink/60">
           Un observatorio de la Universidad Privada del Valle dedicado al análisis y publicación
           de indicadores de salud financiera nacional.
         </p>
 
-        <div className="mx-auto mt-12 max-w-3xl overflow-hidden rounded-2xl border border-black/5 bg-white p-4 shadow-sm sm:p-8">
+        <div className="mx-auto mt-12 max-w-3xl overflow-hidden rounded-2xl border border-line/70 bg-card p-4 shadow-sm sm:p-8">
           <img
             src={boliviaMap}
             alt="Mapa de Bolivia"
@@ -114,7 +116,7 @@ export default function LandingPage() {
       </section>
 
       {/* QUÉ ES EL OBSERVATORIO */}
-      <section className="bg-white px-6 py-16">
+      <section className="bg-card px-6 py-16">
         <div className="mx-auto max-w-5xl text-center">
           <h2 className="text-2xl font-bold text-ink">¿Qué es el Observatorio?</h2>
           <p className="mt-2 text-ink/60">
@@ -124,9 +126,9 @@ export default function LandingPage() {
 
           <div className="mt-10 grid gap-6 md:grid-cols-3">
             {QUE_ES.map(({ icon: Icon, titulo, texto }) => (
-              <div key={titulo} className="rounded-2xl border border-black/5 bg-surface p-6 text-left">
+              <div key={titulo} className="rounded-2xl border border-line/70 bg-surface p-6 text-left">
                 <div className="mb-4 inline-flex h-9 w-9 items-center justify-center rounded-lg bg-maroon/10">
-                  <Icon size={18} className="text-maroon" />
+                  <Icon size={18} className="text-brand" />
                 </div>
                 <h3 className="font-semibold text-ink">{titulo}</h3>
                 <p className="mt-2 text-sm text-ink/60">{texto}</p>
@@ -148,9 +150,9 @@ export default function LandingPage() {
 
           <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {INDICADORES.map(({ icon: Icon, titulo, texto }) => (
-              <div key={titulo} className="rounded-2xl border border-black/5 bg-white p-5">
+              <div key={titulo} className="rounded-2xl border border-line/70 bg-card p-5">
                 <div className="mb-4 inline-flex h-9 w-9 items-center justify-center rounded-lg bg-maroon/10">
-                  <Icon size={18} className="text-maroon" />
+                  <Icon size={18} className="text-brand" />
                 </div>
                 <h3 className="text-sm font-semibold text-ink">{titulo}</h3>
                 <p className="mt-2 text-xs text-ink/60">{texto}</p>
@@ -161,15 +163,15 @@ export default function LandingPage() {
       </section>
 
       {/* ACCESO A LA PLATAFORMA */}
-      <section className="bg-white px-6 py-16 text-center">
+      <section className="bg-card px-6 py-16 text-center">
         <div className="mx-auto max-w-4xl">
           <h2 className="text-2xl font-bold text-ink">Acceso a la Plataforma</h2>
           <p className="mt-2 text-ink/60">Diferentes niveles de acceso según tu rol en el observatorio.</p>
 
           <div className="mt-10 grid gap-5 md:grid-cols-3">
             {ROLES.map(({ icon: Icon, titulo, texto }) => (
-              <div key={titulo} className="rounded-2xl border border-black/5 bg-surface p-6 text-left">
-                <Icon size={18} className="text-maroon" />
+              <div key={titulo} className="rounded-2xl border border-line/70 bg-surface p-6 text-left">
+                <Icon size={18} className="text-brand" />
                 <h3 className="mt-3 font-semibold text-ink">{titulo}</h3>
                 <p className="mt-2 text-sm text-ink/60">{texto}</p>
               </div>
@@ -178,7 +180,7 @@ export default function LandingPage() {
 
           <Link
             to="/login"
-            className="mt-10 inline-flex items-center gap-2 rounded-lg bg-ink px-6 py-3 text-sm font-semibold text-white hover:bg-ink/90"
+            className="mt-10 inline-flex items-center gap-2 rounded-lg bg-night px-6 py-3 text-sm font-semibold text-white hover:bg-night/90"
           >
             Iniciar sesión en la plataforma
             <ArrowRight size={16} />
@@ -187,7 +189,7 @@ export default function LandingPage() {
       </section>
 
       {/* FOOTER */}
-      <footer className="bg-ink px-6 py-12 text-white/70">
+      <footer className="bg-night px-6 py-12 text-white/70">
         <div className="mx-auto grid max-w-5xl gap-8 md:grid-cols-3">
           <div>
             <div className="flex items-center gap-2">
@@ -207,7 +209,8 @@ export default function LandingPage() {
                 <MapPin size={14} /> Campus Tiquipaya, Cochabamba, Bolivia
               </li>
               <li className="flex items-center gap-2">
-                <Mail size={14} /> observatorio@univalle.edu
+                <Mail size={14} />
+                <a href={`mailto:${correoContacto}`} className="hover:text-white">{correoContacto}</a>
               </li>
               <li className="flex items-center gap-2">
                 <Phone size={14} /> +591 (4) 4318800

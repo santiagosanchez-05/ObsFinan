@@ -70,11 +70,11 @@ export default function CitaAcademica({ recurso = 'observatorio', className = ''
   }
 
   return (
-    <section className={`rounded-2xl border border-black/10 bg-white p-5 text-left shadow-sm ${className}`} aria-label="Cómo citar">
+    <section className={`rounded-2xl border border-line bg-card p-5 text-left shadow-sm ${className}`} aria-label="Cómo citar">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3">
           <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-maroon/10">
-            <Quote size={16} className="text-maroon" />
+            <Quote size={16} className="text-brand" />
           </span>
           <div>
             <h2 className="text-sm font-semibold text-ink">Cómo citar (APA 7)</h2>
@@ -88,14 +88,14 @@ export default function CitaAcademica({ recurso = 'observatorio', className = ''
         <button
           type="button"
           onClick={copiar}
-          className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-black/10 px-3 py-2 text-sm font-medium text-ink hover:border-maroon hover:text-maroon"
+          className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-line px-3 py-2 text-sm font-medium text-ink hover:border-brand hover:text-brand"
         >
-          {estado === 'copiada' ? <Check size={15} className="text-green-600" /> : <Copy size={15} />}
+          {estado === 'copiada' ? <Check size={15} className="text-green-600 dark:text-green-400" /> : <Copy size={15} />}
           {estado === 'copiada' ? '¡Cita copiada!' : 'Copiar cita'}
         </button>
       </div>
       {estado === 'error' && (
-        <p className="mt-2 text-xs text-red-600" role="alert">
+        <p className="mt-2 text-xs text-red-600 dark:text-red-400" role="alert">
           No se pudo copiar automáticamente. Selecciona el texto y cópialo a mano.
         </p>
       )}

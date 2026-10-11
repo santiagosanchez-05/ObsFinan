@@ -365,13 +365,13 @@ export default function ICAFileDetail() {
   }
 
   return (
-    <main className="min-h-[calc(100vh-4rem)] bg-[#f4f6f8] px-4 py-5 sm:px-6 lg:px-8">
+    <main className="min-h-[calc(100vh-4rem)] bg-surface px-4 py-5 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-[1200px]">
 
         {/* Breadcrumb */}
         <Link
           to="/ica/historial"
-          className="mb-3 inline-flex items-center gap-1.5 text-xs font-semibold text-[#a00046] hover:underline"
+          className="mb-3 inline-flex items-center gap-1.5 text-xs font-semibold text-brand hover:underline"
         >
           <ArrowLeft size={13} />
           Volver al Historial
@@ -379,7 +379,7 @@ export default function ICAFileDetail() {
 
         {/* Encabezado */}
         <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-2xl font-bold tracking-tight text-[#202522] sm:text-[28px]">
+          <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-[28px]">
             Detalle del registro
           </h1>
 
@@ -388,7 +388,7 @@ export default function ICAFileDetail() {
             {/* Eliminar archivo */}
             <button
               onClick={() => setMostrarModalArchivo(true)}
-              className="inline-flex items-center gap-2 self-start rounded-lg border border-[#f0b9c7] bg-[#fff5f7] px-4 py-2 text-xs font-semibold text-[#a00046] transition hover:bg-[#fde8ee] sm:self-auto"
+              className="inline-flex items-center gap-2 self-start rounded-lg border border-brand-line bg-brand-soft px-4 py-2 text-xs font-semibold text-brand transition hover:bg-brand-soft sm:self-auto"
             >
               <Trash2 size={14} />
               Eliminar registro
@@ -398,39 +398,39 @@ export default function ICAFileDetail() {
         </div>
 
         {error && (
-          <p className="mb-5 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+          <p className="mb-5 rounded-lg bg-red-50 dark:bg-red-950/40 px-3 py-2 text-sm text-red-700 dark:text-red-300">
             {error}
           </p>
         )}
 
         {cargando ? (
-          <div className="flex items-center justify-center gap-2 rounded-xl border border-[#e2e6e8] bg-white p-10 text-sm text-[#8a9290] shadow-sm">
+          <div className="flex items-center justify-center gap-2 rounded-xl border border-line bg-card p-10 text-sm text-muted shadow-sm">
             <Loader2 size={16} className="animate-spin" />
             Cargando detalle del registro...
           </div>
         ) : archivo ? (
           <>
             {/* Tarjeta de metadatos */}
-            <section className="mb-5 rounded-xl border border-[#e2e6e8] bg-white p-4 shadow-sm">
+            <section className="mb-5 rounded-xl border border-line bg-card p-4 shadow-sm">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
 
                 <div className="flex items-center gap-3">
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#e5f5ea] text-[#2f9e58]">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#e5f5ea] dark:bg-white/10 text-[#2f9e58]">
                     <FileSpreadsheet size={20} />
                   </span>
 
                   <div>
-                    <p className="text-sm font-bold text-[#252927]">
+                    <p className="text-sm font-bold text-ink">
                       {archivo.nombre}
                     </p>
 
-                    <p className="mt-0.5 text-xs text-[#8a9290]">
+                    <p className="mt-0.5 text-xs text-muted">
                       {archivo.comunidad} · {archivo.periodo}
                     </p>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-x-8 gap-y-3 sm:grid-cols-4 lg:border-l lg:border-[#edf0f1] lg:pl-6">
+                <div className="grid grid-cols-2 gap-x-8 gap-y-3 sm:grid-cols-4 lg:border-l lg:border-line lg:pl-6">
                   <MetaItem
                     label="Comuna"
                     value={archivo.comunidad}
@@ -456,10 +456,10 @@ export default function ICAFileDetail() {
               <div className="mt-3 flex justify-end">
                 <span
                   className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold ${archivo.estado === 'Verificado'
-                    ? 'bg-[#eaf6ef] text-[#2f9e58]'
+                    ? 'bg-[#eaf6ef] dark:bg-white/10 text-[#2f9e58]'
                     : archivo.estado === 'Rechazado'
-                      ? 'bg-[#fdeaea] text-[#dc2626]'
-                      : 'bg-[#fbf1de] text-[#b7891e]'
+                      ? 'bg-[#fdeaea] dark:bg-white/10 text-[#dc2626]'
+                      : 'bg-[#fbf1de] dark:bg-white/10 text-[#b7891e]'
                     }`}
                 >
                   <CheckCircle2 size={11} />
@@ -469,14 +469,14 @@ export default function ICAFileDetail() {
             </section>
 
             {/* Tabla */}
-            <section className="overflow-hidden rounded-xl border border-[#e2e6e8] bg-white shadow-sm">
+            <section className="overflow-hidden rounded-xl border border-line bg-card shadow-sm">
 
               {/* Barra superior */}
-              <div className="border-b border-[#edf0f1] px-4 py-4">
+              <div className="border-b border-line px-4 py-4">
 
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
 
-                  <h2 className="text-sm font-bold text-[#252927]">
+                  <h2 className="text-sm font-bold text-ink">
                     Respuestas de la encuesta
                   </h2>
 
@@ -486,7 +486,7 @@ export default function ICAFileDetail() {
                     <div className="relative">
                       <Search
                         size={14}
-                        className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8a9290]"
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-muted"
                       />
 
                       <input
@@ -496,13 +496,13 @@ export default function ICAFileDetail() {
                           setBusqueda(e.target.value)
                         }
                         placeholder="Buscar en las respuestas..."
-                        className="w-full rounded-lg border border-[#e1e5e5] bg-white py-2 pl-9 pr-8 text-xs text-[#414845] outline-none transition placeholder:text-[#a1a8a6] focus:border-[#a00046] sm:w-[260px]"
+                        className="w-full rounded-lg border border-line bg-card py-2 pl-9 pr-8 text-xs text-ink-2 outline-none transition placeholder:text-muted focus:border-brand sm:w-[260px]"
                       />
 
                       {busqueda && (
                         <button
                           onClick={() => setBusqueda('')}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 text-[#8a9290] hover:text-[#a00046]"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-brand"
                         >
                           <X size={13} />
                         </button>
@@ -515,15 +515,15 @@ export default function ICAFileDetail() {
                         setMostrarFiltros(!mostrarFiltros)
                       }
                       className={`inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition ${mostrarFiltros || hayFiltrosActivos
-                        ? 'border-[#e8b6c6] bg-[#fff5f7] text-[#a00046]'
-                        : 'border-[#e1e5e5] bg-white text-[#59615e] hover:bg-[#f7f8f8]'
+                        ? 'border-brand-line bg-brand-soft text-brand'
+                        : 'border-line bg-card text-ink-2 hover:bg-subtle'
                         }`}
                     >
                       <Filter size={14} />
                       Filtros
 
                       {hayFiltrosActivos && (
-                        <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-[#a00046] px-1 text-[9px] text-white">
+                        <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-maroon px-1 text-[9px] text-white">
                           4
                         </span>
                       )}
@@ -534,14 +534,14 @@ export default function ICAFileDetail() {
                         <button
                           onClick={() => descargarArchivo('xlsx')}
                           disabled={descargando}
-                          className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#e1e5e5] bg-white px-3 py-2 text-xs font-semibold text-[#59615e] transition hover:bg-[#f7f8f8] hover:text-[#a00046] disabled:cursor-not-allowed disabled:opacity-60"
+                          className="inline-flex items-center justify-center gap-2 rounded-lg border border-line bg-card px-3 py-2 text-xs font-semibold text-ink-2 transition hover:bg-subtle hover:text-brand disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {descargando ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} Excel
                         </button>
                         <button
                           onClick={() => descargarArchivo('json')}
                           disabled={descargando}
-                          className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#e1e5e5] bg-white px-3 py-2 text-xs font-semibold text-[#59615e] transition hover:bg-[#f7f8f8] hover:text-[#a00046] disabled:cursor-not-allowed disabled:opacity-60"
+                          className="inline-flex items-center justify-center gap-2 rounded-lg border border-line bg-card px-3 py-2 text-xs font-semibold text-ink-2 transition hover:bg-subtle hover:text-brand disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {descargando ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} JSON
                         </button>
@@ -552,7 +552,7 @@ export default function ICAFileDetail() {
 
                 {/* Panel de filtros */}
                 {mostrarFiltros && (
-                  <div className="mt-4 rounded-lg border border-[#e6e9e9] bg-[#fafbfb] p-4">
+                  <div className="mt-4 rounded-lg border border-line bg-subtle p-4">
 
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
 
@@ -604,7 +604,7 @@ export default function ICAFileDetail() {
                       <div className="mt-3 flex justify-end">
                         <button
                           onClick={limpiarFiltros}
-                          className="text-[11px] font-semibold text-[#a00046] hover:underline"
+                          className="text-[11px] font-semibold text-brand hover:underline"
                         >
                           Limpiar filtros
                         </button>
@@ -616,7 +616,7 @@ export default function ICAFileDetail() {
 
                 {/* Resultado */}
                 {(busqueda || hayFiltrosActivos) && (
-                  <p className="mt-3 text-[10px] text-[#8a9290]">
+                  <p className="mt-3 text-[10px] text-muted">
                     Mostrando {registrosFiltrados.length} de{' '}
                     {registros.length} registros
                   </p>
@@ -632,10 +632,10 @@ export default function ICAFileDetail() {
                     minWidth: `${220 + PREGUNTAS.length * 160}px`,
                   }}
                 >
-                  <thead className="bg-[#fafbfb] text-[9px] font-bold uppercase tracking-wider text-[#8a9290]">
+                  <thead className="bg-subtle text-[9px] font-bold uppercase tracking-wider text-muted">
                     <tr>
 
-                      <th className="sticky left-0 z-20 w-[55px] min-w-[55px] bg-[#fafbfb] px-4 py-3">
+                      <th className="sticky left-0 z-20 w-[55px] min-w-[55px] bg-subtle px-4 py-3">
                         #
                       </th>
 
@@ -659,7 +659,7 @@ export default function ICAFileDetail() {
                       <tr>
                         <td
                           colSpan={PREGUNTAS.length + 1}
-                          className="px-4 py-8 text-center text-[#8a9290]"
+                          className="px-4 py-8 text-center text-muted"
                         >
                           No se encontraron entrevistas con los criterios seleccionados.
                         </td>
@@ -668,10 +668,10 @@ export default function ICAFileDetail() {
                       registrosPagina.map((r, index) => (
                         <tr
                           key={r.id}
-                          className="border-t border-[#f0f2f2] text-[#48504d] hover:bg-[#fff8fa]"
+                          className="border-t border-line text-ink-2 hover:bg-brand-soft"
                         >
 
-                          <td className="sticky left-0 z-10 bg-white px-4 py-3 font-semibold text-[#252927]">
+                          <td className="sticky left-0 z-10 bg-card px-4 py-3 font-semibold text-ink">
                             {indiceInicio + index + 1}
                           </td>
 
@@ -692,7 +692,7 @@ export default function ICAFileDetail() {
               </div>
 
               {/* Paginación */}
-              <div className="flex flex-col gap-3 border-t border-[#edf0f1] px-4 py-3 text-[10px] text-[#8a9290] sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col gap-3 border-t border-line px-4 py-3 text-[10px] text-muted sm:flex-row sm:items-center sm:justify-between">
 
                 <span>
                   Mostrando{' '}
@@ -715,7 +715,7 @@ export default function ICAFileDetail() {
                         setPaginaActual(paginaActual - 1)
                       }
                       disabled={paginaActual === 1}
-                      className="rounded border border-[#e4e8e8] px-3 py-1.5 font-semibold text-[#59615e] disabled:cursor-not-allowed disabled:opacity-50"
+                      className="rounded border border-line px-3 py-1.5 font-semibold text-ink-2 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       Anterior
                     </button>
@@ -730,8 +730,8 @@ export default function ICAFileDetail() {
                           setPaginaActual(pagina)
                         }
                         className={`rounded px-3 py-1.5 font-semibold ${paginaActual === pagina
-                          ? 'bg-[#a00046] text-white'
-                          : 'border border-[#e4e8e8] text-[#59615e] hover:bg-[#f5f6f6]'
+                          ? 'bg-maroon text-white'
+                          : 'border border-line text-ink-2 hover:bg-subtle'
                           }`}
                       >
                         {pagina}
@@ -745,7 +745,7 @@ export default function ICAFileDetail() {
                       disabled={
                         paginaActual === totalPaginas
                       }
-                      className="rounded border border-[#e4e8e8] px-3 py-1.5 font-semibold text-[#59615e] disabled:cursor-not-allowed disabled:opacity-50"
+                      className="rounded border border-line px-3 py-1.5 font-semibold text-ink-2 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       Siguiente
                     </button>
@@ -761,7 +761,7 @@ export default function ICAFileDetail() {
 
               <SummaryCard
                 icon={<BarChart3 size={16} />}
-                iconClass="bg-[#eaf1fb] text-[#2f6fb0]"
+                iconClass="bg-[#eaf1fb] dark:bg-white/10 text-[#2f6fb0]"
                 label="ICA de esta encuesta"
                 value={puntaje?.ica != null ? puntaje.ica.toFixed(1) : '—'}
                 suffix="pts"
@@ -770,7 +770,7 @@ export default function ICAFileDetail() {
 
               <SummaryCard
                 icon={<Users size={16} />}
-                iconClass="bg-[#f6ecfb] text-[#a34fc4]"
+                iconClass="bg-[#f6ecfb] dark:bg-white/10 text-[#a34fc4]"
                 label="Dimensiones"
                 value={
                   puntaje
@@ -780,17 +780,17 @@ export default function ICAFileDetail() {
                 description="Conocimiento · Educación · Previsión · Uso y confianza (0 a 100)."
               />
 
-              <article className="flex items-start gap-3 rounded-xl border border-[#e4e8e9] bg-white p-4 shadow-sm">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#fbf1de] text-[#b7891e]">
+              <article className="flex items-start gap-3 rounded-xl border border-line bg-card p-4 shadow-sm">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#fbf1de] dark:bg-white/10 text-[#b7891e]">
                   <Info size={16} />
                 </span>
 
                 <div>
-                  <p className="text-xs font-bold text-[#252927]">
+                  <p className="text-xs font-bold text-ink">
                     Vista de revisión
                   </p>
 
-                  <p className="mt-1 text-[11px] leading-relaxed text-[#8a9290]">
+                  <p className="mt-1 text-[11px] leading-relaxed text-muted">
                     Las encuestas aprobadas cuentan en los tableros del ICA. Si eliminas este registro, se recalcula el ICA de su comuna y trimestre.
                   </p>
                 </div>
@@ -804,19 +804,19 @@ export default function ICAFileDetail() {
       {/* Modal: eliminar archivo */}
       {mostrarModalArchivo && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-xl">
+          <div className="w-full max-w-md rounded-xl bg-card p-5 shadow-xl">
 
             <div className="flex items-start gap-3">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#fff0f4] text-[#a00046]">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand">
                 <Trash2 size={17} />
               </span>
 
               <div>
-                <h3 className="text-sm font-bold text-[#252927]">
+                <h3 className="text-sm font-bold text-ink">
                   Eliminar registro
                 </h3>
 
-                <p className="mt-1 text-xs leading-relaxed text-[#747d79]">
+                <p className="mt-1 text-xs leading-relaxed text-muted">
                   Se eliminará este registro individual. Esta acción hará que deje de contar para los datos del ICA.
                 </p>
               </div>
@@ -828,7 +828,7 @@ export default function ICAFileDetail() {
                   setMostrarModalArchivo(false)
                 }
                 disabled={eliminandoArchivo}
-                className="rounded-lg border border-[#e1e5e5] px-4 py-2 text-xs font-semibold text-[#59615e] hover:bg-[#f5f6f6] disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-lg border border-line px-4 py-2 text-xs font-semibold text-ink-2 hover:bg-subtle disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Cancelar
               </button>
@@ -836,7 +836,7 @@ export default function ICAFileDetail() {
               <button
                 onClick={confirmarEliminacionArchivo}
                 disabled={eliminandoArchivo}
-                className="inline-flex items-center gap-2 rounded-lg bg-[#a00046] px-4 py-2 text-xs font-semibold text-white hover:bg-[#86003a] disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-lg bg-maroon px-4 py-2 text-xs font-semibold text-white hover:bg-maroon-dark disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {eliminandoArchivo ? (
                   <Loader2 size={13} className="animate-spin" />
@@ -863,14 +863,14 @@ function FiltroSelect({
 }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-[#8a9290]">
+      <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-muted">
         {label}
       </span>
 
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-[#e1e5e5] bg-white px-3 py-2 text-xs text-[#414845] outline-none focus:border-[#a00046]"
+        className="w-full rounded-lg border border-line bg-card px-3 py-2 text-xs text-ink-2 outline-none focus:border-brand"
       >
         <option value="">Todos</option>
 
@@ -887,11 +887,11 @@ function FiltroSelect({
 function MetaItem({ label, value }) {
   return (
     <div>
-      <span className="mb-1 block text-[9px] font-bold uppercase tracking-wider text-[#8a9290]">
+      <span className="mb-1 block text-[9px] font-bold uppercase tracking-wider text-muted">
         {label}
       </span>
 
-      <p className="text-xs font-semibold text-[#414845]">
+      <p className="text-xs font-semibold text-ink-2">
         {value}
       </p>
     </div>
@@ -907,7 +907,7 @@ function SummaryCard({
   description,
 }) {
   return (
-    <article className="rounded-xl border border-[#e4e8e9] bg-white p-4 shadow-sm">
+    <article className="rounded-xl border border-line bg-card p-4 shadow-sm">
 
       <div className="mb-2 flex items-center gap-2">
         <span
@@ -916,19 +916,19 @@ function SummaryCard({
           {icon}
         </span>
 
-        <p className="text-[10px] font-bold uppercase tracking-wider text-[#8a9290]">
+        <p className="text-[10px] font-bold uppercase tracking-wider text-muted">
           {label}
         </p>
       </div>
 
-      <p className="text-2xl font-bold text-[#a00046]">
+      <p className="text-2xl font-bold text-brand">
         {value}{' '}
-        <span className="text-sm font-semibold text-[#252927]">
+        <span className="text-sm font-semibold text-ink">
           {suffix}
         </span>
       </p>
 
-      <p className="mt-2 text-[11px] text-[#8a9290]">
+      <p className="mt-2 text-[11px] text-muted">
         {description}
       </p>
 
