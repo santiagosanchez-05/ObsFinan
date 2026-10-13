@@ -320,11 +320,12 @@ async function getExportIca(req, res) {
 
   try {
     const dataset = await icaService.obtenerDatasetIcaExport({
-      campusId,
-      year: req.query.year ? Number(req.query.year) : null,
-      quarter: req.query.quarter ? Number(req.query.quarter) : null,
-      communityId: req.query.communityId ? Number(req.query.communityId) : null,
-    });
+  campusId,
+  year: req.query.year ? Number(req.query.year) : null,
+  quarter: req.query.quarter ? Number(req.query.quarter) : null,
+  communityId: req.query.communityId ? Number(req.query.communityId) : null,
+  genero: ['hombres', 'mujeres'].includes(req.query.gender) ? req.query.gender : null,
+});
 
     if (formato === 'json') {
       res.setHeader('Content-Type', 'application/json');

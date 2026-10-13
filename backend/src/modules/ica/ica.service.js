@@ -990,7 +990,7 @@ async function generarExportacionRespuestasIca({ campusId, year, quarter, commun
 }
 // US22: dataset completo del ICA (los índices ya calculados, agregados por
 // comuna y período) — lo que un Usuario descarga para analizar por su cuenta.
-async function obtenerDatasetIcaExport({ campusId, year, quarter, communityId }) {
+async function obtenerDatasetIcaExport({ campusId, year, quarter, communityId, genero }) {
   // Sin campusId (visitante o superadmin con "Todas") exporta todas las sedes.
   const condiciones = ['c.status = 1', 'm.status = 1'];
   const parametros = [];
@@ -1016,21 +1016,36 @@ async function obtenerDatasetIcaExport({ campusId, year, quarter, communityId })
     parametros,
   );
 
-  return filas.map((fila) => {
-    const general = icaPonderado({ conocimiento: fila.conocimiento, uso: fila.uso, educacion: fila.educacion, prevision: fila.prevision });
+  return filas
+  .map((fila) => {
+    const general = icaPonderado({
+      conocimiento: fila.conocimiento,
+      uso: fila.uso,
+      educacion: fila.educacion,
+      prevision: fila.prevision,
+    });
+
+    // Igual que transformarMedicion: con género filtrado, el índice general
+    // es el ICA de ese grupo; si no tiene datos (0), la comuna se descarta.
+    const valorGenero = genero === 'hombres' ? Number(fila.ica_hombres) : Number(fila.ica_mujeres);
+    const icaGeneral = genero
+      ? (valorGenero > 0 ? valorGenero : null)
+      : (general === null ? null : Number(general.toFixed(1)));
+
     return {
       comuna: fila.comuna,
       year: Number(fila.year),
       quarter: Number(fila.quarter),
-      conocimiento: Number(Number(fila.conocimiento).toFixed(1)),
-      uso: Number(Number(fila.uso).toFixed(1)),
-      educacion: Number(Number(fila.educacion).toFixed(1)),
-      prevision: Number(Number(fila.prevision).toFixed(1)),
-      icaHombres: Number(Number(fila.ica_hombres).toFixed(1)),
-      icaMujeres: Number(Number(fila.ica_mujeres).toFixed(1)),
-      icaGeneral: general === null ? null : Number(general.toFixed(1)),
+      conocimiento: Number(fila.conocimiento),
+      uso: Number(fila.uso),
+      educacion: Number(fila.educacion),
+      prevision: Number(fila.prevision),
+      icaHombres: Number(fila.ica_hombres),
+      icaMujeres: Number(fila.ica_mujeres),
+      icaGeneral,
     };
-  });
+  })
+  .filter((fila) => fila.icaGeneral !== null);
 }
 
 

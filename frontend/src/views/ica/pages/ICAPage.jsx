@@ -153,56 +153,53 @@ export default function ICAPage() {
       console.error('Error al exportar respuestas ICA:', err);
     }
   }
-  async function handleExportar(formato) {
-    try {
-      const params = new URLSearchParams();
+ async function handleExportar(formato) {
+  try {
+    const params = new URLSearchParams({ formato });
 
-      params.set('formato', formato);
+    // Mismo criterio que el dashboard: si no hay año/trimestre filtrado,
+    // se usa el período que el dashboard está mostrando.
+    const year = filtrosAplicados.year || periodo?.year;
+    const quarter = filtrosAplicados.quarter || periodo?.quarter;
+    if (year) params.set('year', year);
+    if (quarter) params.set('quarter', quarter);
 
-      if (periodo?.year) {
-        params.set('year', periodo.year);
-      }
+    ['campusId', 'communityId', 'gender'].forEach((clave) => {
+      if (filtrosAplicados[clave]) params.set(clave, filtrosAplicados[clave]);
+    });
 
-      if (periodo?.quarter) {
-        params.set('quarter', periodo.quarter);
-      }
+    const res = await fetch(`/api/ica/export?${params.toString()}`, { headers: headersDe(token) });
 
-      if (filtrosAplicados.communityId) {
-        params.set('communityId', filtrosAplicados.communityId);
-      }
-
-      const res = await fetch(`/api/ica/export?${params.toString()}`, { headers: headersDe(token) });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'No se pudo exportar el ICA');
-      }
-
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-
-      const enlace = document.createElement('a');
-
-      const disposicion = res.headers.get('Content-Disposition') || '';
-      const coincidencia = disposicion.match(/filename="(.+)"/);
-
-      const fechaActual = new Date().toISOString().split('T')[0];
-
-      enlace.download = coincidencia
-        ? coincidencia[1].replace(`.${formato}`, `_${fechaActual}.${formato}`)
-        : `dataset_ica_${fechaActual}.${formato}`;
-
-      enlace.href = url;
-
-      document.body.appendChild(enlace);
-      enlace.click();
-      enlace.remove();
-
-      window.URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error('Error al exportar ICA:', err);
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || 'No se pudo exportar el ICA');
     }
+
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+
+    const enlace = document.createElement('a');
+
+    const disposicion = res.headers.get('Content-Disposition') || '';
+    const coincidencia = disposicion.match(/filename="(.+)"/);
+
+    const fechaActual = new Date().toISOString().split('T')[0];
+
+    enlace.download = coincidencia
+      ? coincidencia[1].replace(`.${formato}`, `_${fechaActual}.${formato}`)
+      : `dataset_ica_${fechaActual}.${formato}`;
+
+    enlace.href = url;
+
+    document.body.appendChild(enlace);
+    enlace.click();
+    enlace.remove();
+
+    window.URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error('Error al exportar ICA:', err);
   }
+}
   return (
     <>
       
