@@ -799,14 +799,16 @@ async function obtenerDetalleRegistroIca({ campusId, dataLoadId }) {
   const carga = cargas[0];
 
   const columnas = CAMPOS_ENCUESTA.map(([, col]) => col);
-  const [respuestas] = await pool.query(
-    `SELECT sr.survey_response_id, sr.community_id, c.community_name, c.campus_id, sr.year, sr.quarter,
-            ${columnas.join(', ')}
-       FROM ica_survey_response sr
-       INNER JOIN community c ON c.community_id = sr.community_id
-      WHERE sr.data_load_id = ? AND sr.status = 1`,
-    [dataLoadId],
-  );
+ const [respuestas] = await pool.query(
+  `SELECT sr.survey_response_id, sr.community_id, c.community_name, c.campus_id, sr.year, sr.quarter,
+          sr.event_id, e.title AS event_title, e.event_date,
+          ${columnas.join(', ')}
+     FROM ica_survey_response sr
+     INNER JOIN community c ON c.community_id = sr.community_id
+     LEFT JOIN event e ON e.event_id = sr.event_id
+    WHERE sr.data_load_id = ? AND sr.status = 1`,
+  [dataLoadId],
+);
 
   // Si no hay respuesta, o la comuna no es de la sede del usuario, no existe
   // para él (el Superadmin, con campusId null, ve todas las sedes).
@@ -825,7 +827,7 @@ async function obtenerDetalleRegistroIca({ campusId, dataLoadId }) {
   const nombreUsuario = [carga.first_name, carga.paternal_last_name].filter(Boolean).join(' ') || 'Usuario del sistema';
   // Puntaje de ESTA encuesta con la metodología del ICA.
   const puntaje = medirEntrevista(registros[0]);
-  return {
+    return {
     archivo: {
       id: carga.data_load_id,
       nombre: carga.file_name,
@@ -834,12 +836,19 @@ async function obtenerDetalleRegistroIca({ campusId, dataLoadId }) {
       subidoPor: nombreUsuario,
       totalRegistros: respuestas.length,
       estado: Number(carga.status) === ESTADO_CARGA.APROBADA
-  ? 'Verificado'
-  : Number(carga.status) === ESTADO_CARGA.RECHAZADA
-    ? 'Rechazado'
-    : 'Pendiente',
+        ? 'Verificado'
+        : Number(carga.status) === ESTADO_CARGA.RECHAZADA
+          ? 'Rechazado'
+          : 'Pendiente',
       comunidad: respuestas[0].community_name,
       periodo: `Q${respuestas[0].quarter} ${respuestas[0].year}`,
+      evento: respuestas[0].event_id
+        ? {
+            id: respuestas[0].event_id,
+            nombre: respuestas[0].event_title || `Evento #${respuestas[0].event_id}`,
+            fecha: respuestas[0].event_date || null,
+          }
+        : null,
     },
     registros,
     puntaje,

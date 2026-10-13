@@ -67,7 +67,11 @@ function formatearFecha(valor) {
     year: 'numeric',
   });
 }
-
+function textoEvento(evento) {
+  if (!evento) return 'Sin evento asignado';
+  const fecha = evento.fecha ? formatearFecha(evento.fecha) : null;
+  return fecha ? `${evento.nombre} · ${fecha}` : evento.nombre;
+}
 export default function ICAFileDetail() {
   const { id } = useParams();
   const { token } = useAuth();
@@ -435,7 +439,7 @@ export default function ICAFileDetail() {
                     label="Comuna"
                     value={archivo.comunidad}
                   />
-
+                  <MetaItem label="Evento" value={textoEvento(archivo.evento)} />
                   <MetaItem
                     label="Fecha de carga"
                     value={formatearFecha(archivo.fechaCarga)}
@@ -530,22 +534,22 @@ export default function ICAFileDetail() {
                     </button>
 
                     {/* Descargar */}
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => descargarArchivo('xlsx')}
-                          disabled={descargando}
-                          className="inline-flex items-center justify-center gap-2 rounded-lg border border-line bg-card px-3 py-2 text-xs font-semibold text-ink-2 transition hover:bg-subtle hover:text-brand disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          {descargando ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} Excel
-                        </button>
-                        <button
-                          onClick={() => descargarArchivo('json')}
-                          disabled={descargando}
-                          className="inline-flex items-center justify-center gap-2 rounded-lg border border-line bg-card px-3 py-2 text-xs font-semibold text-ink-2 transition hover:bg-subtle hover:text-brand disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          {descargando ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} JSON
-                        </button>
-                      </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => descargarArchivo('xlsx')}
+                        disabled={descargando}
+                        className="inline-flex items-center justify-center gap-2 rounded-lg border border-line bg-card px-3 py-2 text-xs font-semibold text-ink-2 transition hover:bg-subtle hover:text-brand disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {descargando ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} Excel
+                      </button>
+                      <button
+                        onClick={() => descargarArchivo('json')}
+                        disabled={descargando}
+                        className="inline-flex items-center justify-center gap-2 rounded-lg border border-line bg-card px-3 py-2 text-xs font-semibold text-ink-2 transition hover:bg-subtle hover:text-brand disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {descargando ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} JSON
+                      </button>
+                    </div>
 
                   </div>
                 </div>
