@@ -8,6 +8,7 @@ import {
   ArrowUpRight,
   BarChart3,
   Building2,
+  Inbox,
   ChartNoAxesCombined,
   CircleDollarSign,
   FileCheck2,
@@ -80,6 +81,11 @@ export default function SPEPage() {
     opcionesFiltros: undefined,
   };
   const propensionSi = datos.propension.find((item) => item.name === 'Sí')?.value || 0;
+  const cargando = !dashboard && !errorDashboard;
+  // Sin encuestas aprobadas (en general o con los filtros elegidos): no se muestran
+  // ceros ni gráficos vacíos como si fueran resultados.
+  const sinDatos = Boolean(dashboard) && !datos.totalEmpresas;
+  const hayFiltros = Object.values(filtros).some(Boolean);
   const variacion = (actual, anterior) => (Number.isFinite(actual) && Number.isFinite(anterior) ? `${actual - anterior >= 0 ? '+' : ''}${(actual - anterior).toFixed(1)} pts` : 'Sin comparación');
 
   useEffect(() => {
@@ -124,37 +130,55 @@ export default function SPEPage() {
 
         {errorDashboard && <p className="rounded-lg border border-brand-line bg-brand-soft px-3 py-2 text-xs text-brand">{errorDashboard}</p>}
 
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <StatCard label="Empresas encuestadas" value={datos.totalEmpresas} detail="Respuestas aprobadas" icon={<Users size={19} />} />
-          <StatCard label="ICE promedio" value={Number.isFinite(datos.indices.ice) ? `${datos.indices.ice} pts` : "-"} detail="Índice de competitividad exportadora" icon={<Gauge size={19} />} variation={variacion(datos.indices.ice, datos.indicesAnterior.ice)} />
-          <StatCard label="Propensión a invertir" value={`${propensionSi}% Sí`} detail="En los próximos 12 meses" icon={<TrendingUp size={19} />} />
-          <StatCard label="Período actual" value={etiquetaPeriodo(datos.periodo)} detail="Última medición disponible" icon={<Building2 size={19} />} />
-          </div>
+        {cargando && <p className="rounded-xl border border-line bg-card px-4 py-10 text-center text-sm text-muted shadow-sm">Cargando datos del Sector Privado Exportador...</p>}
 
-        <section className="grid gap-4 lg:grid-cols-[1.05fr_1.95fr]">
-          <Panel title="Propensión a invertir en 12 meses" icon={<CircleDollarSign size={16} />}>
-            <div className="relative h-[215px]">
-              <ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={datos.propension} dataKey="value" nameKey="name" innerRadius={66} outerRadius={94} paddingAngle={0} startAngle={90} endAngle={-270} stroke="none">{datos.propension.map((entry, index) => <Cell key={entry.name} fill={COLORES[index]} />)}</Pie><Tooltip {...TOOLTIP} formatter={(value) => [`${value}%`, 'Respuestas']} /></PieChart></ResponsiveContainer>
-              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center"><strong className="text-3xl text-ink">{propensionSi}%</strong><span className="text-[10px] text-muted">invertirá</span></div>
+        {sinDatos && (
+          <section className="rounded-xl border border-dashed border-line bg-card px-6 py-12 text-center shadow-sm">
+            <Inbox size={34} className="mx-auto text-muted" />
+            <h2 className="mt-3 text-base font-bold text-ink">No hay datos aprobados para mostrar</h2>
+            <p className="mx-auto mt-1 max-w-md text-sm text-muted">
+              {hayFiltros
+                ? 'No existen encuestas aprobadas para el período o los filtros seleccionados. Prueba con otro año, semestre o filtro.'
+                : 'Todavía no hay encuestas del Sector Privado Exportador aprobadas. Los resultados aparecerán cuando se aprueben las primeras encuestas.'}
+            </p>
+          </section>
+        )}
+
+        {dashboard && !sinDatos && (
+          <>
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <StatCard label="Empresas encuestadas" value={datos.totalEmpresas} detail="Respuestas aprobadas" icon={<Users size={19} />} />
+              <StatCard label="ICE promedio" value={Number.isFinite(datos.indices.ice) ? `${datos.indices.ice} pts` : "-"} detail="Índice de competitividad exportadora" icon={<Gauge size={19} />} variation={variacion(datos.indices.ice, datos.indicesAnterior.ice)} />
+              <StatCard label="Propensión a invertir" value={`${propensionSi}% Sí`} detail="En los próximos 12 meses" icon={<TrendingUp size={19} />} />
+              <StatCard label="Período actual" value={etiquetaPeriodo(datos.periodo)} detail="Última medición disponible" icon={<Building2 size={19} />} />
             </div>
-            <div className="flex justify-center gap-5 text-[10px] text-muted"><span><i className="mr-1 inline-block h-2 w-2 bg-maroon" /> Sí</span><span><i className="mr-1 inline-block h-2 w-2 bg-subtle" /> No</span></div>
-          </Panel>
-          <Panel title="Expectativas macroeconómicas" icon={<ChartNoAxesCombined size={16} />}>
-            <div className="h-[245px]"><ResponsiveContainer width="100%" height="100%"><BarChart data={datos.expectativas} layout="vertical" margin={{ top: 4, right: 8, left: 100, bottom: 0 }}><CartesianGrid horizontal={false} stroke="var(--color-line)" /><XAxis type="number" hide /><YAxis type="category" dataKey="categoria" tick={{ fontSize: 9, fill: 'var(--color-muted)' }} tickLine={false} axisLine={false} width={96} /><Tooltip {...TOOLTIP} formatter={(value) => [`${value} empresas`, 'Respuestas']} /><Legend iconType="circle" wrapperStyle={{ fontSize: 10, paddingTop: 8 }} /><Bar dataKey="pib" name="Crecimiento del PIB" fill="#961d4b" barSize={12} radius={[0, 2, 2, 0]} /><Bar dataKey="inflacion" name="Inflación" fill="#b54363" barSize={12} radius={[0, 2, 2, 0]} /><Bar dataKey="tipoCambio" name="Tipo de cambio" fill="#d17b91" barSize={12} radius={[0, 2, 2, 0]} /></BarChart></ResponsiveContainer></div>
-          </Panel>
-        </section>
 
-        <Panel title="Principales barreras al comercio exterior (Empresas)" icon={<BarChart3 size={16} />}>
-          <div className="h-[300px]"><ResponsiveContainer width="100%" height="100%"><BarChart data={datos.barreras} layout="vertical" margin={{ top: 4, right: 16, left: 135, bottom: 4 }}><CartesianGrid vertical={true} horizontal={false} stroke="var(--color-line)" /><XAxis type="number" domain={[0, 100]} tick={{ fontSize: 9, fill: 'var(--color-muted)' }} tickLine={false} axisLine={false} /><YAxis type="category" dataKey="barrera" tick={{ fontSize: 9, fill: 'var(--color-muted)' }} tickLine={false} axisLine={false} width={130} /><Tooltip {...TOOLTIP} formatter={(value) => [`${value}%`, 'Empresas']} /><Bar dataKey="porcentaje" name="Empresas" fill="#961d4b" barSize={22} radius={[0, 2, 2, 0]} /></BarChart></ResponsiveContainer></div>
-        </Panel>
+            <section className="grid gap-4 lg:grid-cols-[1.05fr_1.95fr]">
+              <Panel title="Propensión a invertir en 12 meses" icon={<CircleDollarSign size={16} />}>
+                <div className="relative h-[215px]">
+                  <ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={datos.propension} dataKey="value" nameKey="name" innerRadius={66} outerRadius={94} paddingAngle={0} startAngle={90} endAngle={-270} stroke="none">{datos.propension.map((entry, index) => <Cell key={entry.name} fill={COLORES[index]} />)}</Pie><Tooltip {...TOOLTIP} formatter={(value) => [`${value}%`, 'Respuestas']} /></PieChart></ResponsiveContainer>
+                  <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center"><strong className="text-3xl text-ink">{propensionSi}%</strong><span className="text-[10px] text-muted">invertirá</span></div>
+                </div>
+                <div className="flex justify-center gap-5 text-[10px] text-muted"><span><i className="mr-1 inline-block h-2 w-2 bg-maroon" /> Sí</span><span><i className="mr-1 inline-block h-2 w-2 bg-subtle" /> No</span></div>
+              </Panel>
+              <Panel title="Expectativas macroeconómicas" icon={<ChartNoAxesCombined size={16} />}>
+                <div className="h-[245px]"><ResponsiveContainer width="100%" height="100%"><BarChart data={datos.expectativas} layout="vertical" margin={{ top: 4, right: 8, left: 100, bottom: 0 }}><CartesianGrid horizontal={false} stroke="var(--color-line)" /><XAxis type="number" hide /><YAxis type="category" dataKey="categoria" tick={{ fontSize: 9, fill: 'var(--color-muted)' }} tickLine={false} axisLine={false} width={96} /><Tooltip {...TOOLTIP} formatter={(value) => [`${value} empresas`, 'Respuestas']} /><Legend iconType="circle" wrapperStyle={{ fontSize: 10, paddingTop: 8 }} /><Bar dataKey="pib" name="Crecimiento del PIB" fill="#961d4b" barSize={12} radius={[0, 2, 2, 0]} /><Bar dataKey="inflacion" name="Inflación" fill="#b54363" barSize={12} radius={[0, 2, 2, 0]} /><Bar dataKey="tipoCambio" name="Tipo de cambio" fill="#d17b91" barSize={12} radius={[0, 2, 2, 0]} /></BarChart></ResponsiveContainer></div>
+              </Panel>
+            </section>
 
-        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <IndexCard label="IEE" name="Expectativas empresariales exportadoras" value={datos.indices.iee} previous={datos.indicesAnterior.iee} />
-          <IndexCard label="ICE" name="Competitividad exportadora" value={datos.indices.ice} previous={datos.indicesAnterior.ice} active />
-          <IndexCard label="IIE" name="Internacionalización empresarial" value={datos.indices.iie} previous={datos.indicesAnterior.iie} />
-          <IndexCard label="ICIE" name="Clima para la inversión exportadora" value={datos.indices.icie} previous={datos.indicesAnterior.icie} />
-        </section>
-        <InsightsSpe insights={datos?.insights ?? []} />
+            <Panel title="Principales barreras al comercio exterior (Empresas)" icon={<BarChart3 size={16} />}>
+              <div className="h-[300px]"><ResponsiveContainer width="100%" height="100%"><BarChart data={datos.barreras} layout="vertical" margin={{ top: 4, right: 16, left: 135, bottom: 4 }}><CartesianGrid vertical={true} horizontal={false} stroke="var(--color-line)" /><XAxis type="number" domain={[0, 100]} tick={{ fontSize: 9, fill: 'var(--color-muted)' }} tickLine={false} axisLine={false} /><YAxis type="category" dataKey="barrera" tick={{ fontSize: 9, fill: 'var(--color-muted)' }} tickLine={false} axisLine={false} width={130} /><Tooltip {...TOOLTIP} formatter={(value) => [`${value}%`, 'Empresas']} /><Bar dataKey="porcentaje" name="Empresas" fill="#961d4b" barSize={22} radius={[0, 2, 2, 0]} /></BarChart></ResponsiveContainer></div>
+            </Panel>
+
+            <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <IndexCard label="IEE" name="Expectativas empresariales exportadoras" value={datos.indices.iee} previous={datos.indicesAnterior.iee} />
+              <IndexCard label="ICE" name="Competitividad exportadora" value={datos.indices.ice} previous={datos.indicesAnterior.ice} active />
+              <IndexCard label="IIE" name="Internacionalización empresarial" value={datos.indices.iie} previous={datos.indicesAnterior.iie} />
+              <IndexCard label="ICIE" name="Clima para la inversión exportadora" value={datos.indices.icie} previous={datos.indicesAnterior.icie} />
+            </section>
+            <InsightsSpe insights={datos?.insights ?? []} />
+          </>
+        )}
         <CitaAcademica recurso="spe" />
       </div>
     </main>
@@ -171,5 +195,5 @@ function Panel({ title, icon, children }) {
 
 function IndexCard({ label, name, value, previous, active }) {
   const change = Number.isFinite(value) && Number.isFinite(previous) ? value - previous : null;
-  return <article className={`rounded-xl border p-4 shadow-sm ${active ? 'border-brand bg-brand-soft' : 'border-line bg-card'}`}><div className="flex items-center justify-between"><span className="text-xs font-bold text-brand">{label}</span><span className="text-[10px] text-muted">vs. anterior</span></div><p className="mt-3 text-2xl font-bold text-ink">{value ?? '-'}<span className="ml-1 text-xs font-normal text-muted">pts</span></p><p className="mt-1 text-[10px] text-muted">{name}</p><p className={`mt-3 flex items-center gap-1 text-[10px] font-bold ${change === null ? 'text-muted' : change >= 0 ? 'text-[#3d916b]' : 'text-brand'}`}>{change === null ? 'Sin comparación' : <>{change >= 0 ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />} {change >= 0 ? '+' : ''}{change.toFixed(1)} pts</>}</p></article>;
+  return <article className={`rounded-xl border p-4 shadow-sm ${active ? 'border-brand bg-brand-soft' : 'border-line bg-card'}`}><div className="flex items-center justify-between"><span className="text-xs font-bold text-brand">{label}</span><span className="text-[10px] text-muted">vs. anterior</span></div><p className="mt-3 text-2xl font-bold text-ink">{Number.isFinite(value) ? <>{value}<span className="ml-1 text-xs font-normal text-muted">pts</span></> : <span className="text-base font-semibold text-muted">Sin datos</span>}</p><p className="mt-1 text-[10px] text-muted">{name}</p><p className={`mt-3 flex items-center gap-1 text-[10px] font-bold ${change === null ? 'text-muted' : change >= 0 ? 'text-[#3d916b]' : 'text-brand'}`}>{change === null ? 'Sin comparación' : <>{change >= 0 ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />} {change >= 0 ? '+' : ''}{change.toFixed(1)} pts</>}</p></article>;
 }

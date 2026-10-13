@@ -97,6 +97,9 @@ async function solicitarCodigoRecuperacion(email) {
   const enviadoEn = new Date();
   const expiraEn = new Date(enviadoEn.getTime() + CODIGO_VALIDO_POR_MINUTOS * 60 * 1000);
 
+  // Solo vale el último código pedido: los anteriores que no se usaron se invalidan.
+  await pool.query('UPDATE verification_code SET status = 0 WHERE user_id = ? AND status = 1', [usuario.user_id]);
+
   await pool.query(
     'INSERT INTO verification_code (user_id, code, sent_at, expires_at) VALUES (?, ?, ?, ?)',
     [usuario.user_id, codigo, enviadoEn, expiraEn],
