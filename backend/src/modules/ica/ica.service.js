@@ -102,6 +102,40 @@ function transformarMedicion(row, genero = null) {
   };
 }
 
+function consolidarMedicionesPorComunidad(filas) {
+  const porComunidad = new Map();
+
+  filas.forEach((fila) => {
+    const actual = porComunidad.get(fila.community_id) || {
+      ica_measurement_id: fila.ica_measurement_id,
+      community_id: fila.community_id,
+      community_name: fila.community_name,
+      conocimiento: [],
+      uso: [],
+      educacion: [],
+      prevision: [],
+      ica_hombres: [],
+      ica_mujeres: [],
+    };
+
+    ['conocimiento', 'uso', 'educacion', 'prevision', 'ica_hombres', 'ica_mujeres']
+      .forEach((campo) => actual[campo].push(Number(fila[campo])));
+    porComunidad.set(fila.community_id, actual);
+  });
+
+  return [...porComunidad.values()].map((fila) => ({
+    ...fila,
+    conocimiento: promedio(fila.conocimiento),
+    uso: promedio(fila.uso),
+    educacion: promedio(fila.educacion),
+    prevision: promedio(fila.prevision),
+    ica_hombres: promedio(fila.ica_hombres),
+    ica_mujeres: promedio(fila.ica_mujeres),
+    year: null,
+    quarter: null,
+  }));
+}
+
 // ---------------------------------------------------------------------
 // Usada por getDashboardIca,
 // ---------------------------------------------------------------------
@@ -230,16 +264,21 @@ async function obtenerDashboard({ campusId, mostrarTodasSedes = false, year, qua
   // PERÍODO DEL DASHBOARD
   // ------------------------------------------------------------
 
-  const periodo = {
-    year: Number(filas[0].year),
-    quarter: Number(filas[0].quarter),
-  };
+  const todosLosPeriodos = !year && !quarter;
+  const periodo = todosLosPeriodos
+    ? { year: null, quarter: null, todos: true }
+    : {
+      year: Number(filas[0].year),
+      quarter: Number(filas[0].quarter),
+    };
 
-  const filasPeriodo = filas.filter(
-    (fila) =>
-      Number(fila.year) === periodo.year &&
-      Number(fila.quarter) === periodo.quarter,
-  );
+  const filasPeriodo = todosLosPeriodos
+    ? consolidarMedicionesPorComunidad(filas)
+    : filas.filter(
+      (fila) =>
+        Number(fila.year) === periodo.year &&
+        Number(fila.quarter) === periodo.quarter,
+    );
 
   const comunas = filasPeriodo
     .map((fila) => transformarMedicion(fila, genero))
@@ -409,8 +448,10 @@ async function obtenerExploradorPreguntas({ campusId, year, quarter, communityId
   let filasPeriodo = filas;
   let periodo = null;
   if (filas.length) {
-    periodo = { year: Number(filas[0].year), quarter: Number(filas[0].quarter) };
     if (!year && !quarter) {
+      periodo = { year: null, quarter: null, todos: true };
+    } else {
+      periodo = { year: Number(filas[0].year), quarter: Number(filas[0].quarter) };
       filasPeriodo = filas.filter((fila) => Number(fila.year) === periodo.year && Number(fila.quarter) === periodo.quarter);
     }
   }
