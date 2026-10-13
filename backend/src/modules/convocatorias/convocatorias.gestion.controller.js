@@ -124,6 +124,16 @@ async function patchPostulante(req, res) {
     if (err.message === "POSTULANTE_YA_APROBADO") {
       return res.status(409).json({ error: "Este postulante ya fue aprobado" });
     }
+    if (err.message === "POSTULANTE_YA_RECHAZADO") {
+      return res
+        .status(409)
+        .json({ error: "Este postulante ya fue rechazado" });
+    }
+    if (err.message === "POSTULANTE_YA_PROCESADO") {
+      return res
+        .status(409)
+        .json({ error: "Este postulante ya fue procesado por otra solicitud" });
+    }
     if (err.message === "CORREO_YA_REGISTRADO") {
       return res
         .status(409)

@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link, useParams } from "react-router-dom";
 import {
   AlertCircle,
+  AlertTriangle,
   Check,
   CheckCircle2,
   ChevronDown,
@@ -9,9 +10,9 @@ import {
   Search,
   Users,
   X,
-} from 'lucide-react';
-import { useAuth } from '../../../shared/AuthContext';
-import ConfirmDialog from '../../../shared/ConfirmDialog';
+} from "lucide-react";
+import { useAuth } from "../../../shared/AuthContext";
+import ConfirmDialog from "../../../shared/ConfirmDialog";
 
 // Estados (deben coincidir con el backend)
 const STATUS = {
@@ -22,49 +23,89 @@ const STATUS = {
 
 const STATUS_CONFIG = {
   [STATUS.PENDIENTE]: {
-    label: 'Pendiente',
-    badge: 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300',
-    dot: 'bg-amber-700',
+    label: "Pendiente",
+    badge:
+      "bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300",
+    dot: "bg-amber-700",
   },
   [STATUS.APROBADO]: {
-    label: 'Aceptado',
-    badge: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300',
-    dot: 'bg-emerald-700',
+    label: "Aceptado",
+    badge:
+      "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300",
+    dot: "bg-emerald-700",
   },
   [STATUS.RECHAZADO]: {
-    label: 'Rechazado',
-    badge: 'bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300',
-    dot: 'bg-red-700',
+    label: "Rechazado",
+    badge: "bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300",
+    dot: "bg-red-700",
   },
 };
 
 const FILTER_OPTIONS = [
-  { value: 'all', label: 'Todos' },
-  { value: String(STATUS.PENDIENTE), label: 'Pendientes' },
-  { value: String(STATUS.APROBADO), label: 'Aceptados' },
-  { value: String(STATUS.RECHAZADO), label: 'Rechazados' },
+  { value: "all", label: "Todos" },
+  { value: String(STATUS.PENDIENTE), label: "Pendientes" },
+  { value: String(STATUS.APROBADO), label: "Aceptados" },
+  { value: String(STATUS.RECHAZADO), label: "Rechazados" },
 ];
 
 const SORT_OPTIONS = [
-  { value: 'recent', label: 'Más recientes' },
-  { value: 'oldest', label: 'Más antiguos' },
-  { value: 'name', label: 'Nombre (A-Z)' },
+  { value: "recent", label: "Más recientes" },
+  { value: "oldest", label: "Más antiguos" },
+  { value: "name", label: "Nombre (A-Z)" },
 ];
 
-const MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+// Configuración visual del popup de feedback. `duration` = cierre automático (ms).
+const FEEDBACK_CONFIG = {
+  error: {
+    Icon: AlertCircle,
+    iconClass: "text-red-500",
+    circleClass: "bg-red-50 dark:bg-red-950/40",
+    title: "No se pudo actualizar",
+    duration: 5000,
+  },
+  success: {
+    Icon: CheckCircle2,
+    iconClass: "text-emerald-600",
+    circleClass: "bg-emerald-50 dark:bg-emerald-950/40",
+    title: "Postulante actualizado",
+    duration: 3000,
+  },
+  warning: {
+    Icon: AlertTriangle,
+    iconClass: "text-amber-500",
+    circleClass: "bg-amber-50 dark:bg-amber-950/40",
+    title: "Atención",
+    duration: 5000,
+  },
+};
+
+const MONTHS = [
+  "Ene",
+  "Feb",
+  "Mar",
+  "Abr",
+  "May",
+  "Jun",
+  "Jul",
+  "Ago",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dic",
+];
 
 const normalize = (value) =>
-  (value ?? '')
+  (value ?? "")
     .toString()
     .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '');
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
 
 const formatDate = (iso) => {
-  if (!iso) return '—';
+  if (!iso) return "—";
   const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return '—';
-  const day = String(date.getDate()).padStart(2, '0');
+  if (Number.isNaN(date.getTime())) return "—";
+  const day = String(date.getDate()).padStart(2, "0");
   return `${day} ${MONTHS[date.getMonth()]} ${date.getFullYear()}`;
 };
 
@@ -123,8 +164,76 @@ function PillSelect({ prefix, value, onChange, options, ariaLabel }) {
 function DetailField({ label, children }) {
   return (
     <div>
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-ink/50">{label}</p>
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-ink/50">
+        {label}
+      </p>
       <div className="mt-1 break-words text-xs text-ink">{children}</div>
+    </div>
+  );
+}
+
+/**
+ * Popup de feedback (éxito / error / advertencia).
+ * Se cierra con el botón, con Escape, al hacer clic fuera y automáticamente
+ * (3 s éxito, 5 s error/advertencia).
+ */
+function FeedbackModal({ feedback, onClose }) {
+  const config = FEEDBACK_CONFIG[feedback.type] ?? FEEDBACK_CONFIG.error;
+  const { Icon } = config;
+  const closeButtonRef = useRef(null);
+
+  useEffect(() => {
+    const handleKey = (e) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [onClose]);
+
+  useEffect(() => {
+    const timer = setTimeout(onClose, config.duration);
+    return () => clearTimeout(timer);
+  }, [config.duration, onClose]);
+
+  useEffect(() => {
+    closeButtonRef.current?.focus();
+  }, []);
+
+  return (
+    <div
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="feedback-modal-title"
+      aria-describedby="feedback-modal-message"
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-night/50 p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="w-full max-w-md rounded-2xl border border-ink/10 bg-card p-6 text-center shadow-xl">
+        <div
+          className={`mx-auto flex h-16 w-16 items-center justify-center rounded-full ${config.circleClass}`}
+        >
+          <Icon className={`h-9 w-9 ${config.iconClass}`} />
+        </div>
+        <h2
+          id="feedback-modal-title"
+          className="mt-4 text-lg font-semibold text-ink"
+        >
+          {feedback.title || config.title}
+        </h2>
+        <p id="feedback-modal-message" className="mt-2 text-sm text-ink/70">
+          {feedback.message}
+        </p>
+        <button
+          ref={closeButtonRef}
+          type="button"
+          onClick={onClose}
+          className="mt-6 w-full rounded-lg bg-maroon px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
+        >
+          Cerrar
+        </button>
+      </div>
     </div>
   );
 }
@@ -134,13 +243,13 @@ function PostulanteModal({ postulante, onClose, onChangeStatus }) {
 
   useEffect(() => {
     const handleKey = (e) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === "Escape") onClose();
     };
-    document.addEventListener('keydown', handleKey);
+    document.addEventListener("keydown", handleKey);
     const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    document.body.style.overflow = "hidden";
     return () => {
-      document.removeEventListener('keydown', handleKey);
+      document.removeEventListener("keydown", handleKey);
       document.body.style.overflow = previousOverflow;
     };
   }, [onClose]);
@@ -162,7 +271,10 @@ function PostulanteModal({ postulante, onClose, onChangeStatus }) {
               Convocatorias
             </p>
             <div className="mt-1 flex flex-wrap items-center gap-2">
-              <h2 id="postulante-modal-title" className="text-xl font-semibold text-ink">
+              <h2
+                id="postulante-modal-title"
+                className="text-xl font-semibold text-ink"
+              >
                 Detalle del postulante
               </h2>
               <StatusBadge status={postulante.status} />
@@ -180,13 +292,15 @@ function PostulanteModal({ postulante, onClose, onChangeStatus }) {
 
         <div className="px-6 py-5">
           <p className="text-lg font-bold text-ink">
-            {postulante.nombreCompleto || 'Sin nombre'}
+            {postulante.nombreCompleto || "Sin nombre"}
           </p>
           <div className="mt-5 border-t border-ink/10 pt-5">
             <div className="grid grid-cols-1 gap-x-8 gap-y-5 sm:grid-cols-2">
-              <DetailField label="Correo electrónico">{postulante.correo || '—'}</DetailField>
+              <DetailField label="Correo electrónico">
+                {postulante.correo || "—"}
+              </DetailField>
               <DetailField label="Teléfono">
-                {postulante.telefono || 'No especificado'}
+                {postulante.telefono || "No especificado"}
               </DetailField>
               <DetailField label="Fecha de solicitud">
                 {formatDate(postulante.fechaSolicitud)}
@@ -245,86 +359,96 @@ export default function PostulantesPage() {
   });
   const [postulantes, setPostulantes] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [feedback, setFeedback] = useState(null);
   const [actionId, setActionId] = useState(null);
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [sortBy, setSortBy] = useState('recent');
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("recent");
   const [selected, setSelected] = useState(null);
   // Aceptar crea una cuenta y manda un correo: siempre se confirma antes.
   const [confirmar, setConfirmar] = useState(null);
 
   const authHeaders = useMemo(
     () => (token ? { Authorization: `Bearer ${token}` } : {}),
-    [token]
+    [token],
   );
 
   const loadPostulantes = useCallback(
     async ({ silent = false } = {}) => {
       if (!silent) setLoading(true);
-      setError('');
+      setError("");
       try {
         const res = await fetch(`/api/convocatorias/${id}/postulaciones`, {
           headers: authHeaders,
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
-          throw new Error(data?.error || 'No se pudo cargar el listado de postulantes.');
+          throw new Error(
+            data?.error || "No se pudo cargar el listado de postulantes.",
+          );
         }
         setConvocatoria(data.convocatoria ?? null);
         setStats(
-          data.stats ?? { pendientes: 0, aprobados: 0, rechazados: 0, total: 0 }
+          data.stats ?? {
+            pendientes: 0,
+            aprobados: 0,
+            rechazados: 0,
+            total: 0,
+          },
         );
         setPostulantes(Array.isArray(data.postulantes) ? data.postulantes : []);
       } catch (err) {
-        setError(err.message || 'Ocurrió un error al cargar los postulantes.');
+        setError(err.message || "Ocurrió un error al cargar los postulantes.");
       } finally {
         if (!silent) setLoading(false);
       }
     },
-    [id, authHeaders]
+    [id, authHeaders],
   );
 
   useEffect(() => {
     loadPostulantes();
   }, [loadPostulantes]);
 
-  useEffect(() => {
-    if (!feedback) return undefined;
-    const timer = setTimeout(() => setFeedback(null), 5000);
-    return () => clearTimeout(timer);
-  }, [feedback]);
-
   const closeModal = useCallback(() => setSelected(null), []);
+  const closeFeedback = useCallback(() => setFeedback(null), []);
 
   const handleChangeStatus = async (postulante, newStatus) => {
     setActionId(postulante.id);
     setFeedback(null);
     try {
-      const res = await fetch(`/api/convocatorias/postulaciones/${postulante.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', ...authHeaders },
-        body: JSON.stringify({ status: newStatus }),
-      });
+      const res = await fetch(
+        `/api/convocatorias/postulaciones/${postulante.id}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", ...authHeaders },
+          body: JSON.stringify({ status: newStatus }),
+        },
+      );
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(data?.error || 'No se pudo actualizar el postulante.');
+        // Solo se usa el mensaje del backend; el código HTTP nunca se muestra.
+        throw new Error(data?.error || "No se pudo actualizar el postulante.");
       }
       setFeedback({
-        type: 'success',
+        type: "success",
         message:
           data?.message ||
           (newStatus === STATUS.APROBADO
-            ? 'Postulante aceptado correctamente.'
-            : 'Postulante rechazado correctamente.'),
+            ? "Postulante aceptado correctamente."
+            : "Postulante rechazado correctamente."),
       });
       await loadPostulantes({ silent: true });
     } catch (err) {
-      setFeedback({
-        type: 'error',
-        message: err.message || 'Ocurrió un error al actualizar el postulante.',
-      });
+      // Error de red (fetch lanza TypeError): mensaje amigable en vez del técnico.
+      const message =
+        err instanceof TypeError
+          ? "No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo."
+          : err.message || "Ocurrió un error al actualizar el postulante.";
+      setFeedback({ type: "error", message });
+      // Refresca la lista para que refleje el estado real del postulante.
+      loadPostulantes({ silent: true });
     } finally {
       setActionId(null);
     }
@@ -339,7 +463,7 @@ export default function PostulantesPage() {
     const term = normalize(search.trim());
     const list = postulantes.filter((p) => {
       const matchesStatus =
-        statusFilter === 'all' || String(p.status) === statusFilter;
+        statusFilter === "all" || String(p.status) === statusFilter;
       const matchesSearch =
         !term ||
         normalize(p.nombreCompleto).includes(term) ||
@@ -349,9 +473,12 @@ export default function PostulantesPage() {
 
     const time = (p) => new Date(p.fechaSolicitud).getTime() || 0;
     return [...list].sort((a, b) => {
-      if (sortBy === 'oldest') return time(a) - time(b);
-      if (sortBy === 'name') {
-        return (a.nombreCompleto ?? '').localeCompare(b.nombreCompleto ?? '', 'es');
+      if (sortBy === "oldest") return time(a) - time(b);
+      if (sortBy === "name") {
+        return (a.nombreCompleto ?? "").localeCompare(
+          b.nombreCompleto ?? "",
+          "es",
+        );
       }
       return time(b) - time(a);
     });
@@ -366,18 +493,23 @@ export default function PostulantesPage() {
           <p className="text-[10px] font-semibold uppercase tracking-wider text-brand">
             Convocatorias
           </p>
-          <h1 className="mt-1 text-3xl font-semibold text-ink">Listado de postulantes</h1>
+          <h1 className="mt-1 text-3xl font-semibold text-ink">
+            Listado de postulantes
+          </h1>
           <p className="mt-1.5 text-xs text-ink/60">
-            Revisa las postulaciones. Al aceptar a alguien se le crea su cuenta de encuestador en la sede de la convocatoria.
+            Revisa las postulaciones. Al aceptar a alguien se le crea su cuenta
+            de encuestador en la sede de la convocatoria.
           </p>
         </div>
 
         {convocatoria && (
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-ink/10 bg-card px-6 py-5 shadow-xs">
             <div className="min-w-0">
-              <p className="text-[10px] font-medium text-ink/50">Convocatoria seleccionada</p>
+              <p className="text-[10px] font-medium text-ink/50">
+                Convocatoria seleccionada
+              </p>
               <p className="mt-0.5 truncate text-sm font-semibold text-ink">
-                {convocatoria.titulo || 'Sin título'}
+                {convocatoria.titulo || "Sin título"}
               </p>
               <p className="mt-1 text-[10px] font-medium uppercase tracking-wide text-ink/50">
                 ID #{convocatoria.id}
@@ -393,40 +525,27 @@ export default function PostulantesPage() {
           </div>
         )}
 
-        {feedback && (
-          <div
-            role="status"
-            className={`flex items-start gap-2 rounded-2xl border px-4 py-3 text-xs shadow-xs ${
-              feedback.type === 'success'
-                ? 'border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300'
-                : 'border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/40 text-red-800 dark:text-red-300'
-            }`}
-          >
-            {feedback.type === 'success' ? (
-              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
-            ) : (
-              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-            )}
-            <p className="flex-1">{feedback.message}</p>
-            <button
-              type="button"
-              onClick={() => setFeedback(null)}
-              aria-label="Cerrar mensaje"
-              className="shrink-0 opacity-60 transition hover:opacity-100"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        )}
-
         <div className="space-y-3">
           <p className="text-[11px] font-medium text-ink/60">
-            {total} {total === 1 ? 'postulante registrado' : 'postulantes registrados'}
+            {total}{" "}
+            {total === 1 ? "postulante registrado" : "postulantes registrados"}
           </p>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <KpiCard label="Pendientes" value={stats.pendientes ?? 0} status={STATUS.PENDIENTE} />
-            <KpiCard label="Aceptados" value={stats.aprobados ?? 0} status={STATUS.APROBADO} />
-            <KpiCard label="Rechazados" value={stats.rechazados ?? 0} status={STATUS.RECHAZADO} />
+            <KpiCard
+              label="Pendientes"
+              value={stats.pendientes ?? 0}
+              status={STATUS.PENDIENTE}
+            />
+            <KpiCard
+              label="Aceptados"
+              value={stats.aprobados ?? 0}
+              status={STATUS.APROBADO}
+            />
+            <KpiCard
+              label="Rechazados"
+              value={stats.rechazados ?? 0}
+              status={STATUS.RECHAZADO}
+            />
           </div>
         </div>
 
@@ -461,7 +580,9 @@ export default function PostulantesPage() {
 
         <div className="overflow-hidden rounded-2xl border border-ink/10 bg-card shadow-xs">
           <div className="border-b border-ink/10 px-6 py-4">
-            <h2 className="text-sm font-semibold text-ink">Postulantes registrados</h2>
+            <h2 className="text-sm font-semibold text-ink">
+              Postulantes registrados
+            </h2>
           </div>
 
           {loading ? (
@@ -486,8 +607,8 @@ export default function PostulantesPage() {
               <Users className="h-6 w-6 text-ink/30" />
               <p className="text-xs font-medium text-ink/70">
                 {postulantes.length === 0
-                  ? 'Aún no hay postulantes para esta convocatoria.'
-                  : 'No se encontraron postulantes con esos filtros.'}
+                  ? "Aún no hay postulantes para esta convocatoria."
+                  : "No se encontraron postulantes con esos filtros."}
               </p>
             </div>
           ) : (
@@ -514,10 +635,12 @@ export default function PostulantesPage() {
                             onClick={() => setSelected(p)}
                             className="text-left text-xs font-semibold text-ink transition hover:text-brand hover:underline"
                           >
-                            {p.nombreCompleto || 'Sin nombre'}
+                            {p.nombreCompleto || "Sin nombre"}
                           </button>
                         </td>
-                        <td className="px-4 py-3.5 text-xs text-ink/60">{p.correo || '—'}</td>
+                        <td className="px-4 py-3.5 text-xs text-ink/60">
+                          {p.correo || "—"}
+                        </td>
                         <td className="px-4 py-3.5 text-xs text-ink/60">
                           {formatDate(p.fechaSolicitud)}
                         </td>
@@ -531,16 +654,22 @@ export default function PostulantesPage() {
                                 <button
                                   type="button"
                                   disabled={isBusy}
-                                  onClick={() => pedirConfirmacion(p, STATUS.APROBADO)}
+                                  onClick={() =>
+                                    pedirConfirmacion(p, STATUS.APROBADO)
+                                  }
                                   className="inline-flex items-center gap-1 rounded-md border border-emerald-700 bg-card px-3 py-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-300 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
-                                  {isBusy && <Loader2 className="h-3 w-3 animate-spin" />}
+                                  {isBusy && (
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                  )}
                                   Aceptar
                                 </button>
                                 <button
                                   type="button"
                                   disabled={isBusy}
-                                  onClick={() => pedirConfirmacion(p, STATUS.RECHAZADO)}
+                                  onClick={() =>
+                                    pedirConfirmacion(p, STATUS.RECHAZADO)
+                                  }
                                   className="rounded-md border border-red-700 bg-card px-3 py-1 text-[11px] font-medium text-red-700 dark:text-red-300 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                   Rechazar
@@ -576,13 +705,19 @@ export default function PostulantesPage() {
       )}
       <ConfirmDialog
         open={Boolean(confirmar)}
-        titulo={confirmar?.status === STATUS.APROBADO ? 'Aceptar postulante' : 'Rechazar postulante'}
+        titulo={
+          confirmar?.status === STATUS.APROBADO
+            ? "Aceptar postulante"
+            : "Rechazar postulante"
+        }
         mensaje={
           confirmar?.status === STATUS.APROBADO
             ? `Se creará la cuenta de encuestador de ${confirmar.postulante.nombreCompleto} y se le enviará su contraseña temporal por correo.`
-            : `${confirmar?.postulante.nombreCompleto ?? 'El postulante'} quedará rechazado.`
+            : `${confirmar?.postulante.nombreCompleto ?? "El postulante"} quedará rechazado.`
         }
-        textoConfirmar={confirmar?.status === STATUS.APROBADO ? 'Aceptar' : 'Rechazar'}
+        textoConfirmar={
+          confirmar?.status === STATUS.APROBADO ? "Aceptar" : "Rechazar"
+        }
         onCancel={() => setConfirmar(null)}
         onConfirm={() => {
           const { postulante, status } = confirmar;
@@ -590,6 +725,9 @@ export default function PostulantesPage() {
           handleChangeStatus(postulante, status);
         }}
       />
+      {feedback && (
+        <FeedbackModal feedback={feedback} onClose={closeFeedback} />
+      )}
     </div>
   );
 }
