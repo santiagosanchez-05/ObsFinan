@@ -73,13 +73,18 @@ const OPCIONES = {
   q31: ['No pagaría nada', 'Hasta un 2% de mis ingresos', 'Entre 3% y 5% de mis ingresos', 'Entre 6% y 10% de mis ingresos', 'Más del 10% de mis ingresos'],
   q32: ['Precio', 'Beneficios y coberturas', 'Confianza en la aseguradora', 'Experiencia previa con seguros', 'Recomendación de un familiar o amigo'],
 };
-
+const EDAD_MINIMA = 16;
+const EDAD_MAXIMA = 120;
 // Valida UNA fila del Excel = UNA entrevista completa (32 respuestas).
 const filaEncuestaIcaSchema = z.object({
   filaExcel: z.number(), // no se valida, solo se propaga para reportar errores
 
   q01ContributesFinancially: z.enum(OPCIONES.siNo),
-  q02Age: z.coerce.number().int().min(0).max(120),
+  q02Age: z.coerce
+  .number({ invalid_type_error: 'La edad debe ser un número' })
+  .int('La edad debe ser un número entero')
+  .min(EDAD_MINIMA, `La edad mínima permitida es ${EDAD_MINIMA} años`)
+  .max(EDAD_MAXIMA, `La edad máxima permitida es ${EDAD_MAXIMA} años`),
   q03Sex: z.enum(OPCIONES.sexo),
   q04EducationLevel: z.enum(OPCIONES.educacion),
   q05InsurancePurpose: z.enum(OPCIONES.q05),
@@ -168,4 +173,6 @@ module.exports = {
   registroIcaSchema,
   entrevistaIcaSchema,
   OPCIONES,
+  EDAD_MINIMA,
+  EDAD_MAXIMA,
 };

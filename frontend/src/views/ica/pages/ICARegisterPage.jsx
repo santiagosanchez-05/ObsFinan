@@ -6,7 +6,8 @@ import { useAuth } from '../../../shared/AuthContext';
 import { periodoDelEvento } from '../../encuestador/useEventoEncuesta';
 
 const CAMPO_ICA = 'w-full rounded-lg border border-line bg-card px-3 py-2 text-xs text-ink-2 outline-none focus:border-brand';
-
+const EDAD_MINIMA = 16;
+const EDAD_MAXIMA = 120;
 const PREGUNTAS = [
   ['q01ContributesFinancially', '¿Usted contribuye económicamente en su hogar y/o participa en la toma de decisiones financieras?', ['Sí', 'No']],
   ['q02Age', '¿Qué edad tiene?', 'number'],
@@ -226,7 +227,21 @@ function Pregunta({ numero, campo, pregunta, opciones, register, error }) {
         <span className="mr-2 text-[11px] font-bold text-brand">{String(numero).padStart(2, '0')}</span>{pregunta}
       </legend>
       {esNumero ? (
-        <input type="number" min="0" max="120" {...register(campo, { required: 'Respondé esta pregunta' })} className={`${CAMPO_ICA} mt-3 max-w-45`} placeholder="Edad" />
+        <input
+          type="number"
+          min={EDAD_MINIMA}
+          max={EDAD_MAXIMA}
+          step="1"
+          {...register(campo, {
+            required: 'Respondé esta pregunta',
+            valueAsNumber: true,
+            validate: (valor) =>
+              (Number.isInteger(valor) && valor >= EDAD_MINIMA && valor <= EDAD_MAXIMA) ||
+              `Ingresa una edad válida entre ${EDAD_MINIMA} y ${EDAD_MAXIMA} años`,
+          })}
+          className={`${CAMPO_ICA} mt-3 max-w-45`}
+          placeholder="Edad"
+        />
       ) : (
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
           {opciones.map((opcion) => (
