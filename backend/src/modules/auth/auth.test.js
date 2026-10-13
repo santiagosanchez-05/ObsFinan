@@ -90,6 +90,7 @@ describe('POST /api/auth/forgot-password', () => {
   it('si el correo existe, genera el código, lo guarda con expiración a 15 min, y envía el correo', async () => {
     pool.query
       .mockResolvedValueOnce([[{ user_id: 1, first_name: 'Santiago', paternal_last_name: 'Admin', email: CORREO, status: 1, campus_id: 1, role_name: 'superadmin' }]]) // buscarUsuarioPorCorreo
+      .mockResolvedValueOnce([{ affectedRows: 0 }]) // invalida los códigos anteriores
       .mockResolvedValueOnce([{ insertId: 1 }]); // INSERT INTO verification_code
 
     const res = await request(app).post('/api/auth/forgot-password').send({ email: CORREO });
@@ -98,11 +99,25 @@ describe('POST /api/auth/forgot-password', () => {
     expect(transporter.sendMail).toHaveBeenCalledTimes(1);
 
     // Verificamos que se guardó con exactamente 15 minutos de vigencia.
-    const insertCall = pool.query.mock.calls[1];
+    const insertCall = pool.query.mock.calls[2];
     const [, params] = insertCall;
     const [, codigo, enviadoEn, expiraEn] = params;
     expect(codigo).toMatch(/^\d{6}$/);
     expect(expiraEn.getTime() - enviadoEn.getTime()).toBe(15 * 60 * 1000);
+  });
+
+  it('al pedir un código nuevo, invalida los anteriores del usuario antes de guardarlo', async () => {
+    pool.query
+      .mockResolvedValueOnce([[{ user_id: 1, first_name: 'Santiago', paternal_last_name: 'Admin', email: CORREO, status: 1, campus_id: 1, role_name: 'superadmin' }]])
+      .mockResolvedValueOnce([{ affectedRows: 1 }])
+      .mockResolvedValueOnce([{ insertId: 2 }]);
+
+    await request(app).post('/api/auth/forgot-password').send({ email: CORREO });
+
+    const [sqlInvalida, paramsInvalida] = pool.query.mock.calls[1];
+    expect(sqlInvalida).toMatch(/UPDATE verification_code SET status = 0 WHERE user_id = \? AND status = 1/);
+    expect(paramsInvalida).toEqual([1]);
+    expect(pool.query.mock.calls[2][0]).toMatch(/INSERT INTO verification_code/);
   });
 });
 

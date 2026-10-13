@@ -106,7 +106,6 @@ export default function ICAPage() {
     return () => { cancelado = true; };
   }, [token, filtrosAplicados]);
   const periodo = dashboard?.periodo;
-  const periodoLabel = periodo ? `${periodo.year} - Trimestre ${periodo.quarter}` : 'Cargando...';
   const comunas = dashboard?.comunas ?? [];
   const dimensiones = dashboard?.dimensiones ?? [];
   const brechas = dashboard?.brechas ?? [];
@@ -123,6 +122,11 @@ export default function ICAPage() {
   const sedesDisponibles = opcionesFiltros.sedes ?? [];
   const metricas = dashboard?.metricas;
   const comunaMinima = comunas.reduce((minima, comuna) => (!minima || comuna.valor < minima.valor ? comuna : minima), null);
+  const periodoLabel = periodo?.todos
+    ? 'Todos los períodos'
+    : periodo
+      ? `${periodo.year} - Trimestre ${periodo.quarter}`
+      : 'Cargando...';
 
   
   
@@ -363,7 +367,7 @@ export default function ICAPage() {
           </>}
 
           {vista === 'dimensiones' && <DimensionProfileView dimensiones={dimensiones} metricas={metricas} periodoLabel={periodoLabel} />}
-          {vista === 'preguntas' && <QuestionExplorerView preguntas={explorador.preguntas} pregunta={preguntaSeleccionada} onSelect={setPreguntaSeleccionada} periodoLabel={explorador.periodo ? `${explorador.periodo.year} - Trimestre ${explorador.periodo.quarter}` : periodoLabel} total={explorador.total} error={errorExplorador} onExportar={handleExportarRespuestas} />}
+          {vista === 'preguntas' && <QuestionExplorerView preguntas={explorador.preguntas} pregunta={preguntaSeleccionada} onSelect={setPreguntaSeleccionada} periodoLabel={explorador.periodo?.todos ? 'Todos los períodos' : explorador.periodo ? `${explorador.periodo.year} - Trimestre ${explorador.periodo.quarter}` : periodoLabel} total={explorador.total} error={errorExplorador} onExportar={handleExportarRespuestas} />}
           <CitaAcademica recurso="ica" className="mt-4" />
         </div>
       </main>

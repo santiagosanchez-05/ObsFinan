@@ -145,7 +145,7 @@ export default function RegistrarSpePage({ evento = null }) {
       <div className="mx-auto max-w-[1180px]">
         <Link to={volverA.to} className="mb-4 inline-flex items-center gap-1.5 text-xs font-semibold text-brand hover:underline"><ArrowLeft size={14} /> {volverA.texto}</Link>
         <header className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div><div className="mb-2 inline-flex items-center gap-2 rounded-full bg-brand-soft px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-brand"><span className="h-1.5 w-1.5 rounded-full bg-maroon" /> {evento ? 'Encuesta de campo' : 'Registro individual'}</div><h1 className="text-2xl font-bold tracking-tight text-ink sm:text-[28px]">{evento ? 'Registrar encuesta SPE' : 'Registrar nuevo registro SPE'}</h1><p className="mt-1 text-sm text-muted">Encuesta única integrada SOCOMEX - SOCIFIN</p></div>
+          <div><div className="mb-2 inline-flex items-center gap-2 rounded-full bg-brand-soft px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-brand"><span className="h-1.5 w-1.5 rounded-full bg-maroon" /> {evento ? 'Encuesta de campo' : 'Encuesta individual'}</div><h1 className="text-2xl font-bold tracking-tight text-ink sm:text-[28px]">Nueva encuesta SPE</h1><p className="mt-1 text-sm text-muted">Encuesta única integrada SOCOMEX - SOCIFIN</p></div>
           <div className="flex items-center gap-2 rounded-lg border border-line bg-card px-3 py-2 text-[11px] text-ink-2"><ClipboardCheck size={15} className="text-brand" /> {evento ? 'Quedará pendiente de aprobación' : 'Se guardará como aprobado'}</div>
         </header>
         <div className="grid gap-5 lg:grid-cols-[240px_minmax(0,1fr)] lg:items-start">
