@@ -126,6 +126,10 @@ async function actualizarPostulante(applicantId, nuevoStatus, actorId, puedeGest
   if (postulante.status === ESTADO_POSTULANTE.APROBADO) {
     throw new Error("POSTULANTE_YA_APROBADO");
   }
+  // BUG #8: un postulante rechazado no puede volver a procesarse.
+  if (postulante.status === ESTADO_POSTULANTE.RECHAZADO) {
+    throw new Error("POSTULANTE_YA_RECHAZADO");
+  }
 
   let userIdCreado = postulante.user_id;
 
@@ -145,12 +149,17 @@ async function actualizarPostulante(applicantId, nuevoStatus, actorId, puedeGest
     userIdCreado = resultado.userId;
   }
 
-  await pool.query(
+  // El UPDATE solo aplica si el estado sigue siendo el que validamos arriba;
+  // evita que dos solicitudes simultáneas procesen al mismo postulante.
+  const [resultadoUpdate] = await pool.query(
     `UPDATE applicant
      SET status = ?, user_id = ?, created_modified_by = ?, updated_at = NOW()
-     WHERE applicant_id = ?`,
-    [nuevoStatus, userIdCreado, actorId, applicantId],
+     WHERE applicant_id = ? AND status = ?`,
+    [nuevoStatus, userIdCreado, actorId, applicantId, postulante.status],
   );
+  if (resultadoUpdate.affectedRows === 0) {
+    throw new Error("POSTULANTE_YA_PROCESADO");
+  }
 
   return {
     applicant_id: applicantId,
