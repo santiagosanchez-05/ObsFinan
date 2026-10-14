@@ -154,12 +154,37 @@ describe('US41 — Detalle de un registro SPE (GET /api/spe/registros/:id)', () 
       expect.objectContaining({
         id: 10,
         nombre: 'Registro individual',
+        evento: 'Registro individual',
         subidoPor: 'Santiago Admin',
         totalRegistros: 1,
         estado: 'aprobada',
       })
     );
     expect(res.body.registros).toHaveLength(1);
+  });
+
+  it('incluye el nombre del evento cuando la encuesta se registró desde Mis eventos', async () => {
+    const mockCarga = {
+      data_load_id: 11,
+      source_type: 1,
+      file_name: 'Registro individual',
+      total_rows: 1,
+      status: 2,
+      created_at: '2026-03-01T12:00:00.000Z',
+      first_name: 'Ana',
+      paternal_last_name: 'Encuestadora',
+    };
+
+    pool.query
+      .mockResolvedValueOnce([[mockCarga]])
+      .mockResolvedValueOnce([[{ spe_survey_response_id: 102, event_id: 5, evento: 'Feria financiera' }]]);
+
+    const res = await request(app)
+      .get('/api/spe/registros/11')
+      .set('Authorization', `Bearer ${token('superadmin')}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.archivo.evento).toBe('Feria financiera');
   });
 });
 

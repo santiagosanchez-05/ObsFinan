@@ -116,9 +116,11 @@ async function obtenerDetalleRegistroSpe(dataLoadId) {
 
   const [registros] = await pool.query(
     `SELECT sr.*,
-            sis.iee, sis.ice, sis.iie, sis.icie
+            sis.iee, sis.ice, sis.iie, sis.icie,
+            e.title AS evento
      FROM spe_survey_response sr
      LEFT JOIN spe_index_score sis ON sis.spe_survey_response_id = sr.spe_survey_response_id
+     LEFT JOIN event e ON e.event_id = sr.event_id
      WHERE sr.data_load_id = ? AND sr.status = ?
      ORDER BY sr.spe_survey_response_id ASC`,
     [dataLoadId, ESTADO.ACTIVO]
@@ -129,13 +131,15 @@ async function obtenerDetalleRegistroSpe(dataLoadId) {
   else if (carga.status === ESTADO_CARGA.RECHAZADA) estadoTexto = 'rechazada';
 
   const subidoPor = [carga.first_name, carga.paternal_last_name].filter(Boolean).join(' ') || 'Administrador SPE';
+  const evento = registros.find((r) => r.evento)?.evento || 'Registro individual';
 
   return {
     archivo: {
       id: carga.data_load_id,
       nombre: carga.file_name || 'Registro individual',
       tipoCarga: TIPO_CARGA.INDIVIDUAL,
-      tipoCargaTexto: 'Registro individual',
+      tipoCargaTexto: evento,
+      evento,
       fechaCarga: carga.created_at,
       subidoPor,
       totalRegistros: registros.length,
