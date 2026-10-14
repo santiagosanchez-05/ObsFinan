@@ -225,8 +225,8 @@ export default function DetalleArchivoSpePage() {
                 <FileSpreadsheet className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-[11px] font-medium text-ink/60">Tipo de carga</p>
-                <p className="text-sm font-semibold text-ink">{archivo.tipoCargaTexto}</p>
+                <p className="text-[11px] font-medium text-ink/60">Evento</p>
+                <p className="text-sm font-semibold text-ink">{archivo.evento || archivo.tipoCargaTexto || 'No asociado a evento'}</p>
               </div>
             </div>
           </div>

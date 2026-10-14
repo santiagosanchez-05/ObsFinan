@@ -19,6 +19,7 @@ const ARCHIVO_MOCK = {
     nombre: 'censo_empresas_2026.xlsx',
     tipoCarga: 2,
     tipoCargaTexto: 'Archivo masivo',
+    evento: 'Feria financiera',
     fechaCarga: '2026-03-15T10:00:00.000Z',
     subidoPor: 'Santiago Admin',
     totalRegistros: 2,
@@ -77,6 +78,7 @@ describe('DetalleArchivoSpePage (US41 — Detalle de un registro SPE y US42 — 
 
     await waitFor(() => {
       expect(screen.getByText('censo_empresas_2026.xlsx')).toBeInTheDocument();
+      expect(screen.getByText('Feria financiera')).toBeInTheDocument();
       expect(screen.getByText('Santiago Admin')).toBeInTheDocument();
       expect(screen.getByText('Agroindustria')).toBeInTheDocument();
       expect(screen.getByText('Textiles')).toBeInTheDocument();
