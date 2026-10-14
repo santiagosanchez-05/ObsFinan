@@ -8,6 +8,18 @@ import { periodoDelEvento } from '../../encuestador/useEventoEncuesta';
 const CAMPO_ICA = 'w-full rounded-lg border border-line bg-card px-3 py-2 text-xs text-ink-2 outline-none focus:border-brand';
 const EDAD_MINIMA = 16;
 const EDAD_MAXIMA = 120;
+const CAMPOS_SEGURO_VIDA = [
+  'q23LifeInsuranceDuration',
+  'q24ReasonAcquired',
+  'q25PolicyReviewFrequency',
+  'q26WouldSwitchProvider',
+  'q27SatisfactionCurrentPolicy',
+];
+const CAMPOS_SIN_SEGURO_VIDA = [
+  'q28LikelihoodFuturePurchase',
+  'q29BarriersToPurchase',
+];
+
 const PREGUNTAS = [
   ['q01ContributesFinancially', '¿Usted contribuye económicamente en su hogar y/o participa en la toma de decisiones financieras?', ['Sí', 'No']],
   ['q02Age', '¿Qué edad tiene?', 'number'],
@@ -63,6 +75,7 @@ export default function ICARegisterPage({ eventId = null, evento = null, encuest
     register,
     handleSubmit,
     watch,
+    unregister,
     formState: { errors },
   } = useForm({
     defaultValues: {
@@ -71,6 +84,14 @@ export default function ICARegisterPage({ eventId = null, evento = null, encuest
     },
   });
   const tieneSeguro = watch('q22HasLifeInsurance');
+
+  useEffect(() => {
+    if (tieneSeguro === 'Sí') {
+      unregister(CAMPOS_SIN_SEGURO_VIDA);
+    } else if (tieneSeguro === 'No') {
+      unregister(CAMPOS_SEGURO_VIDA);
+    }
+  }, [tieneSeguro, unregister]);
 
   useEffect(() => {
     let cancelado = false;
@@ -144,8 +165,8 @@ export default function ICARegisterPage({ eventId = null, evento = null, encuest
         </Link>
 
         <div className="mb-5 mt-3">
-          <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.18em] text-brand">{encuestador ? 'Encuesta de campo' : 'Registro individual'}</p>
-          <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-[28px]">{encuestador ? 'Registrar encuesta ICA' : 'Registrar nuevo registro — ICA'}</h1>
+          <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.18em] text-brand">{encuestador ? 'Encuesta de campo' : 'Encuesta individual'}</p>
+          <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-[28px]">Nueva encuesta ICA</h1>
           <p className="mt-1 max-w-xl text-sm text-muted">Aplica el instrumento ICA a una persona. Las respuestas se organizan en 32 preguntas y la pregunta 22 define el bloque que corresponde completar.</p>
         </div>
 
