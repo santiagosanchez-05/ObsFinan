@@ -4,9 +4,10 @@
 // Usa el mismo mapeo y la misma validación que el registro del Superadmin
 // (spe.registro.*): un solo lugar con las columnas reales y las opciones del Word.
 const pool = require('../../config/db');
-const { ESTADO_CARGA } = require('../../config/estados');
+const { ESTADO_CARGA, MODULO } = require('../../config/estados');
 const { insertarEncuesta } = require('./spe.registro.service');
 const { periodoDelEventoAsignado } = require('../events/events.encuesta.service');
+const notificaciones = require('../notificaciones/notificaciones.service');
 
 async function registrarEncuestaSpe({ userId, eventId, ...respuestas }) {
   const { year, semester } = await periodoDelEventoAsignado({ eventId, userId, encuesta: 'spe' });
@@ -24,6 +25,7 @@ async function registrarEncuestaSpe({ userId, eventId, ...respuestas }) {
       respuestas,
     });
     await conexion.commit();
+    notificaciones.encuestaPendiente({ modulo: MODULO.SPE, dataLoadId: resultado.dataLoadId, encuestadorId: userId, eventId });
     return { ...resultado, periodo: { year, semester } };
   } catch (err) {
     await conexion.rollback();

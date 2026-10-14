@@ -5,10 +5,12 @@ const jwt = require('jsonwebtoken');
 // la fecha del evento, no del formulario.
 jest.mock('../../config/db', () => ({ query: jest.fn(), getConnection: jest.fn() }));
 jest.mock('../../config/mailer', () => ({ sendMail: jest.fn().mockResolvedValue(true) }));
+jest.mock('../notificaciones/notificaciones.service');
 
 const pool = require('../../config/db');
 const app = require('../../app');
 const { filaEncuestaIcaSchema } = require('./ica.validation');
+const notificaciones = require('../notificaciones/notificaciones.service');
 
 const token = (role) => jwt.sign({ userId: 9, role, campusId: 1 }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
@@ -53,6 +55,7 @@ describe('POST /api/ica/entrevistas — encuestador', () => {
     expect(res.body.periodo).toEqual({ year: 2026, quarter: 4 });
     const [, params] = conexion.query.mock.calls[1];
     expect(params.slice(0, 6)).toEqual([70, 3, 2026, 4, 9, 5]); // carga, comuna, año, trimestre, encuestador, evento
+    expect(notificaciones.encuestaPendiente).toHaveBeenCalledWith({ modulo: 1, dataLoadId: 70, encuestadorId: 9, eventId: 5 });
   });
 
   it('si el evento no está asignado o no habilita ICA responde 400', async () => {

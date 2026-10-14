@@ -1,4 +1,5 @@
 const pool = require('../../config/db');
+const notificaciones = require('../notificaciones/notificaciones.service');
 const { MODULO, ESTADO_CARGA } = require('../../config/estados');
 const { ENCABEZADOS_ESPERADOS } = require('./ica.validation');
 const { CAMPOS_ENCUESTA } = require('./ica.service');
@@ -171,6 +172,7 @@ async function obtenerPendientesIca({ campusId = null } = {}) {
 //   CARGA_YA_REVISADA   -> 409
 async function cambiarEstadoCargaIca({ dataLoadId, estado, motivo, revisorId, campusId = null }) {
   const nuevoEstado = ESTADO_DESTINO[estado];
+  let nota = null;
   const conexion = await pool.getConnection();
 
   try {
@@ -208,7 +210,7 @@ async function cambiarEstadoCargaIca({ dataLoadId, estado, motivo, revisorId, ca
       throw new Error('CARGA_YA_REVISADA');
     }
 
-    const nota =
+    nota =
       estado === 'rechazada'
         ? (typeof motivo === 'string' ? motivo.trim() : '') || null
         : null;
@@ -238,6 +240,7 @@ async function cambiarEstadoCargaIca({ dataLoadId, estado, motivo, revisorId, ca
     }
 
     await conexion.commit();
+    notificaciones.encuestaRevisada({ dataLoadId, aprobada: estado === 'aprobada', motivo: nota });
   } catch (err) {
     await conexion.rollback();
     throw err;

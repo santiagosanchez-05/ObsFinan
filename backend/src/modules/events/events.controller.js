@@ -7,6 +7,7 @@
 // Además, el encuestador puede anotarse solo (sin límite) en los eventos con
 // encuesta de su sede: POST/DELETE /api/events/:id/participacion.
 const eventsService = require('./events.service');
+const notificaciones = require('../notificaciones/notificaciones.service');
 const { eventoSchema, listarEventosQuerySchema, asignarEncuestadorSchema } = require('./events.validation');
 
 const ERROR_INTERNO = { error: 'Error interno del servidor' };
@@ -108,6 +109,7 @@ async function postEvento(req, res) {
       { ...parsed.data, campusId: reglas.campusId },
       { imagen: req.file?.buffer, creadoPor: req.user.userId },
     );
+    notificaciones.nuevoEvento(eventId); // a los encuestadores de la sede, si tiene encuesta
     return res.status(201).json({ message: 'Evento registrado correctamente', eventId });
   } catch (err) {
     console.error('Error al registrar el evento:', err);
@@ -136,6 +138,7 @@ async function patchEvento(req, res) {
       { ...parsed.data, campusId: reglas.campusId },
       { imagen: req.file?.buffer, quitarImagen: parsed.data.quitarImagen, editadoPor: req.user.userId },
     );
+    notificaciones.eventoCambiado(eventId, actual); // solo avisa si cambió fecha, hora, lugar o modalidad
     return res.json({ message: 'Evento actualizado correctamente' });
   } catch (err) {
     console.error('Error al editar el evento:', err);
@@ -147,7 +150,10 @@ async function deleteEvento(req, res) {
   const eventId = idDeRuta(req);
   if (!eventId) return res.status(400).json({ error: 'ID inválido' });
   try {
+    // A quién avisar se lee antes: la baja también da de baja las asignaciones.
+    const avisarCancelacion = await notificaciones.prepararAvisoCancelacion(eventId);
     await eventsService.eliminarEvento(eventId, req.user.userId);
+    avisarCancelacion();
     return res.json({ message: 'Evento eliminado correctamente' });
   } catch (err) {
     console.error('Error al eliminar el evento:', err);
@@ -258,6 +264,7 @@ async function postAsignarEncuestador(req, res) {
       return res.status(400).json({ error: 'El usuario no es un encuestador activo de la sede del evento' });
     }
     await eventsService.asignarEncuestador(evento.id, userId, req.user.userId);
+    notificaciones.asignadoAEvento({ eventId: evento.id, userId });
     return res.status(201).json({ message: 'Encuestador asignado correctamente' });
   } catch (err) {
     console.error('Error al asignar encuestador:', err);

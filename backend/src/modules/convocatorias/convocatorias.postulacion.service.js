@@ -1,5 +1,6 @@
 const pool = require('../../config/db');
 const { ESTADO, ESTADO_POSTULANTE } = require('../../config/estados');
+const notificaciones = require('../notificaciones/notificaciones.service');
 
 async function obtenerConvocatoriasAbiertas() {
   const querySql = `
@@ -90,6 +91,13 @@ async function registrarPostulacion({ convocationId, datos }) {
     datos.phone,
     ESTADO_POSTULANTE.PENDIENTE,
   ]);
+
+  notificaciones.nuevaPostulacion({
+    convocationId,
+    nombre: [datos.first_name, datos.paternal_last_name, datos.maternal_last_name].filter(Boolean).join(' '),
+    correo: email,
+    telefono: datos.phone,
+  });
 
   return resInsert?.insertId;
 }

@@ -4,11 +4,13 @@ const jwt = require('jsonwebtoken');
 // US66 — encuesta SPE del encuestador desde "Mis eventos".
 jest.mock('../../config/db', () => ({ query: jest.fn(), getConnection: jest.fn() }));
 jest.mock('../../config/mailer', () => ({ sendMail: jest.fn().mockResolvedValue(true) }));
+jest.mock('../notificaciones/notificaciones.service');
 
 const pool = require('../../config/db');
 const app = require('../../app');
 const { OPCIONES, RADIO_FIELDS, SCALE_FIELDS } = require('./spe.registro.validation');
-const { ESTADO_CARGA } = require('../../config/estados');
+const { ESTADO_CARGA, MODULO } = require('../../config/estados');
+const notificaciones = require('../notificaciones/notificaciones.service');
 
 const token = (role = 'encuestador') =>
   jwt.sign({ userId: 9, role, campusId: 1 }, process.env.JWT_SECRET, { expiresIn: '1h' });
@@ -47,6 +49,7 @@ describe('POST /api/spe/encuestas', () => {
     const [, paramsRespuesta] = conexion.query.mock.calls[1];
     expect(paramsRespuesta.slice(0, 5)).toEqual([50, 2026, 2, 9, 5]); // carga, año, semestre, encuestador, evento
     expect(conexion.commit).toHaveBeenCalled();
+    expect(notificaciones.encuestaPendiente).toHaveBeenCalledWith({ modulo: MODULO.SPE, dataLoadId: 50, encuestadorId: 9, eventId: 5 });
   });
 
   it('no calcula índices: eso pasa recién al aprobarla', async () => {
@@ -60,6 +63,7 @@ describe('POST /api/spe/encuestas', () => {
     const res = await request(app).post('/api/spe/encuestas').set('Authorization', `Bearer ${token()}`).send(encuesta());
     expect(res.status).toBe(400);
     expect(pool.getConnection).not.toHaveBeenCalled();
+    expect(notificaciones.encuestaPendiente).not.toHaveBeenCalled();
   });
 
   it('el encuestador no puede mandar el período (lo da el evento)', async () => {

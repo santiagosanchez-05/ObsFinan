@@ -4,6 +4,7 @@ const pool = require('../../config/db');
 const transporter = require('../../config/mailer');
 const { codigoRecuperacionHtml, attachmentLogo } = require('./emailTemplates');
 const { FORMATO_TEMPORAL_REGEX } = require('../../config/passwordTemporal');
+const notificaciones = require('../notificaciones/notificaciones.service');
 
 const TOKEN_EXPIRA_EN = '8h';
 const CODIGO_VALIDO_POR_MINUTOS = 15;
@@ -166,6 +167,7 @@ async function restablecerContrasena(resetToken, newPassword) {
 
   const passwordHash = await bcrypt.hash(newPassword, 10);
   await pool.query('UPDATE user SET password_hash = ? WHERE user_id = ?', [passwordHash, payload.userId]);
+  notificaciones.contrasenaCambiada(payload.userId);
 }
 
 // Cambio de contraseña con sesión activa (primer ingreso con la temporal, o
@@ -185,6 +187,7 @@ async function cambiarPasswordPropia(userId, currentPassword, newPassword) {
 
   const passwordHash = await bcrypt.hash(newPassword, 10);
   await pool.query('UPDATE user SET password_hash = ? WHERE user_id = ?', [passwordHash, userId]);
+  notificaciones.contrasenaCambiada(userId);
 }
 
 // Primer ingreso: el token ya prueba que acaba de entrar con la contraseña

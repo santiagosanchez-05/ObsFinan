@@ -4,7 +4,10 @@ const path = require('path');
 // duplicado acá (no importado desde auth/) para que este módulo no dependa de otro.
 const LOGO_PATH = path.join(__dirname, '..', '..', '..', '..', 'frontend', 'src', 'assets', 'univalleLogo.png');
 
-function bienvenidaHtml(nombre, passwordTemporal) {
+const escapar = (texto) => String(texto ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+// `mensaje` (opcional): un párrafo extra arriba, ej. "Tu postulación fue aceptada".
+function bienvenidaHtml(nombre, passwordTemporal, mensaje) {
   return `
   <meta name="color-scheme" content="light">
   <meta name="supported-color-schemes" content="light">
@@ -16,19 +19,20 @@ function bienvenidaHtml(nombre, passwordTemporal) {
       </div>
       <div style="padding:0 32px 32px;text-align:center;">
         <h1 style="font-size:20px;color:#1D201E;margin:0 0 8px;">¡Bienvenido/a, ${nombre}!</h1>
+        ${mensaje ? `<p style="font-size:14px;color:#1D201E;font-weight:600;margin:0 0 12px;line-height:1.5;">${escapar(mensaje)}</p>` : ''}
         <p style="font-size:14px;color:#6b6b6b;margin:0 0 24px;line-height:1.5;">
-          Se creó tu cuenta en el Observatorio de Bienestar Financiero Univalle. Usá la siguiente contraseña temporal para iniciar sesión:
+          Se creó tu cuenta en el Observatorio de Bienestar Financiero Univalle. Usa la siguiente contraseña temporal para iniciar sesión:
         </p>
         <div style="background:#F5F7F9;border-radius:12px;padding:20px;margin-bottom:24px;">
           <span style="font-size:26px;font-weight:700;letter-spacing:2px;color:#9E0044;">${passwordTemporal}</span>
         </div>
         <p style="font-size:13px;color:#6b6b6b;margin:0;">
-          Por seguridad, cambiala apenas inicies sesión por primera vez.
+          Por seguridad, el sistema te pedirá cambiarla la primera vez que inicies sesión.
         </p>
       </div>
       <div style="background:#F5F7F9;padding:16px 32px;text-align:center;">
         <p style="font-size:12px;color:#9a9a9a;margin:0;">
-          Si no esperabas este correo, contactá al administrador del observatorio.
+          Si no esperabas este correo, contacta al administrador del observatorio.
         </p>
       </div>
     </div>
@@ -53,18 +57,18 @@ function passwordReseteadaHtml(nombre, passwordTemporal) {
       <div style="padding:0 32px 32px;text-align:center;">
         <h1 style="font-size:20px;color:#1D201E;margin:0 0 8px;">Hola, ${nombre}</h1>
         <p style="font-size:14px;color:#6b6b6b;margin:0 0 24px;line-height:1.5;">
-          Un administrador restableció tu contraseña. Usá la siguiente contraseña temporal para iniciar sesión:
+          Un administrador restableció tu contraseña. Usa la siguiente contraseña temporal para iniciar sesión:
         </p>
         <div style="background:#F5F7F9;border-radius:12px;padding:20px;margin-bottom:24px;">
           <span style="font-size:26px;font-weight:700;letter-spacing:2px;color:#9E0044;">${passwordTemporal}</span>
         </div>
         <p style="font-size:13px;color:#6b6b6b;margin:0;">
-          Por seguridad, cambiala apenas inicies sesión.
+          Por seguridad, el sistema te pedirá cambiarla al iniciar sesión.
         </p>
       </div>
       <div style="background:#F5F7F9;padding:16px 32px;text-align:center;">
         <p style="font-size:12px;color:#9a9a9a;margin:0;">
-          Si no esperabas este correo, contactá al administrador del observatorio.
+          Si no esperabas este correo, contacta al administrador del observatorio.
         </p>
       </div>
     </div>

@@ -192,7 +192,9 @@ async function obtenerCampusActivos() {
   return rows.map((c) => ({ id: c.campus_id, nombre: c.campus_name }));
 }
 
-async function registrarUsuario({ nombre, apellidoPaterno, apellidoMaterno, correo, rol, campusId, creadoPor, foto }) {
+// `bienvenida` (opcional): asunto y mensaje extra del correo, ej. cuando la cuenta
+// nace de una postulación aceptada.
+async function registrarUsuario({ nombre, apellidoPaterno, apellidoMaterno, correo, rol, campusId, creadoPor, foto, bienvenida }) {
   const [[rolRow]] = await pool.query('SELECT role_id FROM role WHERE role_name = ? AND status = 1', [rol]);
   if (!rolRow) {
     throw new Error('ROL_INVALIDO');
@@ -252,8 +254,8 @@ async function registrarUsuario({ nombre, apellidoPaterno, apellidoMaterno, corr
     await transporter.sendMail({
       from: `"Bienestar Financiero Univalle" <${process.env.MAIL_USER}>`,
       to: correo,
-      subject: 'Tu cuenta en Bienestar Financiero Univalle',
-      html: bienvenidaHtml(nombre, passwordTemporal),
+      subject: bienvenida?.asunto || 'Tu cuenta en Bienestar Financiero Univalle',
+      html: bienvenidaHtml(nombre, passwordTemporal, bienvenida?.mensaje),
       attachments: attachmentLogo(),
     });
   } catch (err) {

@@ -4,6 +4,7 @@ const { ESTADO_CARGA } = require('../../config/estados');
 const { ENCABEZADOS_ESPERADOS, OPCIONES } = require('./ica.validation');
 const { puntuarEncuesta, icaPonderado } = require('./ica.puntajes');
 const { periodoDelEventoAsignado } = require('../events/events.encuesta.service');
+const notificaciones = require('../notificaciones/notificaciones.service');
 
 // module: 1=ICA, 2=SPE; source_type: 1=individual (la carga por archivo se quitó: todo es individual)
 const MODULE_ICA = 1;
@@ -638,6 +639,9 @@ async function registrarEntrevistaIndividual({ communityId, year, quarter, event
       });
     }
     await conexion.commit();
+    if (rol === 'encuestador') {
+      notificaciones.encuestaPendiente({ modulo: MODULE_ICA, dataLoadId: carga.insertId, encuestadorId: userId, eventId });
+    }
     return { dataLoadId: carga.insertId, surveyResponseId: respuesta.insertId, periodo: { year, quarter } };
   } catch (err) {
     await conexion.rollback();

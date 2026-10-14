@@ -9,6 +9,7 @@ jest.mock("../../config/db", () => ({
 jest.mock("../../config/mailer", () => ({
   sendMail: jest.fn().mockResolvedValue(true),
 }));
+jest.mock("../notificaciones/notificaciones.service");
 jest.mock("../users/users.service", () => ({
   ...jest.requireActual("../users/users.service"),
   registrarUsuario: jest.fn(),
@@ -16,6 +17,7 @@ jest.mock("../users/users.service", () => ({
 
 const pool = require("../../config/db");
 const { registrarUsuario } = require("../users/users.service");
+const notificaciones = require("../notificaciones/notificaciones.service");
 const app = require("../../app");
 const { ESTADO_POSTULANTE } = require("../../config/estados");
 
@@ -35,6 +37,7 @@ const postulante = (cambios = {}) => [
       email: "ana@correo.com",
       status: ESTADO_POSTULANTE.PENDIENTE,
       campus_id: 2,
+      convocatoria: "Encuestadores 2026",
       ...cambios,
     },
   ],
@@ -136,5 +139,39 @@ describe("PATCH /api/convocatorias/postulaciones/:id", () => {
     registrarUsuario.mockRejectedValue(new Error("CORREO_YA_REGISTRADO"));
     const res = await patch("superadmin", 1, ESTADO_POSTULANTE.APROBADO);
     expect(res.status).toBe(409);
+  });
+
+  // Avisos por correo
+  it("rechazar avisa al postulante por correo", async () => {
+    pool.query
+      .mockResolvedValueOnce(postulante())
+      .mockResolvedValueOnce([{ affectedRows: 1 }]);
+    await patch("superadmin", 1, ESTADO_POSTULANTE.RECHAZADO);
+    expect(notificaciones.postulacionRechazada).toHaveBeenCalledWith({
+      correo: "ana@correo.com",
+      nombre: "Ana",
+      convocatoria: "Encuestadores 2026",
+    });
+  });
+
+  it("aceptar: el correo de bienvenida también dice que la postulación fue aceptada", async () => {
+    pool.query
+      .mockResolvedValueOnce(postulante())
+      .mockResolvedValueOnce([{ affectedRows: 1 }]);
+    registrarUsuario.mockResolvedValue({ userId: 30 });
+    await patch("superadmin", 1, ESTADO_POSTULANTE.APROBADO);
+    const { bienvenida } = registrarUsuario.mock.calls[0][0];
+    expect(bienvenida.asunto).toMatch(/aceptada/);
+    expect(bienvenida.mensaje).toContain("Encuestadores 2026");
+    expect(notificaciones.postulacionRechazada).not.toHaveBeenCalled();
+  });
+
+  it("si el rechazo no se guardó (409), no se avisa", async () => {
+    pool.query
+      .mockResolvedValueOnce(postulante())
+      .mockResolvedValueOnce([{ affectedRows: 0 }]);
+    const res = await patch("superadmin", 1, ESTADO_POSTULANTE.RECHAZADO);
+    expect(res.status).toBe(409);
+    expect(notificaciones.postulacionRechazada).not.toHaveBeenCalled();
   });
 });

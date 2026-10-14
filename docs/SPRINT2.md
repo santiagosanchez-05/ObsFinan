@@ -145,3 +145,21 @@ El diagrama ya está aplicado en la BD real. Santiago le pasa a Monserrat el scr
 - **Colores:** usar los del tema definidos en `src/index.css` (`bg-card`, `bg-subtle`, `bg-surface`, `border-line`, `text-ink`, `text-ink-2`, `text-muted`, `text-brand`, `bg-brand-soft`, `border-brand-line`, `bg-night`). Cada uno tiene su versión oscura. **No usar hex sueltos ni `bg-white`**: no cambian con el tema. Para estilos en línea, `var(--color-...)`. El guindo de botones sigue siendo `bg-maroon` (texto blanco); para textos e íconos guindo, `text-brand`.
 - **Correo de contacto de los footers** (landing y Sobre nosotros): `GET /api/contacto/correo` devuelve el del Superadmin activo más antiguo; si no hay, queda `observatorio@univalle.edu` (`shared/useCorreoContacto.js`).
 - **Recalculación aplicada:** los ICA (Itocta y Molle, Q3 2026) y los índices de las 8 encuestas SPE aprobadas se recalcularon con la metodología nueva.
+
+## Avisos por correo (14/10)
+
+Módulo `backend/src/modules/notificaciones/` (`notificaciones.service.js` + plantilla común). Cada aviso se manda en segundo plano después de guardar la acción: si Gmail falla, solo se registra el error.
+
+| Cuándo | A quién |
+|---|---|
+| Nueva postulación | Admin de la sede de la convocatoria (si no hay, los Superadmin) |
+| Postulación aceptada | Al postulante: el correo de bienvenida con la contraseña temporal dice que fue aceptada |
+| Postulación rechazada | Al postulante |
+| Encuesta enviada por un encuestador (pendiente) | ICA: Admin de su sede y Superadmin. SPE: solo Superadmin. Se agrupa: no se repite si el mismo encuestador envió otra en los últimos 30 minutos |
+| Encuesta aprobada o rechazada | Al encuestador que la envió (con el motivo si se rechazó) |
+| Nuevo evento con encuesta (ICA/SPE) | Encuestadores activos de la sede |
+| Asignación a un evento | Al encuestador asignado |
+| Evento cambiado (fecha, hora, lugar o modalidad) o cancelado | Encuestadores asignados/anotados |
+| Contraseña cambiada (perfil o recuperación) | Al usuario (aviso de seguridad) |
+
+Con varios destinatarios van en copia oculta. Los enlaces usan `FRONTEND_URL` (ver `.env.example`; por defecto `http://localhost:5173`). En los tests no se mandan avisos salvo con `NOTIFICAR_EN_TEST=1`.

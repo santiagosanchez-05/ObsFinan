@@ -2,6 +2,7 @@
 const pool = require("../../config/db");
 const { ESTADO, ESTADO_POSTULANTE } = require("../../config/estados");
 const { registrarUsuario } = require("../users/users.service");
+const notificaciones = require("../notificaciones/notificaciones.service");
 
 // ============================================================================
 // US50 — Crear convocatoria
@@ -113,7 +114,7 @@ async function obtenerPostulantes(convocationId) {
 async function actualizarPostulante(applicantId, nuevoStatus, actorId, puedeGestionar = () => true) {
   const [rows] = await pool.query(
     `SELECT a.applicant_id, a.user_id, a.first_name, a.paternal_last_name,
-            a.maternal_last_name, a.email, a.status, c.campus_id
+            a.maternal_last_name, a.email, a.status, c.campus_id, c.title AS convocatoria
      FROM applicant a
      JOIN convocation c ON c.convocation_id = a.convocation_id
      WHERE a.applicant_id = ? AND a.status != ?`,
@@ -145,6 +146,11 @@ async function actualizarPostulante(applicantId, nuevoStatus, actorId, puedeGest
       campusId: postulante.campus_id,
       creadoPor: actorId,
       foto: null,
+      // El correo de bienvenida también le avisa que fue aceptado/a.
+      bienvenida: {
+        asunto: "Tu postulación fue aceptada — Bienestar Financiero Univalle",
+        mensaje: `Tu postulación a la convocatoria "${postulante.convocatoria}" fue aceptada. Ya tienes tu cuenta de encuestador.`,
+      },
     });
     userIdCreado = resultado.userId;
   }
@@ -159,6 +165,14 @@ async function actualizarPostulante(applicantId, nuevoStatus, actorId, puedeGest
   );
   if (resultadoUpdate.affectedRows === 0) {
     throw new Error("POSTULANTE_YA_PROCESADO");
+  }
+
+  if (nuevoStatus === ESTADO_POSTULANTE.RECHAZADO) {
+    notificaciones.postulacionRechazada({
+      correo: postulante.email,
+      nombre: postulante.first_name,
+      convocatoria: postulante.convocatoria,
+    });
   }
 
   return {
