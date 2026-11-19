@@ -142,7 +142,9 @@ describe('GET /api/ica/export (US22 — descarga pública)', () => {
 
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toContain('text/csv');
-    expect(res.text.split('\n')[0]).toBe('comuna;year;quarter;conocimiento;uso;educacion;prevision;icaHombres;icaMujeres;icaGeneral');
+    // Empieza con BOM UTF-8 para que Excel muestre bien los acentos.
+    expect(res.text.startsWith('\uFEFF')).toBe(true);
+    expect(res.text.slice(1).split('\n')[0]).toBe('comuna;year;quarter;conocimiento;uso;educacion;prevision;icaHombres;icaMujeres;icaGeneral');
     expect(res.text).toContain('Tunari');
   });
 

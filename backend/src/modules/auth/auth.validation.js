@@ -1,17 +1,18 @@
 const { z } = require('zod');
+const { campoNombre, campoNombreOpcional } = require('../../utils/validacionesComunes');
 const { FORMATO_TEMPORAL_REGEX } = require('../../config/passwordTemporal');
 
 const loginSchema = z.object({
-  email: z.string().email('Correo inválido'),
+  email: z.string().trim().email('Correo inválido'),
   password: z.string().min(1, 'La contraseña es obligatoria'),
 });
 
 const forgotPasswordSchema = z.object({
-  email: z.string().email('Correo inválido'),
+  email: z.string().trim().email('Correo inválido'),
 });
 
 const verifyCodeSchema = z.object({
-  email: z.string().email('Correo inválido'),
+  email: z.string().trim().email('Correo inválido'),
   code: z.string().regex(/^\d{6}$/, 'El código debe tener 6 dígitos'),
 });
 
@@ -42,12 +43,12 @@ const changePasswordSchema = z.object({
 
 const updateProfileSchema = z
   .object({
-    first_name: z.string().trim().min(1, 'El nombre es obligatorio').optional(),
-    paternal_last_name: z.string().trim().min(1, 'El apellido paterno es obligatorio').optional(),
-    maternal_last_name: z.string().trim().nullable().optional(),
-    nombres: z.string().trim().min(1, 'El nombre es obligatorio').optional(),
-    apellidoPaterno: z.string().trim().min(1, 'El apellido paterno es obligatorio').optional(),
-    apellidoMaterno: z.string().trim().nullable().optional(),
+    first_name: campoNombre('El nombre').optional(),
+    paternal_last_name: campoNombre('El apellido paterno').optional(),
+    maternal_last_name: campoNombreOpcional('El apellido materno'),
+    nombres: campoNombre('El nombre').optional(),
+    apellidoPaterno: campoNombre('El apellido paterno').optional(),
+    apellidoMaterno: campoNombreOpcional('El apellido materno'),
   })
   .refine((data) => (data.first_name || data.nombres) && (data.paternal_last_name || data.apellidoPaterno), {
     message: 'El nombre y apellido paterno son obligatorios',

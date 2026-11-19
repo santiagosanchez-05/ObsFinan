@@ -5,12 +5,13 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { ArrowLeft, Camera, Info, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../../shared/AuthContext';
+import { campoNombre, campoNombreOpcional, campoCorreo } from '../../../shared/validaciones';
 
 const registrarUsuarioSchema = z.object({
-  nombre: z.string().trim().min(1, 'El nombre es obligatorio'),
-  apellidoPaterno: z.string().trim().min(1, 'El apellido paterno es obligatorio'),
-  apellidoMaterno: z.string().trim().optional(),
-  correo: z.string().trim().min(1, 'El correo es obligatorio').email('Correo inválido'),
+  nombre: campoNombre('El nombre'),
+  apellidoPaterno: campoNombre('El apellido paterno'),
+  apellidoMaterno: campoNombreOpcional('El apellido materno'),
+  correo: campoCorreo(),
   rol: z.string().min(1, 'Seleccioná un rol'),
   campusId: z.string().min(1, 'Seleccioná una sede'),
 });

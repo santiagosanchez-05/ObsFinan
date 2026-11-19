@@ -9,6 +9,7 @@
 const { encuestadorSchema } = require("./users.encuestadores.validation");
 const { puedeGestionarSede } = require("../../middlewares/sede.middleware");
 const { registrarUsuario } = require("./users.service");
+const { dominioRecibeCorreo, MENSAJE_DOMINIO_INVALIDO } = require("../../utils/dominioCorreo");
 
 async function postRegistrarEncuestador(req, res) {
   // 1. Validar datos del formulario
@@ -20,6 +21,13 @@ async function postRegistrarEncuestador(req, res) {
   }
 
   const datos = parsed.data;
+
+  if (!(await dominioRecibeCorreo(datos.correo))) {
+    return res.status(400).json({
+      error: MENSAJE_DOMINIO_INVALIDO,
+      detalles: { formErrors: [], fieldErrors: { correo: [MENSAJE_DOMINIO_INVALIDO] } },
+    });
+  }
 
   // 2. Control de acceso por sede
   //    Admin: solo puede crear en su propia sede (ignoramos el campusId del body)

@@ -2,6 +2,8 @@
 // La carga por archivo/dataset se quitó: todos los registros son individuales.
 // La descarga es pública y solo incluye cargas APROBADAS.
 const speArchivosService = require('./spe.archivos.service');
+// BOM UTF-8: sin él Excel abre el CSV como ANSI y muestra los acentos como caracteres basura.
+const BOM_UTF8 = '\uFEFF';
 
 async function getExportSpe(req, res) {
   const formato = String(req.query.formato || 'json').toLowerCase();
@@ -27,7 +29,7 @@ async function getExportSpe(req, res) {
     const csvData = speArchivosService.generarCsv(dataset);
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename="dataset_spe.csv"');
-    return res.send(csvData);
+    return res.send(BOM_UTF8 + csvData);
   } catch (err) {
     console.error('Error al exportar dataset SPE:', err);
     return res.status(500).json({ error: 'No se pudo generar la exportación SPE' });

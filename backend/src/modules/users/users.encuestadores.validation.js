@@ -1,28 +1,12 @@
 // backend/src/modules/users/users.encuestadores.validation.js
 const { z } = require("zod");
+const { campoNombre, campoNombreOpcional, campoCorreo } = require("../../utils/validacionesComunes");
 
 const encuestadorSchema = z.object({
-  nombre: z
-    .string()
-    .trim()
-    .min(1, "El nombre es obligatorio")
-    .max(100, "El nombre es demasiado largo"),
-  apellidoPaterno: z
-    .string()
-    .trim()
-    .min(1, "El apellido paterno es obligatorio")
-    .max(100, "El apellido paterno es demasiado largo"),
-  apellidoMaterno: z
-    .string()
-    .trim()
-    .max(100, "El apellido materno es demasiado largo")
-    .optional()
-    .or(z.literal("")),
-  correo: z
-    .string()
-    .trim()
-    .email("Correo inválido")
-    .max(150, "El correo es demasiado largo"),
+  nombre: campoNombre("El nombre"),
+  apellidoPaterno: campoNombre("El apellido paterno"),
+  apellidoMaterno: campoNombreOpcional("El apellido materno"),
+  correo: campoCorreo(),
   // Solo la usa el Superadmin: al Admin se le fuerza su sede en el controlador.
   campusId: z.coerce.number().int().positive("La sede es obligatoria").optional(),
 });

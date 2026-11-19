@@ -1,6 +1,8 @@
 const { registroIcaSchema, entrevistaIcaSchema } = require('./ica.validation');
 const icaService = require('./ica.service');
 const { sedeDeGestion } = require('../../middlewares/sede.middleware');
+// BOM UTF-8: sin él Excel abre el CSV como ANSI y muestra los acentos como caracteres basura.
+const BOM_UTF8 = '\uFEFF';
 
 // Gestión del ICA (US65): el Superadmin trabaja sobre cualquier sede
 // (campusId null = todas, o la que pida con ?campusId=) y el Admin solo
@@ -298,7 +300,7 @@ async function getExportRespuestasIca(req, res) {
     });
     res.setHeader('Content-Type', mimeType);
     res.setHeader('Content-Disposition', `attachment; filename="${nombreArchivo}"`);
-    return res.send(contenido);
+    return res.send(mimeType.startsWith('text/csv') ? BOM_UTF8 + contenido : contenido);
   } catch (err) {
     console.error('Error al exportar respuestas ICA:', err);
     return res.status(500).json({ error: 'No se pudo generar la exportación' });
@@ -341,7 +343,7 @@ async function getExportIca(req, res) {
 
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename="dataset_ica.csv"');
-    return res.send(lineas.join('\n'));
+    return res.send(BOM_UTF8 + lineas.join('\n'));
   } catch (err) {
     console.error('Error al exportar dataset ICA:', err);
     return res.status(500).json({ error: 'No se pudo generar la exportación' });

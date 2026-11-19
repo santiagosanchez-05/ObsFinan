@@ -48,4 +48,18 @@ describe('POST /api/users/encuestadores', () => {
     const res = await request(app).post('/api/users/encuestadores').set('Authorization', `Bearer ${token('encuestador')}`).send(datos);
     expect(res.status).toBe(403);
   });
+
+  // Hallazgos de QA: el panel Admin aceptaba ":" y "+" en los datos.
+  it.each([
+    ['correo', 'ana:perez@gmail.com'],
+    ['correo', 'ana+1@gmail.com'],
+    ['nombre', 'Ana:'],
+    ['apellidoPaterno', 'Pérez+'],
+    ['apellidoMaterno', '<b>Rojas</b>'],
+  ])('rechaza %s = "%s"', async (campo, valor) => {
+    const res = await request(app).post('/api/users/encuestadores').set('Authorization', `Bearer ${token('admin', 1)}`).send({ ...datos, [campo]: valor });
+    expect(res.status).toBe(400);
+    expect(res.body.detalles.fieldErrors[campo]).toBeDefined();
+    expect(registrarUsuario).not.toHaveBeenCalled();
+  });
 });

@@ -5,16 +5,17 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { ArrowLeft, Camera, CheckCircle2, Info } from 'lucide-react';
 import { useAuth, ROLES } from '../../../shared/AuthContext';
+import { campoNombre, campoNombreOpcional, campoCorreo } from '../../../shared/validaciones';
 
 const CAMPO = 'w-full rounded-lg border border-line px-3 py-2 text-sm focus:border-brand focus:outline-none';
 
 function crearSchema(esSuperadmin) {
   return z
     .object({
-      nombre: z.string().trim().min(1, 'El nombre es obligatorio'),
-      apellidoPaterno: z.string().trim().min(1, 'El apellido paterno es obligatorio'),
-      apellidoMaterno: z.string().trim().optional(),
-      correo: z.string().trim().min(1, 'El correo es obligatorio').email('Correo inválido'),
+      nombre: campoNombre('El nombre'),
+      apellidoPaterno: campoNombre('El apellido paterno'),
+      apellidoMaterno: campoNombreOpcional('El apellido materno'),
+      correo: campoCorreo(),
       campusId: z.string(),
     })
     .superRefine((datos, ctx) => {

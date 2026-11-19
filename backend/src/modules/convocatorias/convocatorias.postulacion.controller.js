@@ -3,6 +3,7 @@
 // La postulación entra a applicant con status = ESTADO_POSTULANTE.PENDIENTE.
 const postulacionService = require('./convocatorias.postulacion.service');
 const { postulacionSchema } = require('./convocatorias.postulacion.validation');
+const { dominioRecibeCorreo, MENSAJE_DOMINIO_INVALIDO } = require('../../utils/dominioCorreo');
 
 async function getConvocatoriasAbiertas(req, res) {
   try {
@@ -25,6 +26,12 @@ async function postPostulacion(req, res) {
     return res.status(400).json({
       error: 'Datos de postulación inválidos',
       detalles: validacion.error.flatten(),
+    });
+  }
+  if (!(await dominioRecibeCorreo(validacion.data.email))) {
+    return res.status(400).json({
+      error: MENSAJE_DOMINIO_INVALIDO,
+      detalles: { formErrors: [], fieldErrors: { email: [MENSAJE_DOMINIO_INVALIDO] } },
     });
   }
 

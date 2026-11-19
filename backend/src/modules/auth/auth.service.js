@@ -91,6 +91,7 @@ async function solicitarCodigoRecuperacion(email) {
   // No revelamos si el correo existe o no — misma respuesta en ambos casos
   // (evita que alguien use este endpoint para descubrir cuentas válidas).
   if (!usuario || usuario.status !== 1) {
+    console.warn('Recuperación de contraseña: correo no registrado o cuenta inactiva; no se envía código.');
     return;
   }
 
@@ -113,6 +114,7 @@ async function solicitarCodigoRecuperacion(email) {
     html: codigoRecuperacionHtml(codigo),
     attachments: attachmentLogo(),
   });
+  console.log(`Recuperación de contraseña: código enviado al usuario ${usuario.user_id}.`);
 }
 
 const RESET_TOKEN_EXPIRA_EN = '10m';

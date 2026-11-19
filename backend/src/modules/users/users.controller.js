@@ -1,4 +1,5 @@
 const usersService = require('./users.service');
+const { dominioRecibeCorreo, MENSAJE_DOMINIO_INVALIDO } = require('../../utils/dominioCorreo');
 const {
   registrarUsuarioSchema,
   editarUsuarioSchema,
@@ -103,6 +104,12 @@ async function postRegistrarUsuario(req, res) {
   const parsed = registrarUsuarioSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: 'Datos inválidos', detalles: parsed.error.flatten() });
+  }
+  if (!(await dominioRecibeCorreo(parsed.data.correo))) {
+    return res.status(400).json({
+      error: MENSAJE_DOMINIO_INVALIDO,
+      detalles: { formErrors: [], fieldErrors: { correo: [MENSAJE_DOMINIO_INVALIDO] } },
+    });
   }
 
   try {
