@@ -1,6 +1,9 @@
+const fs = require('fs');
 const path = require('path');
 
-const LOGO_PATH = path.join(__dirname, '..', '..', '..', '..', 'frontend', 'src', 'assets', 'univalleLogo.png');
+// El logo vive dentro del backend: en Docker (y en el servidor) la carpeta
+// frontend/ no existe y el envío fallaba con ENOENT.
+const LOGO_PATH = path.join(__dirname, '..', '..', 'assets', 'univalleLogo.png');
 
 function codigoRecuperacionHtml(codigo) {
   return `
@@ -37,6 +40,8 @@ function codigoRecuperacionHtml(codigo) {
 }
 
 function attachmentLogo() {
+  // Si el logo no está, el correo sale igual (sin imagen) en vez de fallar.
+  if (!fs.existsSync(LOGO_PATH)) return [];
   return [{ filename: 'univalleLogo.png', path: LOGO_PATH, cid: 'univalleLogo', contentDisposition: 'inline' }];
 }
 

@@ -1,8 +1,11 @@
+const fs = require('fs');
 const path = require('path');
 
 // Plantilla común de los avisos por correo. Mismo estilo que los correos de
 // bienvenida y de recuperación de contraseña (users/ y auth/emailTemplates.js).
-const LOGO_PATH = path.join(__dirname, '..', '..', '..', '..', 'frontend', 'src', 'assets', 'univalleLogo.png');
+// El logo vive dentro del backend: en Docker (y en el servidor) la carpeta
+// frontend/ no existe y el envío fallaba con ENOENT.
+const LOGO_PATH = path.join(__dirname, '..', '..', 'assets', 'univalleLogo.png');
 
 // Todo lo que viene de usuarios (nombres, títulos, motivos) se escapa antes de
 // meterlo en el HTML.
@@ -59,6 +62,8 @@ function correoHtml({ titulo, parrafos = [], detalles = [], boton, nota }) {
 }
 
 function attachmentLogo() {
+  // Si el logo no está, el correo sale igual (sin imagen) en vez de fallar.
+  if (!fs.existsSync(LOGO_PATH)) return [];
   return [{ filename: 'univalleLogo.png', path: LOGO_PATH, cid: 'univalleLogo', contentDisposition: 'inline' }];
 }
 
