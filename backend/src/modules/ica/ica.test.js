@@ -148,6 +148,21 @@ describe('GET /api/ica/export (US22 — descarga pública)', () => {
     expect(res.text).toContain('Tunari');
   });
 
+  it('descarga en XLSX formateado por casillas sin sesión', async () => {
+    icaService.obtenerDatasetIcaExport.mockResolvedValue(DATASET);
+    icaService.generarExcelDatasetIca.mockReturnValue({
+      contenido: Buffer.from('mock-excel'),
+      nombreArchivo: 'dataset_ica_2026-11-23.xlsx',
+      mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+
+    const res = await request(app).get('/api/ica/export?formato=xlsx');
+
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toContain('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    expect(res.headers['content-disposition']).toContain('dataset_ica_2026-11-23.xlsx');
+  });
+
   it('con un formato inválido responde 400', async () => {
     const res = await request(app).get('/api/ica/export?formato=xml');
     expect(res.status).toBe(400);

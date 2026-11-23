@@ -10,23 +10,23 @@ describe('ExportarSpe (US40 — Descarga de datos SPE pública)', () => {
     global.URL.revokeObjectURL = vi.fn();
   });
 
-  it('renderiza los botones de exportar CSV y JSON', () => {
+  it('renderiza los botones de exportar Excel y JSON', () => {
     render(
       <AuthProvider>
         <ExportarSpe filtros={{ year: 2026, semester: 1 }} />
       </AuthProvider>
     );
 
-    expect(screen.getByRole('button', { name: /exportar csv/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /exportar excel/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /exportar json/i })).toBeInTheDocument();
   });
 
-  it('ejecuta la descarga en formato CSV con los filtros provistos', async () => {
-    const mockBlob = new Blob(['col1;col2\nval1;val2'], { type: 'text/csv' });
+  it('ejecuta la descarga en formato Excel (XLSX)', async () => {
+    const mockBlob = new Blob(['mock-xlsx-binary'], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       headers: {
-        get: (h) => (h === 'Content-Disposition' ? 'attachment; filename="dataset_spe.csv"' : null),
+        get: (h) => (h === 'Content-Disposition' ? 'attachment; filename="dataset_spe_2026-11-23.xlsx"' : null),
       },
       blob: () => Promise.resolve(mockBlob),
     });
@@ -37,8 +37,8 @@ describe('ExportarSpe (US40 — Descarga de datos SPE pública)', () => {
       </AuthProvider>
     );
 
-    const botonCsv = screen.getByRole('button', { name: /exportar csv/i });
-    fireEvent.click(botonCsv);
+    const botonExcel = screen.getByRole('button', { name: /exportar excel/i });
+    fireEvent.click(botonExcel);
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledTimes(1);
@@ -46,7 +46,7 @@ describe('ExportarSpe (US40 — Descarga de datos SPE pública)', () => {
 
     const [urlLlamada, opciones] = global.fetch.mock.calls[0];
     expect(urlLlamada).toContain('/api/spe/export?');
-    expect(urlLlamada).toContain('formato=csv');
+    expect(urlLlamada).toContain('formato=xlsx');
     expect(urlLlamada).toContain('year=2026');
     expect(urlLlamada).toContain('semester=1');
     expect(urlLlamada).toContain('department=La+Paz');
@@ -92,7 +92,7 @@ describe('ExportarSpe (US40 — Descarga de datos SPE pública)', () => {
       </AuthProvider>
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /exportar csv/i }));
+    fireEvent.click(screen.getByRole('button', { name: /exportar excel/i }));
 
     await waitFor(() => {
       expect(screen.getByText('Error del servidor al exportar')).toBeInTheDocument();

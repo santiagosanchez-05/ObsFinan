@@ -316,23 +316,30 @@ async function getExportIca(req, res) {
   if (!mostrarTodasSedes && !campusId) return res.status(400).json({ error: 'Tu usuario no tiene una sede asignada' });
 
   const formato = String(req.query.formato || 'json').toLowerCase();
-  if (!['csv', 'json'].includes(formato)) {
-    return res.status(400).json({ error: 'Formato inválido. Usá "csv" o "json".' });
+  if (!['csv', 'json', 'xlsx'].includes(formato)) {
+    return res.status(400).json({ error: 'Formato inválido. Usá "xlsx", "csv" o "json".' });
   }
 
   try {
     const dataset = await icaService.obtenerDatasetIcaExport({
-  campusId,
-  year: req.query.year ? Number(req.query.year) : null,
-  quarter: req.query.quarter ? Number(req.query.quarter) : null,
-  communityId: req.query.communityId ? Number(req.query.communityId) : null,
-  genero: ['hombres', 'mujeres'].includes(req.query.gender) ? req.query.gender : null,
-});
+      campusId,
+      year: req.query.year ? Number(req.query.year) : null,
+      quarter: req.query.quarter ? Number(req.query.quarter) : null,
+      communityId: req.query.communityId ? Number(req.query.communityId) : null,
+      genero: ['hombres', 'mujeres'].includes(req.query.gender) ? req.query.gender : null,
+    });
 
     if (formato === 'json') {
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Content-Disposition', 'attachment; filename="dataset_ica.json"');
       return res.send(JSON.stringify(dataset, null, 2));
+    }
+
+    if (formato === 'xlsx') {
+      const { contenido, nombreArchivo, mimeType } = icaService.generarExcelDatasetIca(dataset);
+      res.setHeader('Content-Type', mimeType);
+      res.setHeader('Content-Disposition', `attachment; filename="${nombreArchivo}"`);
+      return res.send(contenido);
     }
 
     const columnas = ['comuna', 'year', 'quarter', 'conocimiento', 'uso', 'educacion', 'prevision', 'icaHombres', 'icaMujeres', 'icaGeneral'];

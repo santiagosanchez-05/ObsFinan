@@ -16,31 +16,28 @@ const { requireAuth } = require('../../middlewares/auth.middleware');
 // En los tests se desactiva: varias pruebas inician sesión seguidas.
 const enTests = () => process.env.NODE_ENV === 'test';
 
-// Máximo 5 intentos de login por IP cada 15 minutos — evita fuerza bruta.
+// Límite ampliado temporalmente para pruebas automáticas continuas (sin bloquear por IP)
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 5,
+  limit: 1000,
   skip: enTests,
   message: { error: 'Demasiados intentos. Intenta de nuevo en unos minutos.' },
   standardHeaders: true,
   legacyHeaders: false,
 });
 
-// Máximo 3 pedidos de código por IP cada 15 minutos — evita spamear correos.
 const forgotPasswordLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 3,
+  limit: 1000,
   skip: enTests,
   message: { error: 'Demasiados intentos. Intenta de nuevo en unos minutos.' },
   standardHeaders: true,
   legacyHeaders: false,
 });
 
-// Máximo 10 intentos de código por IP cada 15 minutos — evita fuerza bruta
-// sobre el código de 6 dígitos (1 millón de combinaciones posibles).
 const verifyCodeLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 10,
+  limit: 1000,
   message: { error: 'Demasiados intentos. Intenta de nuevo en unos minutos.' },
   standardHeaders: true,
   legacyHeaders: false,

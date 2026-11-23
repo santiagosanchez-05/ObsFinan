@@ -338,12 +338,12 @@ export default function ICAPage() {
                   <div className="absolute right-0 z-20 mt-2 w-32 rounded-lg border bg-card shadow-lg">
                     <button
                       onClick={() => {
-                        handleExportar('csv');
+                        handleExportar('xlsx');
                         setMostrarExportar(false);
                       }}
                       className="block w-full px-3 py-2 text-left text-xs hover:bg-subtle"
                     >
-                      CSV
+                      Excel (XLSX)
                     </button>
 
                     <button

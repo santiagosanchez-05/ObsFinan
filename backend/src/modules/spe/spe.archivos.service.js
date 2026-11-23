@@ -1,5 +1,41 @@
+const xlsx = require('xlsx');
 const pool = require('../../config/db');
 const { ESTADO, ESTADO_CARGA, MODULO, TIPO_CARGA } = require('../../config/estados');
+
+const MAPEO_COLUMNAS_SPE = [
+  ['id', 'ID'],
+  ['year', 'Año'],
+  ['semester', 'Semestre'],
+  ['departamento', 'Departamento'],
+  ['sectorExportador', 'Sector Exportador'],
+  ['tamanoEmpresa', 'Tamaño Empresa'],
+  ['anosExportando', 'Años Exportando'],
+  ['mercadosAtendidos', 'Mercados Atendidos'],
+  ['porcentajeIngresosExportacion', '% Ingresos Exportación'],
+  ['destinoPrincipal', 'Destino Principal'],
+  ['economiaBoliviaScore', 'Economía Bolivia (Puntaje)'],
+  ['economiaEmpresaScore', 'Economía Empresa (Puntaje)'],
+  ['sectorExportadorScore', 'Sector Exportador (Puntaje)'],
+  ['expectativaPib', 'Expectativa PIB'],
+  ['expectativaInflacion', 'Expectativa Inflación'],
+  ['expectativaTipoCambio', 'Expectativa Tipo de Cambio'],
+  ['expectativaExportaciones', 'Expectativa Exportaciones'],
+  ['planesNuevosMercados', 'Planes Nuevos Mercados'],
+  ['prioridadExpansionScore', 'Prioridad Expansión (Puntaje)'],
+  ['frecuenciaAnalisisMercado', 'Frecuencia Análisis Mercado'],
+  ['modalidadAcceso', 'Modalidad Acceso'],
+  ['tieneCertificaciones', 'Tiene Certificaciones'],
+  ['mejorAcuerdoComercial', 'Mejor Acuerdo Comercial'],
+  ['barreraPrincipalExportacion', 'Barrera Principal Exportación'],
+  ['impactoEscasezDivisas', 'Impacto Escasez Divisas'],
+  ['medidaMayorImpacto', 'Medida Mayor Impacto'],
+  ['invirtioUltimos12m', 'Invirtió Últimos 12m'],
+  ['invertiraProximos12m', 'Invertirá Próximos 12m'],
+  ['iee', 'IEE'],
+  ['ice', 'ICE'],
+  ['iie', 'IIE'],
+  ['icie', 'ICIE'],
+];
 
 function escaparCsv(valor) {
   if (valor === null || valor === undefined) return '';
@@ -19,7 +55,48 @@ function generarCsv(filas) {
   const lineas = filas.map((fila) =>
     columnas.map((col) => escaparCsv(fila[col])).join(';')
   );
-  return [encabezado, ...lineas].join('\n');
+  return ['sep=;', encabezado, ...lineas].join('\r\n');
+}
+
+function generarExcelSpe(filas) {
+  const encabezados = MAPEO_COLUMNAS_SPE.map(([, titulo]) => titulo);
+  const filasAoa = (filas || []).map((fila) =>
+    MAPEO_COLUMNAS_SPE.map(([clave]) => {
+      const val = fila[clave];
+      if (val === null || val === undefined) return '';
+      if (typeof val === 'number') return val;
+      if (!isNaN(val) && val !== '' && typeof val === 'string' && !val.includes('-') && !val.includes('/')) {
+        const n = Number(val);
+        if (!isNaN(n)) return n;
+      }
+      return val;
+    })
+  );
+
+  const datosCompletos = [encabezados, ...filasAoa];
+  const hoja = xlsx.utils.aoa_to_sheet(datosCompletos);
+
+  // Formato por casillas: anchos de columna automáticos con margen para evitar desbordes
+  const anchos = encabezados.map((enc, colIdx) => {
+    let maxLen = enc.length;
+    for (const fila of filasAoa) {
+      const len = fila[colIdx] !== null && fila[colIdx] !== undefined ? String(fila[colIdx]).length : 0;
+      if (len > maxLen) maxLen = len;
+    }
+    return { wch: Math.min(Math.max(maxLen + 3, 12), 60) };
+  });
+  hoja['!cols'] = anchos;
+
+  const libro = xlsx.utils.book_new();
+  xlsx.utils.book_append_sheet(libro, hoja, 'Dataset SPE');
+  const contenido = xlsx.write(libro, { type: 'buffer', bookType: 'xlsx' });
+  const fechaActual = new Date().toISOString().split('T')[0];
+
+  return {
+    contenido,
+    nombreArchivo: `dataset_spe_${fechaActual}.xlsx`,
+    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  };
 }
 
 async function exportarDatasetSpe(filtros = {}) {
@@ -190,6 +267,7 @@ async function eliminarRegistroIndividualSpe(id) {
 module.exports = {
   exportarDatasetSpe,
   generarCsv,
+  generarExcelSpe,
   obtenerDetalleRegistroSpe,
   eliminarRegistroIndividualSpe,
 };

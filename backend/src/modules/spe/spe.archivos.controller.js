@@ -7,8 +7,8 @@ const BOM_UTF8 = '\uFEFF';
 
 async function getExportSpe(req, res) {
   const formato = String(req.query.formato || 'json').toLowerCase();
-  if (!['csv', 'json'].includes(formato)) {
-    return res.status(400).json({ error: 'Formato inválido. Usa "csv" o "json".' });
+  if (!['csv', 'json', 'xlsx'].includes(formato)) {
+    return res.status(400).json({ error: 'Formato inválido. Usa "xlsx", "csv" o "json".' });
   }
 
   try {
@@ -24,6 +24,13 @@ async function getExportSpe(req, res) {
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Content-Disposition', 'attachment; filename="dataset_spe.json"');
       return res.send(JSON.stringify(dataset, null, 2));
+    }
+
+    if (formato === 'xlsx') {
+      const { contenido, nombreArchivo, mimeType } = speArchivosService.generarExcelSpe(dataset);
+      res.setHeader('Content-Type', mimeType);
+      res.setHeader('Content-Disposition', `attachment; filename="${nombreArchivo}"`);
+      return res.send(contenido);
     }
 
     const csvData = speArchivosService.generarCsv(dataset);

@@ -73,6 +73,33 @@ describe('US40 — Descarga de datos SPE pública (GET /api/spe/export)', () => 
     expect(res.text).toContain('1;La Paz;Manufactura');
   });
 
+  it('exporta en XLSX formateado por casillas sin requerir autenticación', async () => {
+    const mockRows = [
+      {
+        id: 1,
+        year: 2026,
+        semester: 1,
+        departamento: 'Santa Cruz',
+        sectorExportador: 'Agroindustria',
+      },
+    ];
+    pool.query.mockResolvedValueOnce([mockRows]);
+
+    const res = await request(app)
+      .get('/api/spe/export?formato=xlsx')
+      .parse((res, cb) => {
+        const bufs = [];
+        res.on('data', (chunk) => bufs.push(chunk));
+        res.on('end', () => cb(null, Buffer.concat(bufs)));
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toContain('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    expect(res.headers['content-disposition']).toMatch(/attachment; filename="dataset_spe_\d{4}-\d{2}-\d{2}\.xlsx"/);
+    expect(Buffer.isBuffer(res.body)).toBe(true);
+    expect(res.body.length).toBeGreaterThan(0);
+  });
+
   it('rechaza formatos no soportados con 400', async () => {
     const res = await request(app).get('/api/spe/export?formato=xml');
     expect(res.status).toBe(400);

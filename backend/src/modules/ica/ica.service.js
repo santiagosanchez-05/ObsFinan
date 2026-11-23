@@ -965,6 +965,13 @@ async function generarDescargaRegistroIndividual({ campusId, dataLoadId, formato
   // Fila 2: las 32 respuestas de esta entrevista.
   const valores = CAMPOS_ENCUESTA.map(([, col]) => fila[col] ?? '');
   const hoja = xlsx.utils.aoa_to_sheet([ENCABEZADOS_ESPERADOS, valores]);
+
+  // Formato por casillas con ancho de columnas ajustado
+  hoja['!cols'] = ENCABEZADOS_ESPERADOS.map((enc, i) => {
+    const valLen = String(valores[i] ?? '').length;
+    return { wch: Math.min(Math.max(enc.length, valLen, 12) + 2, 50) };
+  });
+
   const libro = xlsx.utils.book_new();
   xlsx.utils.book_append_sheet(libro, hoja, 'Respuestas');
   const contenido = xlsx.write(libro, { type: 'buffer', bookType: 'xlsx' });
@@ -1028,6 +1035,17 @@ async function generarExportacionRespuestasIca({ campusId, year, quarter, commun
   // xlsx por defecto
   const filasHoja = filas.map((fila) => columnasClave.map((clave) => fila[clave] ?? ''));
   const hoja = xlsx.utils.aoa_to_sheet([encabezados, ...filasHoja]);
+
+  // Formato por casillas con ancho de columnas ajustado
+  hoja['!cols'] = encabezados.map((enc, colIdx) => {
+    let maxLen = enc.length;
+    for (const fila of filasHoja) {
+      const len = fila[colIdx] !== null && fila[colIdx] !== undefined ? String(fila[colIdx]).length : 0;
+      if (len > maxLen) maxLen = len;
+    }
+    return { wch: Math.min(Math.max(maxLen + 2, 12), 50) };
+  });
+
   const libro = xlsx.utils.book_new();
   xlsx.utils.book_append_sheet(libro, hoja, 'Respuestas ICA');
   const contenido = xlsx.write(libro, { type: 'buffer', bookType: 'xlsx' });
@@ -1094,6 +1112,60 @@ async function obtenerDatasetIcaExport({ campusId, year, quarter, communityId, g
 }
 
 
+const MAPEO_COLUMNAS_DATASET_ICA = [
+  ['comuna', 'Comuna'],
+  ['year', 'Año'],
+  ['quarter', 'Trimestre'],
+  ['conocimiento', 'Conocimiento'],
+  ['uso', 'Uso'],
+  ['educacion', 'Educación'],
+  ['prevision', 'Previsión'],
+  ['icaHombres', 'ICA Hombres'],
+  ['icaMujeres', 'ICA Mujeres'],
+  ['icaGeneral', 'ICA General'],
+];
+
+function generarExcelDatasetIca(dataset = []) {
+  const encabezados = MAPEO_COLUMNAS_DATASET_ICA.map(([, titulo]) => titulo);
+  const filasAoa = (dataset || []).map((fila) =>
+    MAPEO_COLUMNAS_DATASET_ICA.map(([clave]) => {
+      const val = fila[clave];
+      if (val === null || val === undefined) return '';
+      if (typeof val === 'number') return val;
+      if (!isNaN(val) && val !== '' && typeof val === 'string') {
+        const n = Number(val);
+        if (!isNaN(n)) return n;
+      }
+      return val;
+    })
+  );
+
+  const datosCompletos = [encabezados, ...filasAoa];
+  const hoja = xlsx.utils.aoa_to_sheet(datosCompletos);
+
+  // Formato por casillas con anchos dinámicos ajustados al contenido
+  const anchos = encabezados.map((enc, colIdx) => {
+    let maxLen = enc.length;
+    for (const fila of filasAoa) {
+      const len = fila[colIdx] !== null && fila[colIdx] !== undefined ? String(fila[colIdx]).length : 0;
+      if (len > maxLen) maxLen = len;
+    }
+    return { wch: Math.min(Math.max(maxLen + 3, 14), 40) };
+  });
+  hoja['!cols'] = anchos;
+
+  const libro = xlsx.utils.book_new();
+  xlsx.utils.book_append_sheet(libro, hoja, 'Dataset ICA');
+  const contenido = xlsx.write(libro, { type: 'buffer', bookType: 'xlsx' });
+  const fechaActual = new Date().toISOString().split('T')[0];
+
+  return {
+    contenido,
+    nombreArchivo: `dataset_ica_${fechaActual}.xlsx`,
+    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  };
+}
+
 module.exports = {
   obtenerComunidadesPorSede,
   obtenerDashboard,
@@ -1107,6 +1179,7 @@ module.exports = {
   generarDescargaRegistroIndividual,
   generarExportacionRespuestasIca,
   obtenerDatasetIcaExport,
+  generarExcelDatasetIca,
   estadoInicialCarga,
   CAMPOS_ENCUESTA,
   recalcularAgregadoManual,

@@ -63,17 +63,17 @@ export default function ExportarSpe({ filtros }) {
       <div className="flex items-center gap-2">
         <button
           type="button"
-          onClick={() => manejarDescarga('csv')}
+          onClick={() => manejarDescarga('xlsx')}
           disabled={Boolean(descargando)}
           className="inline-flex items-center gap-1.5 rounded-lg border border-ink/15 bg-card px-3 py-1.5 text-xs font-semibold text-ink shadow-xs hover:bg-surface transition-colors disabled:opacity-50"
-          title="Descargar datos filtrados en formato CSV"
+          title="Descargar datos filtrados en formato Excel"
         >
-          {descargando === 'csv' ? (
+          {descargando === 'xlsx' ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin text-brand" />
           ) : (
             <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
           )}
-          <span>Exportar CSV</span>
+          <span>Exportar Excel</span>
         </button>
 
         <button
