@@ -1,0 +1,34 @@
+# Despliegue en Render (un solo servicio): Express sirve la API (/api) y el
+# frontend ya compilado (frontend/dist). La BD sigue en AlwaysData.
+# Las variables secretas se cargan en el panel de Render (sync: false).
+services:
+  - type: web
+    name: bienestar-financiero
+    runtime: node
+    plan: free
+    buildCommand: npm run render-build
+    startCommand: npm run render-start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: NODE_ENV
+        value: production
+      - key: DB_HOST
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: MAIL_USER
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      # URL pública del servicio (se usa en enlaces de los correos), ej. https://bienestar-financiero.onrender.com
+      - key: FRONTEND_URL
+        sync: false
